@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
-import rateLimit from 'express-rate-limit';
+// import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger';
 import * as path from 'path';
@@ -27,7 +27,17 @@ import pipelineRoutes from './routes/pipeline.routes';
 import testingStrategiesRoutes from './routes/testing-strategies.routes';
 import visualRegressionRoutes from './routes/visual-regression.routes';
 import databaseTestingRoutes from './routes/database-testing.routes';
+import organizationRoutes from './routes/organization.routes';
+import queueRoutes from './routes/queue.routes';
+import dataDrivenRoutes from './routes/dataDriven.routes';
+import bddRoutes from './routes/bdd.routes';
+import screenplayRoutes from './routes/screenplay.routes';
 import pool from './db';
+
+// Services
+import { queueService } from './services/queue';
+import { workerPoolService } from './services/workers';
+import { bddService } from './services/bdd/bdd.service';
 
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -94,20 +104,20 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization'],
   optionsSuccessStatus: 200
 }));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
-  message: 'Too many requests from this IP, please try again later.'
-});
-
-app.use('/api/', limiter);
+// Rate limiting disabled for development
+// const limiter = rateLimit({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+//   message: 'Too many requests from this IP, please try again later.'
+// });
+// app.use('/api/', limiter);
 
 app.use((req, _res, next) => {
   logger.info(`${req.method} ${req.path}`, { ip: req.ip, userAgent: req.get('user-agent') });
@@ -150,6 +160,10 @@ app.get('/api', (_req, res) => {
       '/api/testing-strategies/*',
       '/api/visual-regression/*',
       '/api/database-testing/*',
+      '/api/organizations/*',
+      '/api/queue/*',
+      '/api/data-driven-runs/*',
+      '/api/bdd/*',
       '/api-docs',
       '/api-docs.json'
     ]
@@ -160,6 +174,7 @@ app.get('/api-docs.json', (_req, res) => { res.json(swaggerSpec); });
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/allure-reports', express.static(path.join(process.cwd(), 'allure-reports')));
+app.use('/playwright-crx-reports', express.static(path.join(process.cwd(), 'playwright-crx-reports')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
@@ -179,17 +194,74 @@ app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/testing-strategies', testingStrategiesRoutes);
 app.use('/api/visual-regression', visualRegressionRoutes);
 app.use('/api/database-testing', databaseTestingRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/queue', queueRoutes);
+app.use('/api/data-driven-runs', dataDrivenRoutes);
+app.use('/api/bdd', bddRoutes);
+app.use('/api/screenplay', screenplayRoutes);
 
 app.use((_req, res) => { res.status(404).json({ error: 'Route not found' }); });
 app.use(errorHandler);
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`📡 Environment: ${NODE_ENV}`);
   logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
+
+  
+  // Initialize Queue Service
+  if (process.env.ENABLE_QUEUE === 'true') {
+    try {
+      await queueService.initialize();
+      logger.info(`📦 Queue Service: Enabled`);
+    } catch (error: any) {
+      logger.error(`📦 Queue Service: Failed to initialize - ${error.message}`);
+    }
+  } else {
+    logger.info(`📦 Queue Service: Disabled - Set ENABLE_QUEUE=true to enable`);
+  }
+  
+  // Initialize Worker Pool
+  if (process.env.ENABLE_WORKER_POOL === 'true') {
+    try {
+      await workerPoolService.initialize();
+      logger.info(`👷 Worker Pool: Enabled`);
+    } catch (error: any) {
+      logger.error(`👷 Worker Pool: Failed to initialize - ${error.message}`);
+    }
+  } else {
+    logger.info(`👷 Worker Pool: Disabled - Set ENABLE_WORKER_POOL=true to enable`);
+  }
+
+  // Pre-warm BDD/Cucumber environment in background (non-blocking)
+  bddService.warmup().catch(() => {});
+
+  // Initialize BDD scheduled runs
+  bddService.initializeSchedules().catch(() => {});
 });
 
-process.on('SIGTERM', () => { logger.info('SIGTERM signal received: closing HTTP server'); httpServer.close(() => { logger.info('HTTP server closed'); }); });
-process.on('SIGINT', () => { logger.info('SIGINT signal received: closing HTTP server'); httpServer.close(() => { logger.info('HTTP server closed'); process.exit(0); }); });
+// Graceful shutdown
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`${signal} signal received: starting graceful shutdown`);
+  
+  // Shutdown worker pool first
+  if (workerPoolService.isReady()) {
+    await workerPoolService.shutdown();
+  }
+  
+  // Then shutdown queue
+  if (queueService.isReady()) {
+    await queueService.shutdown();
+  }
+  
+  // Finally close HTTP server
+  httpServer.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export { app, httpServer };

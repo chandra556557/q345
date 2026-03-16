@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
   Wand2,
@@ -8,7 +8,6 @@ import {
   Copy,
   Trash2,
   Plus,
-  Save,
   RefreshCw,
   ChevronDown,
   ChevronUp,
@@ -16,7 +15,15 @@ import {
   Code,
   FileText,
   Database,
-  Sparkles
+  Sparkles,
+  Link,
+  Settings,
+  Square,
+  CheckCircle,
+  XCircle,
+  Clock,
+  BarChart3,
+  AlertTriangle
 } from 'lucide-react';
 import './DataDrivenTesting.css';
 
@@ -42,52 +49,84 @@ interface GeneratedTestData {
   [key: string]: any;
 }
 
-interface TestDataResponse {
-  success: boolean;
-  data: GeneratedTestData[];
-  metadata: {
-    count: number;
-    testDataType: string;
-    fieldsDetected: string[];
-    generatedAt: string;
+interface Placeholder {
+  name: string;
+  line: number;
+  context: string;
+}
+
+interface RowResult {
+  rowIndex: number;
+  dataValues: Record<string, any>;
+  testRunId: string;
+  status: string;
+  duration: number | null;
+  errorMsg: string | null;
+  reportUrl: string | null;
+  steps: { stepNumber: number; action: string; selector: string; value: string; status: string; duration: number; errorMsg: string | null }[];
+}
+
+interface DDRResult {
+  dataDrivenRun: any;
+  summary: {
+    total: number;
+    completed: number;
+    passed: number;
+    failed: number;
+    passRate: number;
+    totalDuration: number;
   };
+  rowResults: RowResult[];
 }
 
 const DataDrivenTesting = () => {
-  // Script Selection
   const [scripts, setScripts] = useState<Script[]>([]);
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
   const [loadingScripts, setLoadingScripts] = useState(false);
-
-  // AI Field Extraction
   const [extractedFields, setExtractedFields] = useState<ExtractedField[]>([]);
   const [extractingFields, setExtractingFields] = useState(false);
   const [showFields, setShowFields] = useState(true);
-
-  // Test Data Generation
   const [testDataType, setTestDataType] = useState<'all' | 'boundary' | 'positive' | 'negative' | 'security' | 'equivalence'>('all');
   const [dataCount, setDataCount] = useState(10);
   const [generatedData, setGeneratedData] = useState<GeneratedTestData[]>([]);
   const [generatingData, setGeneratingData] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
-
-  // Custom Script Upload
-  const [uploadedScript, setUploadedScript] = useState<string>('');
+  const [uploadedScript, setUploadedScript] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // Step 3: Field Binding
+  const [placeholders, setPlaceholders] = useState<Placeholder[]>([]);
+  const [fieldBindings, setFieldBindings] = useState<Record<string, string>>({});
+  const [loadingPlaceholders, setLoadingPlaceholders] = useState(false);
+
+  // Step 4: Execution Config
+  const [executionMode, setExecutionMode] = useState<'sequential' | 'parallel'>('sequential');
+  const [stopOnFirstFailure, setStopOnFirstFailure] = useState(false);
+  const [delayBetweenRows, setDelayBetweenRows] = useState(500);
+  const [executionBrowser, setExecutionBrowser] = useState('chromium');
+
+  // Step 5: Results
+  const [dataDrivenRunId, setDataDrivenRunId] = useState<string | null>(null);
+  const [runStatus, setRunStatus] = useState('idle');
+  const [runResults, setRunResults] = useState<DDRResult | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [activeStep, setActiveStep] = useState(1);
 
   const token = localStorage.getItem('accessToken');
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
     loadScripts();
+    return () => { if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); };
   }, []);
 
   const loadScripts = async () => {
     setLoadingScripts(true);
     try {
       const res = await axios.get(`${API_URL}/scripts`, { headers });
-      const scriptList = res.data?.data || res.data?.scripts || [];
-      setScripts(scriptList);
+      setScripts(res.data?.data || res.data?.scripts || []);
     } catch (error) {
       console.error('Failed to load scripts:', error);
     } finally {
@@ -98,22 +137,12 @@ const DataDrivenTesting = () => {
   const extractFieldsWithAI = async (scriptCode: string) => {
     setExtractingFields(true);
     setExtractedFields([]);
-
     try {
-      const response = await axios.post(
-        `${API_URL}/ai-analysis/xpath-deep-analysis`,
-        { scriptCode },
-        { headers }
-      );
-
-      const fields: ExtractedField[] = response.data?.fields || [];
-      setExtractedFields(fields);
+      const response = await axios.post(`${API_URL}/ai-analysis/xpath-deep-analysis`, { scriptCode }, { headers });
+      setExtractedFields(response.data?.fields || []);
       setShowFields(true);
-    } catch (error: any) {
-      console.error('Field extraction failed:', error);
-      // Fallback to regex-based extraction
-      const fallbackFields = extractFieldsManually(scriptCode);
-      setExtractedFields(fallbackFields);
+    } catch {
+      setExtractedFields(extractFieldsManually(scriptCode));
     } finally {
       setExtractingFields(false);
     }
@@ -121,81 +150,82 @@ const DataDrivenTesting = () => {
 
   const extractFieldsManually = (code: string): ExtractedField[] => {
     const fields: ExtractedField[] = [];
-    const patterns = [
-      /fill\(['"]#?([^'"`]+)['"]/, // ID selector
-      /fill\(['"]\.([^'"`]+)['"]/, // Class selector
-      /getByPlaceholder\(['"]([^'"`]+)['"]/, // Placeholder
-      /getByLabel\(['"]([^'"`]+)['"]/, // Label
-    ];
-
+    const patterns = [/fill\(['"]#?([^'"`]+)['"]/, /fill\(['"]\.([^'"`]+)['"]/, /getByPlaceholder\(['"]([^'"`]+)['"]/, /getByLabel\(['"]([^'"`]+)['"]/];
     patterns.forEach(pattern => {
       const matches = code.matchAll(new RegExp(pattern, 'g'));
       for (const match of matches) {
         const fieldName = match[1];
         if (fieldName && !fields.find(f => f.name === fieldName)) {
-          fields.push({
-            name: fieldName,
-            type: inferFieldType(fieldName),
-            confidence: 0.6
-          });
+          fields.push({ name: fieldName, type: inferFieldType(fieldName), confidence: 0.6 });
         }
       }
     });
-
     return fields;
   };
 
   const inferFieldType = (fieldName: string): string => {
-    const name = fieldName.toLowerCase();
-    if (name.includes('email') || name.includes('mail')) return 'email';
-    if (name.includes('password') || name.includes('pwd')) return 'password';
-    if (name.includes('phone') || name.includes('mobile')) return 'phone';
-    if (name.includes('name') || name.includes('user')) return 'text';
-    if (name.includes('amount') || name.includes('price') || name.includes('count')) return 'number';
+    const n = fieldName.toLowerCase();
+    if (n.includes('email')) return 'email';
+    if (n.includes('password')) return 'password';
+    if (n.includes('phone')) return 'phone';
+    if (n.includes('amount') || n.includes('price')) return 'number';
     return 'text';
   };
 
-  const generateTestData = async () => {
-    if (!selectedScript && !uploadedScript) {
-      alert('Please select a script or upload code first');
-      return;
+  const doExtractPlaceholders = async () => {
+    if (!selectedScript) return;
+    setLoadingPlaceholders(true);
+    try {
+      const res = await axios.post(`${API_URL}/data-driven-runs/extract-placeholders`, { scriptId: selectedScript.id }, { headers });
+      const phs: Placeholder[] = res.data?.placeholders || [];
+      setPlaceholders(phs);
+      autoBindFields(phs);
+    } catch {
+      const code = selectedScript.code || '';
+      const phs: Placeholder[] = [];
+      const seen = new Set<string>();
+      code.split('\n').forEach((line, i) => {
+        for (const match of line.matchAll(/\{\{(\w+)\}\}/g)) {
+          if (!seen.has(match[1])) { seen.add(match[1]); phs.push({ name: match[1], line: i + 1, context: line.trim().substring(0, 80) }); }
+        }
+      });
+      setPlaceholders(phs);
+      autoBindFields(phs);
+    } finally {
+      setLoadingPlaceholders(false);
     }
+  };
 
+  const autoBindFields = (phs: Placeholder[]) => {
+    if (generatedData.length === 0) return;
+    const dataFields = Object.keys(generatedData[0]).filter(k => !k.startsWith('_'));
+    const bindings: Record<string, string> = {};
+    for (const ph of phs) {
+      const exact = dataFields.find(f => f.toLowerCase() === ph.name.toLowerCase());
+      if (exact) { bindings[ph.name] = exact; continue; }
+      const fuzzy = dataFields.find(f => f.toLowerCase().includes(ph.name.toLowerCase()) || ph.name.toLowerCase().includes(f.toLowerCase()));
+      if (fuzzy) bindings[ph.name] = fuzzy;
+    }
+    setFieldBindings(bindings);
+  };
+
+  const generateTestData = async () => {
+    if (!selectedScript && !uploadedScript) { alert('Please select a script first'); return; }
     setGeneratingData(true);
     setGeneratedData([]);
-
     try {
       const scriptCode = selectedScript?.code || uploadedScript;
-
-      // Determine which API endpoint to use based on data type
       const endpoints: Record<string, string> = {
-        all: `${API_URL}/external-api/testdata/all`,
-        boundary: `${API_URL}/external-api/testdata/boundary`,
-        positive: `${API_URL}/external-api/testdata/positive`,
-        negative: `${API_URL}/external-api/testdata/negative`,
-        security: `${API_URL}/external-api/testdata/security`,
-        equivalence: `${API_URL}/external-api/testdata/equivalence`
+        all: `${API_URL}/external-api/testdata/all`, boundary: `${API_URL}/external-api/testdata/boundary`,
+        positive: `${API_URL}/external-api/testdata/positive`, negative: `${API_URL}/external-api/testdata/negative`,
+        security: `${API_URL}/external-api/testdata/security`, equivalence: `${API_URL}/external-api/testdata/equivalence`
       };
-
-      const endpoint = testDataType === 'all'
-        ? endpoints.all
-        : endpoints[testDataType];
-
-      const response = await axios.post(
-        endpoint,
-        {
-          scriptCode,
-          count: dataCount,
-          testDataType: testDataType === 'all' ? undefined : testDataType
-        },
-        { headers }
-      );
-
-      const result: TestDataResponse = response.data;
-      setGeneratedData(result.data || []);
+      const response = await axios.post(endpoints[testDataType] || endpoints.all, { scriptCode, count: dataCount, testDataType: testDataType === 'all' ? undefined : testDataType }, { headers });
+      const data = response.data?.data || [];
+      setGeneratedData(data);
       setShowPreview(true);
+      if (data.length > 0) setActiveStep(3);
     } catch (error: any) {
-      console.error('Test data generation failed:', error);
       alert(`Failed to generate test data: ${error.response?.data?.error || error.message}`);
     } finally {
       setGeneratingData(false);
@@ -203,82 +233,93 @@ const DataDrivenTesting = () => {
   };
 
   const downloadTestData = (format: 'json' | 'csv') => {
-    if (generatedData.length === 0) {
-      alert('No data to download');
-      return;
-    }
-
+    if (generatedData.length === 0) return;
     if (format === 'json') {
-      const dataStr = JSON.stringify(generatedData, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
       const link = document.createElement('a');
-      link.setAttribute('href', dataUri);
+      link.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(generatedData, null, 2)));
       link.setAttribute('download', `test-data-${Date.now()}.json`);
       link.click();
-    } else if (format === 'csv') {
-      if (generatedData.length === 0) return;
-
-      const headers = Object.keys(generatedData[0]);
-      const csvContent = [
-        headers.join(','),
-        ...generatedData.map(row =>
-          headers.map(header => {
-            const value = row[header];
-            const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-            return `"${stringValue}"`;
-          }).join(',')
-        )
-      ].join('\n');
-
-      const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+    } else {
+      const h = Object.keys(generatedData[0]);
+      const csv = [h.join(','), ...generatedData.map(row => h.map(k => `"${typeof row[k] === 'string' ? row[k] : JSON.stringify(row[k])}"`).join(','))].join('\n');
       const link = document.createElement('a');
-      link.setAttribute('href', dataUri);
+      link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv));
       link.setAttribute('download', `test-data-${Date.now()}.csv`);
       link.click();
     }
   };
 
-  const generatePlaywrightCode = () => {
-    if (generatedData.length === 0) {
-      alert('No test data to generate code for');
+  const startDataDrivenRun = async () => {
+    if (!selectedScript || generatedData.length === 0 || Object.keys(fieldBindings).length === 0) {
+      alert('Please complete all steps before starting a run');
       return;
     }
-
-    const code = `import { test } from '@playwright/test';
-
-// Data-driven test with ${generatedData.length} test cases
-const testData = ${JSON.stringify(generatedData, null, 2)};
-
-test.describe('Data-Driven Tests', () => {
-  testData.forEach((data, index) => {
-    test(\`Test case \${index + 1}: \${data._testDataType}\`, async ({ page }) => {
-      // TODO: Add your test logic here
-      console.log('Running test with data:', data);
-
-      // Example: Fill form fields
-      ${extractedFields.length > 0
-        ? extractedFields.map(f => `      // await page.fill('#${f.name}', data.${f.name});`).join('\n')
-        : '      // await page.fill(\'selector\', data.fieldName);'
-      }
-    });
-  });
-});`;
-
-    navigator.clipboard.writeText(code);
-    alert('Playwright code copied to clipboard!');
+    setIsExecuting(true);
+    setRunStatus('starting');
+    try {
+      const createRes = await axios.post(`${API_URL}/data-driven-runs`, {
+        scriptId: selectedScript.id, dataRows: generatedData, fieldBindings,
+        browser: executionBrowser, executionMode,
+        executionConfig: { stopOnFirstFailure, delayBetweenRows, maxParallel: executionMode === 'parallel' ? 3 : 1 }
+      }, { headers });
+      const ddrId = createRes.data.data.id;
+      setDataDrivenRunId(ddrId);
+      await axios.post(`${API_URL}/data-driven-runs/${ddrId}/start`, {}, { headers });
+      setRunStatus('running');
+      setActiveStep(5);
+      startPolling(ddrId);
+    } catch (error: any) {
+      alert(`Failed to start run: ${error.response?.data?.error || error.message}`);
+      setIsExecuting(false);
+      setRunStatus('idle');
+    }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+  const startPolling = (ddrId: string) => {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    const poll = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/data-driven-runs/${ddrId}/results`, { headers });
+        setRunResults(res.data);
+        const status = res.data.dataDrivenRun.status;
+        setRunStatus(status);
+        if (['passed', 'failed', 'partial', 'cancelled'].includes(status)) {
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          setIsExecuting(false);
+        }
+      } catch (error) { console.error('Polling error:', error); }
+    };
+    poll();
+    pollIntervalRef.current = setInterval(poll, 2000);
+  };
+
+  const stopDataDrivenRun = async () => {
+    if (!dataDrivenRunId) return;
+    try {
+      await axios.post(`${API_URL}/data-driven-runs/${dataDrivenRunId}/stop`, {}, { headers });
+      setRunStatus('cancelled');
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      setIsExecuting(false);
+    } catch (error: any) { console.error('Failed to stop run:', error); }
+  };
+
+  const toggleRowExpand = (idx: number) => {
+    setExpandedRows(prev => { const next = new Set(prev); if (next.has(idx)) next.delete(idx); else next.add(idx); return next; });
   };
 
   const clearAll = () => {
-    setSelectedScript(null);
-    setUploadedScript('');
-    setExtractedFields([]);
-    setGeneratedData([]);
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    setSelectedScript(null); setUploadedScript(''); setExtractedFields([]); setGeneratedData([]);
+    setPlaceholders([]); setFieldBindings({}); setDataDrivenRunId(null); setRunStatus('idle');
+    setRunResults(null); setIsExecuting(false); setActiveStep(1); setExpandedRows(new Set());
   };
+
+  const getStatusClass = (status: string) => {
+    const map: Record<string, string> = { passed: 'ddt-badge-passed', failed: 'ddt-badge-failed', running: 'ddt-badge-running', partial: 'ddt-badge-partial', cancelled: 'ddt-badge-cancelled', queued: 'ddt-badge-queued' };
+    return map[status] || 'ddt-badge-pending';
+  };
+
+  const getAvailableDataFields = () => generatedData.length > 0 ? Object.keys(generatedData[0]).filter(k => !k.startsWith('_')) : [];
 
   return (
     <div className="ddt-container">
@@ -287,87 +328,58 @@ test.describe('Data-Driven Tests', () => {
         <div className="ddt-title">
           <Database className="ddt-icon" />
           <div>
-            <h1>Data-Driven Testing with AI</h1>
-            <p>Automatically extract fields from scripts and generate intelligent test data</p>
+            <h1>Data-Driven Testing</h1>
+            <p>Generate test data, bind to script placeholders, and execute data-driven runs</p>
           </div>
         </div>
         <div className="ddt-actions">
-          <button onClick={clearAll} className="btn-secondary">
-            <RefreshCw size={16} />
-            Clear All
-          </button>
+          <button onClick={clearAll} className="btn-secondary"><RefreshCw size={16} /> Clear All</button>
         </div>
       </div>
 
+      {/* Step Indicators */}
+      <div className="ddt-steps-indicator">
+        {[{ num: 1, label: 'Select Script' }, { num: 2, label: 'Generate Data' }, { num: 3, label: 'Bind Fields' }, { num: 4, label: 'Configure' }, { num: 5, label: 'Results' }].map(step => (
+          <div key={step.num} className={`ddt-step-indicator ${activeStep >= step.num ? 'active' : ''} ${activeStep === step.num ? 'current' : ''}`}
+            onClick={() => { if (step.num <= activeStep) setActiveStep(step.num); }}>
+            <span className="ddt-step-num">{step.num}</span>
+            <span className="ddt-step-label">{step.label}</span>
+          </div>
+        ))}
+      </div>
+
       <div className="ddt-grid">
-        {/* Left Panel - Script Selection & Field Extraction */}
+        {/* Left Panel */}
         <div className="ddt-panel">
           <div className="ddt-panel-header">
             <h2><FileText size={18} /> 1. Select Script</h2>
-            <p>Choose a script or upload custom code</p>
+            <p>Choose a script with {'{{placeholder}}'} variables</p>
           </div>
-
-          {/* Script Selection */}
           <div className="ddt-section">
             <label className="ddt-label">Select from Database</label>
-            <select
-              className="ddt-select"
-              value={selectedScript?.id || ''}
-              onChange={(e) => {
-                const script = scripts.find(s => s.id === e.target.value);
-                if (script) {
-                  setSelectedScript(script);
-                  setUploadedScript('');
-                  extractFieldsWithAI(script.code);
-                }
-              }}
-              disabled={loadingScripts}
-            >
+            <select className="ddt-select" value={selectedScript?.id || ''} disabled={loadingScripts}
+              onChange={(e) => { const s = scripts.find(s => s.id === e.target.value); if (s) { setSelectedScript(s); setUploadedScript(''); extractFieldsWithAI(s.code); setActiveStep(2); } }}>
               <option value="">-- Select a script --</option>
-              {scripts.map(script => (
-                <option key={script.id} value={script.id}>
-                  {script.name} ({script.language})
-                </option>
-              ))}
+              {scripts.map(s => <option key={s.id} value={s.id}>{s.name} ({s.language})</option>)}
             </select>
-
-            <div className="ddt-divider">
-              <span>OR</span>
-            </div>
-
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="btn-secondary w-full"
-            >
-              <Upload size={16} />
-              Upload Custom Script
-            </button>
+            <div className="ddt-divider"><span>OR</span></div>
+            <button onClick={() => setShowUploadModal(true)} className="btn-secondary w-full"><Upload size={16} /> Upload Custom Script</button>
           </div>
 
-          {/* Extracted Fields */}
           {extractedFields.length > 0 && (
             <div className="ddt-section">
-              <div
-                className="ddt-collapsible-header"
-                onClick={() => setShowFields(!showFields)}
-              >
-                <div className="ddt-collapsible-title">
-                  <Sparkles size={16} />
-                  <span>AI-Extracted Fields ({extractedFields.length})</span>
-                </div>
+              <div className="ddt-collapsible-header" onClick={() => setShowFields(!showFields)}>
+                <div className="ddt-collapsible-title"><Sparkles size={16} /><span>AI-Extracted Fields ({extractedFields.length})</span></div>
                 {showFields ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </div>
-
               {showFields && (
                 <div className="ddt-fields-list">
-                  {extractedFields.map((field, idx) => (
-                    <div key={idx} className="ddt-field-item">
+                  {extractedFields.map((f, i) => (
+                    <div key={i} className="ddt-field-item">
                       <div className="ddt-field-info">
-                        <span className="ddt-field-name">{field.name}</span>
-                        <span className="ddt-field-type">{field.type}</span>
-                        <span className="ddt-field-confidence">
-                          {Math.round(field.confidence * 100)}% confidence
-                        </span>
+                        <span className="ddt-field-name">{f.name}</span>
+                        <span className="ddt-field-type">{f.type}</span>
+                        <span className="ddt-field-confidence">{Math.round(f.confidence * 100)}%</span>
                       </div>
                     </div>
                   ))}
@@ -376,35 +388,83 @@ test.describe('Data-Driven Tests', () => {
             </div>
           )}
 
-          {/* Upload Modal */}
+          {(selectedScript || uploadedScript) && (
+            <>
+              <div className="ddt-panel-header" style={{ marginTop: '16px' }}>
+                <h2><Sparkles size={18} /> 2. Generate Test Data</h2>
+              </div>
+              <div className="ddt-section">
+                <div className="ddt-form-group">
+                  <label className="ddt-label">Test Data Type</label>
+                  <select className="ddt-select" value={testDataType} onChange={(e) => setTestDataType(e.target.value as any)}>
+                    <option value="all">All Types (Comprehensive)</option>
+                    <option value="boundary">Boundary Value Analysis</option>
+                    <option value="positive">Positive Testing</option>
+                    <option value="negative">Negative Testing</option>
+                    <option value="security">Security Testing</option>
+                    <option value="equivalence">Equivalence Partitioning</option>
+                  </select>
+                </div>
+                <div className="ddt-form-group">
+                  <label className="ddt-label">Records: {dataCount}</label>
+                  <input type="range" className="ddt-slider" min="1" max="50" value={dataCount} onChange={(e) => setDataCount(parseInt(e.target.value))} />
+                </div>
+                <button onClick={generateTestData} disabled={generatingData} className="btn-primary w-full">
+                  {generatingData ? <><RefreshCw size={16} className="spinning" /> Generating...</> : <><Wand2 size={16} /> Generate Test Data</>}
+                </button>
+              </div>
+
+              {generatedData.length > 0 && (
+                <div className="ddt-section">
+                  <div className="ddt-collapsible-header" onClick={() => setShowPreview(!showPreview)}>
+                    <div className="ddt-collapsible-title"><Eye size={16} /><span>Generated Data ({generatedData.length} records)</span></div>
+                    {showPreview ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </div>
+                  {showPreview && (
+                    <div className="ddt-data-preview">
+                      <div className="ddt-data-actions">
+                        <button onClick={() => downloadTestData('json')} className="btn-secondary btn-sm"><Download size={14} /> JSON</button>
+                        <button onClick={() => downloadTestData('csv')} className="btn-secondary btn-sm"><Download size={14} /> CSV</button>
+                      </div>
+                      <div className="ddt-data-table">
+                        {generatedData.slice(0, 5).map((rec, idx) => (
+                          <div key={idx} className="ddt-data-record">
+                            <div className="ddt-record-header">
+                              <span className="ddt-record-index">#{rec._index || idx + 1}</span>
+                              <span className="ddt-record-type">{rec._testDataType}</span>
+                              <button onClick={() => navigator.clipboard.writeText(JSON.stringify(rec, null, 2))} className="ddt-icon-btn" title="Copy"><Copy size={14} /></button>
+                            </div>
+                            <div className="ddt-record-fields">
+                              {Object.entries(rec).filter(([k]) => !k.startsWith('_')).map(([k, v]) => (
+                                <div key={k} className="ddt-field-pair">
+                                  <span className="ddt-field-key">{k}:</span>
+                                  <span className="ddt-field-value">{typeof v === 'string' && v.length > 30 ? v.substring(0, 30) + '...' : JSON.stringify(v)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {generatedData.length > 5 && <div className="ddt-more-records">+ {generatedData.length - 5} more records</div>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
           {showUploadModal && (
             <div className="ddt-modal-overlay" onClick={() => setShowUploadModal(false)}>
-              <div className="ddt-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="ddt-modal" onClick={e => e.stopPropagation()}>
                 <div className="ddt-modal-header">
                   <h3>Upload Custom Script</h3>
-                  <button onClick={() => setShowUploadModal(false)} className="ddt-close-btn">×</button>
+                  <button onClick={() => setShowUploadModal(false)} className="ddt-close-btn">&times;</button>
                 </div>
                 <div className="ddt-modal-body">
-                  <textarea
-                    className="ddt-textarea"
-                    placeholder="Paste your Playwright script code here..."
-                    value={uploadedScript}
-                    onChange={(e) => setUploadedScript(e.target.value)}
-                    rows={15}
-                  />
+                  <textarea className="ddt-textarea" placeholder="Paste your Playwright script code here..." value={uploadedScript} onChange={e => setUploadedScript(e.target.value)} rows={15} />
                   <div className="ddt-modal-actions">
-                    <button
-                      onClick={() => {
-                        if (uploadedScript.trim()) {
-                          setSelectedScript(null);
-                          extractFieldsWithAI(uploadedScript);
-                          setShowUploadModal(false);
-                        }
-                      }}
-                      className="btn-primary"
-                    >
-                      <Wand2 size={16} />
-                      Extract Fields & Analyze
+                    <button onClick={() => { if (uploadedScript.trim()) { setSelectedScript(null); extractFieldsWithAI(uploadedScript); setShowUploadModal(false); setActiveStep(2); } }} className="btn-primary">
+                      <Wand2 size={16} /> Extract Fields & Analyze
                     </button>
                   </div>
                 </div>
@@ -413,156 +473,188 @@ test.describe('Data-Driven Tests', () => {
           )}
         </div>
 
-        {/* Right Panel - Test Data Generation */}
+        {/* Right Panel */}
         <div className="ddt-panel">
-          <div className="ddt-panel-header">
-            <h2><Sparkles size={18} /> 2. Generate Test Data</h2>
-            <p>Configure and generate AI-powered test data</p>
-          </div>
 
-          {/* Configuration */}
-          <div className="ddt-section">
-            <div className="ddt-form-group">
-              <label className="ddt-label">Test Data Type</label>
-              <select
-                className="ddt-select"
-                value={testDataType}
-                onChange={(e) => setTestDataType(e.target.value as any)}
-              >
-                <option value="all">All Types (Comprehensive)</option>
-                <option value="boundary">Boundary Value Analysis</option>
-                <option value="positive">Positive Testing</option>
-                <option value="negative">Negative Testing</option>
-                <option value="security">Security Testing</option>
-                <option value="equivalence">Equivalence Partitioning</option>
-              </select>
-            </div>
-
-            <div className="ddt-form-group">
-              <label className="ddt-label">Number of Records: {dataCount}</label>
-              <input
-                type="range"
-                className="ddt-slider"
-                min="1"
-                max="50"
-                value={dataCount}
-                onChange={(e) => setDataCount(parseInt(e.target.value))}
-              />
-              <div className="ddt-slider-labels">
-                <span>1</span>
-                <span>25</span>
-                <span>50</span>
-              </div>
-            </div>
-
-            <button
-              onClick={generateTestData}
-              disabled={generatingData || (!selectedScript && !uploadedScript)}
-              className="btn-primary w-full"
-            >
-              {generatingData ? (
-                <>
-                  <RefreshCw size={16} className="spinning" />
-                  Generating with AI...
-                </>
-              ) : (
-                <>
-                  <Wand2 size={16} />
-                  Generate Test Data
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Generated Data Preview */}
-          {generatedData.length > 0 && (
+          {/* Step 3: Field Binding */}
+          {generatedData.length > 0 && activeStep >= 3 && (
             <div className="ddt-section">
-              <div
-                className="ddt-collapsible-header"
-                onClick={() => setShowPreview(!showPreview)}
-              >
-                <div className="ddt-collapsible-title">
-                  <Eye size={16} />
-                  <span>Generated Data ({generatedData.length} records)</span>
-                </div>
-                {showPreview ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              <div className="ddt-panel-header">
+                <h2><Link size={18} /> 3. Bind Fields</h2>
+                <p>Map script {'{{placeholders}}'} to data fields</p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <button onClick={doExtractPlaceholders} disabled={loadingPlaceholders || !selectedScript} className="btn-secondary btn-sm">
+                  {loadingPlaceholders ? <RefreshCw size={14} className="spinning" /> : <Wand2 size={14} />} Auto-Detect
+                </button>
+                <button onClick={() => setFieldBindings({})} className="btn-secondary btn-sm"><Trash2 size={14} /> Clear</button>
               </div>
 
-              {showPreview && (
-                <div className="ddt-data-preview">
-                  <div className="ddt-data-actions">
-                    <button onClick={() => downloadTestData('json')} className="btn-secondary btn-sm">
-                      <Download size={14} />
-                      JSON
-                    </button>
-                    <button onClick={() => downloadTestData('csv')} className="btn-secondary btn-sm">
-                      <Download size={14} />
-                      CSV
-                    </button>
-                    <button onClick={generatePlaywrightCode} className="btn-secondary btn-sm">
-                      <Code size={14} />
-                      Copy Playwright Code
-                    </button>
-                  </div>
-
-                  <div className="ddt-data-table">
-                    {generatedData.slice(0, 5).map((record, idx) => (
-                      <div key={idx} className="ddt-data-record">
-                        <div className="ddt-record-header">
-                          <span className="ddt-record-index">#{record._index || idx + 1}</span>
-                          <span className="ddt-record-type">{record._testDataType}</span>
-                          <button
-                            onClick={() => copyToClipboard(JSON.stringify(record, null, 2))}
-                            className="ddt-icon-btn"
-                            title="Copy record"
-                          >
-                            <Copy size={14} />
-                          </button>
-                        </div>
-                        <div className="ddt-record-fields">
-                          {Object.entries(record)
-                            .filter(([key]) => !key.startsWith('_'))
-                            .map(([key, value]) => (
-                              <div key={key} className="ddt-field-pair">
-                                <span className="ddt-field-key">{key}:</span>
-                                <span className="ddt-field-value">
-                                  {typeof value === 'string' && value.length > 30
-                                    ? value.substring(0, 30) + '...'
-                                    : JSON.stringify(value)}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
+              {placeholders.length > 0 ? (
+                <div className="ddt-bindings-table">
+                  {placeholders.map(ph => (
+                    <div key={ph.name} className="ddt-binding-row">
+                      <div className="ddt-binding-placeholder">
+                        <Code size={14} />
+                        <span className="ddt-binding-name">{`{{${ph.name}}}`}</span>
+                        <span className="ddt-binding-line">L{ph.line}</span>
                       </div>
-                    ))}
-                    {generatedData.length > 5 && (
-                      <div className="ddt-more-records">
-                        + {generatedData.length - 5} more records
-                      </div>
-                    )}
+                      <span className="ddt-binding-arrow">&rarr;</span>
+                      <select className="ddt-select ddt-binding-select" value={fieldBindings[ph.name] || ''} onChange={e => setFieldBindings(prev => ({ ...prev, [ph.name]: e.target.value }))}>
+                        <option value="">-- Select field --</option>
+                        {getAvailableDataFields().map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="ddt-empty-state">
+                  <p>Click "Auto-Detect" to find {'{{placeholder}}'} patterns in your script, or add manually below.</p>
+                  <div className="ddt-manual-binding">
+                    <input type="text" placeholder="Placeholder name" className="ddt-input" id="manual-ph-name" />
+                    <select className="ddt-select" id="manual-ph-field">
+                      <option value="">-- Field --</option>
+                      {getAvailableDataFields().map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <button className="btn-secondary btn-sm" onClick={() => {
+                      const nameEl = document.getElementById('manual-ph-name') as HTMLInputElement;
+                      const fieldEl = document.getElementById('manual-ph-field') as HTMLSelectElement;
+                      if (nameEl?.value && fieldEl?.value) {
+                        setPlaceholders(prev => [...prev, { name: nameEl.value, line: 0, context: '' }]);
+                        setFieldBindings(prev => ({ ...prev, [nameEl.value]: fieldEl.value }));
+                        nameEl.value = '';
+                      }
+                    }}><Plus size={14} /> Add</button>
                   </div>
                 </div>
+              )}
+
+              {Object.keys(fieldBindings).length > 0 && (
+                <button className="btn-primary w-full" style={{ marginTop: '12px' }} onClick={() => setActiveStep(4)}>
+                  Continue to Configuration
+                </button>
               )}
             </div>
           )}
 
-          {/* Quick Stats */}
-          {generatedData.length > 0 && (
-            <div className="ddt-stats">
-              <div className="ddt-stat-item">
-                <span className="ddt-stat-label">Total Records</span>
-                <span className="ddt-stat-value">{generatedData.length}</span>
+          {/* Step 4: Execution Config */}
+          {activeStep >= 4 && (
+            <div className="ddt-section">
+              <div className="ddt-panel-header"><h2><Settings size={18} /> 4. Execution Config</h2></div>
+              <div className="ddt-config-grid">
+                <div className="ddt-form-group">
+                  <label className="ddt-label">Execution Mode</label>
+                  <select className="ddt-select" value={executionMode} onChange={e => setExecutionMode(e.target.value as any)}>
+                    <option value="sequential">Sequential (one at a time)</option>
+                    <option value="parallel">Parallel (batch of 3)</option>
+                  </select>
+                </div>
+                <div className="ddt-form-group">
+                  <label className="ddt-label">Browser</label>
+                  <select className="ddt-select" value={executionBrowser} onChange={e => setExecutionBrowser(e.target.value)}>
+                    <option value="chromium">Chromium</option>
+                    <option value="firefox">Firefox</option>
+                    <option value="webkit">WebKit</option>
+                  </select>
+                </div>
+                <div className="ddt-form-group">
+                  <label className="ddt-label"><input type="checkbox" checked={stopOnFirstFailure} onChange={e => setStopOnFirstFailure(e.target.checked)} /> Stop on first failure</label>
+                </div>
+                <div className="ddt-form-group">
+                  <label className="ddt-label">Delay: {delayBetweenRows}ms</label>
+                  <input type="range" className="ddt-slider" min="0" max="5000" step="100" value={delayBetweenRows} onChange={e => setDelayBetweenRows(parseInt(e.target.value))} />
+                </div>
               </div>
-              <div className="ddt-stat-item">
-                <span className="ddt-stat-label">Fields Detected</span>
-                <span className="ddt-stat-value">
-                  {generatedData[0] ? Object.keys(generatedData[0]).filter(k => !k.startsWith('_')).length : 0}
-                </span>
+              <div className="ddt-run-summary">
+                <span>{generatedData.length} data rows</span>
+                <span>{Object.keys(fieldBindings).length} bindings</span>
+                <span>{executionMode}</span>
+                <span>{executionBrowser}</span>
               </div>
-              <div className="ddt-stat-item">
-                <span className="ddt-stat-label">Data Type</span>
-                <span className="ddt-stat-value">{testDataType}</span>
+              <button onClick={startDataDrivenRun} disabled={isExecuting || Object.keys(fieldBindings).length === 0} className="btn-primary w-full ddt-execute-btn">
+                {isExecuting ? <><RefreshCw size={16} className="spinning" /> Running...</> : <><Play size={16} /> Start Data-Driven Run ({generatedData.length} rows)</>}
+              </button>
+            </div>
+          )}
+
+          {/* Step 5: Live Results */}
+          {activeStep >= 5 && runResults && (
+            <div className="ddt-section">
+              <div className="ddt-panel-header">
+                <h2><BarChart3 size={18} /> 5. Results</h2>
+                <div className={`ddt-status-badge ${getStatusClass(runStatus)}`}>{runStatus}</div>
               </div>
+
+              <div className="ddt-progress-container">
+                <div className="ddt-progress-bar">
+                  <div className="ddt-progress-fill ddt-progress-passed" style={{ width: `${runResults.summary.total > 0 ? (runResults.summary.passed / runResults.summary.total * 100) : 0}%` }} />
+                  <div className="ddt-progress-fill ddt-progress-failed" style={{ width: `${runResults.summary.total > 0 ? (runResults.summary.failed / runResults.summary.total * 100) : 0}%` }} />
+                </div>
+                <div className="ddt-progress-stats">
+                  <span className="ddt-stat-passed"><CheckCircle size={14} /> {runResults.summary.passed} passed</span>
+                  <span className="ddt-stat-failed"><XCircle size={14} /> {runResults.summary.failed} failed</span>
+                  <span className="ddt-stat-total">{runResults.summary.completed}/{runResults.summary.total} complete</span>
+                  {runResults.summary.totalDuration > 0 && <span className="ddt-stat-duration"><Clock size={14} /> {(runResults.summary.totalDuration / 1000).toFixed(1)}s</span>}
+                </div>
+              </div>
+
+              <div className="ddt-row-results">
+                {runResults.rowResults.map(row => (
+                  <div key={row.rowIndex} className={`ddt-row-result ${getStatusClass(row.status)}`}>
+                    <div className="ddt-row-result-header" onClick={() => toggleRowExpand(row.rowIndex)}>
+                      <div className="ddt-row-info">
+                        {row.status === 'passed' ? <CheckCircle size={16} className="text-green" /> : row.status === 'failed' ? <XCircle size={16} className="text-red" /> : row.status === 'running' ? <RefreshCw size={16} className="spinning text-blue" /> : <Clock size={16} className="text-gray" />}
+                        <span className="ddt-row-index">Row {row.rowIndex + 1}</span>
+                        <span className="ddt-row-data-summary">
+                          {row.dataValues ? Object.entries(row.dataValues).filter(([k]) => !k.startsWith('_')).slice(0, 3).map(([k, v]) => `${k}=${typeof v === 'string' && v.length > 15 ? v.substring(0, 15) + '...' : v}`).join(', ') : ''}
+                        </span>
+                      </div>
+                      <div className="ddt-row-meta">
+                        {row.duration && <span className="ddt-row-duration">{(row.duration / 1000).toFixed(1)}s</span>}
+                        <span className={`ddt-status-badge ${getStatusClass(row.status)}`}>{row.status}</span>
+                        {expandedRows.has(row.rowIndex) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </div>
+                    </div>
+                    {expandedRows.has(row.rowIndex) && (
+                      <div className="ddt-row-details">
+                        {row.errorMsg && <div className="ddt-row-error"><AlertTriangle size={14} /> {row.errorMsg}</div>}
+                        {row.steps && row.steps.length > 0 && (
+                          <div className="ddt-steps-list">
+                            {row.steps.map(step => (
+                              <div key={step.stepNumber} className={`ddt-step ${step.status}`}>
+                                <span className="ddt-step-num">{step.stepNumber}</span>
+                                <span className="ddt-step-action">{step.action}</span>
+                                <span className="ddt-step-selector">{step.selector || ''}</span>
+                                {step.value && <span className="ddt-step-value">{step.value}</span>}
+                                <span className={`ddt-step-status ${step.status}`}>
+                                  {step.status === 'passed' ? <CheckCircle size={12} /> : step.status === 'failed' ? <XCircle size={12} /> : null}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {row.reportUrl && <a href={row.reportUrl} target="_blank" rel="noopener noreferrer" className="ddt-report-link">View Report</a>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="ddt-result-actions">
+                {isExecuting && <button onClick={stopDataDrivenRun} className="btn-danger"><Square size={16} /> Stop Run</button>}
+                {runResults.dataDrivenRun.aggregateReportUrl && (
+                  <a href={runResults.dataDrivenRun.aggregateReportUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary"><BarChart3 size={16} /> Aggregate Report</a>
+                )}
+                {!isExecuting && <button onClick={clearAll} className="btn-secondary"><RefreshCw size={16} /> New Run</button>}
+              </div>
+            </div>
+          )}
+
+          {activeStep < 3 && (
+            <div className="ddt-empty-right-panel">
+              <Database size={48} className="text-gray-300" />
+              <h3>Complete Steps 1 & 2</h3>
+              <p>Select a script and generate test data to continue with field binding and execution.</p>
             </div>
           )}
         </div>

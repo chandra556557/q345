@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Dashboard from './components/Dashboard';
 import Signup from './components/Signup';
+import MCPTesting from './components/MCPTesting';
 
 // Point frontend to running backend API
 const API_URL = 'http://localhost:3001/api';
@@ -100,7 +101,7 @@ function App() {
                       <input
                         type="email"
                         value={email}
-                        onChange={e => setEmail(e.target.value)}
+                        onChange={e => setEmail((e.target as HTMLInputElement).value)}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="demo@example.com"
                         required
@@ -112,7 +113,7 @@ function App() {
                       <input
                         type="password"
                         value={password}
-                        onChange={e => setPassword(e.target.value)}
+                        onChange={e => setPassword((e.target as HTMLInputElement).value)}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter password"
                         required
@@ -146,7 +147,12 @@ function App() {
     );
   }
 
-  return <Dashboard onLogout={handleLogout} />;
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
+      <Route path="/mcp-testing" element={<MCPTesting />} />
+    </Routes>
+  );
 }
 
 export default App;

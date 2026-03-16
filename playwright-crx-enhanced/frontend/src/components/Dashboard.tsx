@@ -15,12 +15,14 @@ import {
 import axios from 'axios';
 import ApiTesting from './ApiTesting.tsx';
 import DatabaseTesting from './DatabaseTesting';
+import MCPTesting from './MCPTesting';
 import ScriptEnhancementModal from './ScriptEnhancementModal';
 import ImportScriptModal from './ImportScriptModal';
 import ScriptValidationModal from './ScriptValidationModal';
 import ScriptCueCards from './ScriptCueCards';
 import TestDataManager from './TestDataManager';
 import DataDrivenTesting from './DataDrivenTesting';
+import BDDTesting from './BDDTesting';
 // import ErrorAnalysis from './ErrorAnalysis';
 import './Dashboard.css';
 
@@ -66,6 +68,7 @@ type ActiveView =
   | 'datadriventesting'
   | 'apitesting'
   | 'databasetesting'
+  | 'bdd'
   | 'allure'
   | 'analytics'
   | 'settings';
@@ -355,8 +358,11 @@ Navigating to Test Runs...`);
     { id: 'scripts', icon: '📝', label: 'Scripts', category: 'Test Management' },
     { id: 'runs', icon: '▶️', label: 'Test Runs', category: 'Test Management' },
     { id: 'testdata', icon: '🗄️', label: 'Test Data', category: 'Data Management' },
+    { id: 'datadriventesting', icon: '🔄', label: 'Data-Driven Testing', category: 'Data Management' },
     { id: 'apitesting', icon: '🔌', label: 'API Testing', category: 'Testing Tools' },
     { id: 'databasetesting', icon: '🗃️', label: 'Database Testing', category: 'Testing Tools' },
+    { id: 'bdd', icon: '🥒', label: 'BDD Testing', category: 'Testing Tools' },
+    { id: 'mcp-testing', icon: '🤖', label: 'MCP Testing', category: 'Testing Tools' },
     { id: 'allure', icon: '📈', label: 'Test Execution Reports', category: 'Reports' },
     { id: 'analytics', icon: '📉', label: 'Analytics', category: 'Reports' },
     { id: 'settings', icon: '⚙️', label: 'Settings', category: 'System' }
@@ -940,6 +946,12 @@ Navigating to Test Runs...`);
 
           {/* Database Testing */}
           {activeView === 'databasetesting' && <DatabaseTesting />}
+
+          {/* BDD Testing */}
+          {activeView === 'bdd' && <BDDTesting />}
+          
+          {/* MCP Testing */}
+          {activeView === 'mcp-testing' && <MCPTesting />}
 
           {/* Execution Reports */}
           {activeView === 'allure' && (
