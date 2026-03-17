@@ -1,8 +1,8 @@
 import { WebSocketServer } from 'ws';
 import { logger } from '../../utils/logger';
 import pool from '../../db';
-import { firefox, Browser, Page } from 'playwright-core';
-import { allureService } from '../allure.service';
+import { chromium, firefox, webkit, Browser, Page } from 'playwright-core';
+import { playwrightCrxService } from '../allure.service';
 
 interface TestRunContext {
   testRunId: string;
@@ -19,7 +19,7 @@ interface TestRunContext {
 export class TestRunnerService {
   private activeRuns: Map<string, TestRunContext> = new Map();
 
-  async startTestRun(testRunId: string, scriptId: string, userId: string, ws?: WebSocketServer): Promise<void> {
+  async startTestRun(testRunId: string, scriptId: string, userId: string, ws?: WebSocketServer, browserType: string = 'firefox'): Promise<void> {
     let context: TestRunContext | undefined;
     
     try {
@@ -33,30 +33,33 @@ export class TestRunnerService {
       }
 
       const { rows: scriptRows } = await pool.query(
-        `SELECT code, language, name FROM "Script" WHERE id = $1 AND "userId" = $2`,
+        `SELECT code, language, name, "browserType" FROM "Script" WHERE id = $1 AND "userId" = $2`,
         [scriptId, userId]
       );
       const script = scriptRows[0];
       if (!script) throw new Error('Script not found');
 
+      // Use browserType from request parameter, then from script, then default to firefox
+      const effectiveBrowserType = browserType || script.browserType || 'firefox';
+
       // Start Allure test tracking
-      await allureService.startTest(testRunId, script.name);
+      await playwrightCrxService.startTest(testRunId, script.name);
       logger.info('📊 Allure test tracking started');
 
       const startTime = Date.now();
       
       // Execute script with Playwright
-      await this.executeScriptWithPlaywright(context, script.code);
+      await this.executeScriptWithPlaywright(context, script.code, effectiveBrowserType);
       
       const duration = Date.now() - startTime;
 
       // End Allure test as passed
-      await allureService.endTest(testRunId, 'passed');
+      await playwrightCrxService.endTest(testRunId, 'passed');
       logger.info('📊 Allure test marked as passed');
 
       // Generate Allure report
-      await allureService.generateReport(testRunId);
-      const reportUrl = await allureService.getReportUrl(testRunId);
+      await playwrightCrxService.generateReport(testRunId);
+      const reportUrl = await playwrightCrxService.getReportUrl(testRunId);
       logger.info('📊 Allure report generated:', reportUrl);
 
       await pool.query(
@@ -77,9 +80,9 @@ export class TestRunnerService {
 
       // End Allure test as failed
       try {
-        await allureService.endTest(testRunId, 'failed', error.message);
-        await allureService.generateReport(testRunId);
-        const reportUrl = await allureService.getReportUrl(testRunId);
+        await playwrightCrxService.endTest(testRunId, 'failed', error.message);
+        await playwrightCrxService.generateReport(testRunId);
+        const reportUrl = await playwrightCrxService.getReportUrl(testRunId);
         logger.info('📊 Allure report generated for failed test:', reportUrl);
 
         await pool.query(
@@ -124,7 +127,7 @@ export class TestRunnerService {
     }
   }
 
-  private async executeScriptWithPlaywright(context: TestRunContext, code: string): Promise<void> {
+  private async executeScriptWithPlaywright(context: TestRunContext, code: string, browserType: string = 'firefox'): Promise<void> {
     let browser: Browser | null = null;
     let page: Page | null = null;
 
@@ -132,29 +135,53 @@ export class TestRunnerService {
       logger.info('Starting server-side headless test execution');
       logger.info('Test Run ID:', context.testRunId);
       logger.info('Script ID:', context.scriptId);
+      logger.info('Browser Type:', browserType);
       
-      // Launch Firefox headless browser
-      logger.info('Launching Firefox in headless mode');
+      // Launch browser based on browserType
+      logger.info(`Launching ${browserType} in headless mode`);
       try {
-        browser = await firefox.launch({
-          headless: true,         // Headless mode for server-side execution
+        // Select browser based on type
+        let browserLauncher;
+        switch(browserType.toLowerCase()) {
+          case 'chromium':
+          case 'chrome':
+            browserLauncher = chromium;
+            break;
+          case 'webkit':
+            browserLauncher = webkit;
+            break;
+          case 'firefox':
+          default:
+            browserLauncher = firefox;
+            break;
+        }
+
+        const launchOptions: any = {
+          headless: true,
           args: [
             '--no-remote',
-            '--foreground'
+            '--foreground',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor'
           ]
-        });
-        logger.info('✅ Firefox browser launched successfully');
-      } catch (firefoxError: any) {
-        logger.error('Firefox launch failed:', firefoxError.message);
-        logger.error('Full error:', firefoxError);
-        throw new Error(`Firefox browser launch failed: ${firefoxError.message}`);
+        };
+        // Use installed Chrome instead of bundled Chromium
+        if (browserLauncher === chromium) {
+          launchOptions.channel = 'chrome';
+        }
+        browser = await browserLauncher.launch(launchOptions);
+        logger.info(`✅ ${browserType} browser launched successfully`);
+      } catch (browserError: any) {
+        logger.error(`${browserType} launch failed:`, browserError.message);
+        logger.error('Full error:', browserError);
+        throw new Error(`${browserType} browser launch failed: ${browserError.message}`);
       }
 
       // Create new context and page
       logger.info('Creating browser context and page...');
       const browserContext = await browser.newContext({
         viewport: { width: 1920, height: 1080 },
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0'
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       });
       page = await browserContext.newPage();
       logger.info('✅ Browser context and page created successfully');
@@ -320,7 +347,7 @@ export class TestRunnerService {
       // Record step in Allure when completed (passed or failed)
       if (status === 'passed' || status === 'failed') {
         const stepName = `${action} ${selector || value || ''}`;
-        await allureService.recordStep(
+        await playwrightCrxService.recordStep(
           context.testRunId,
           stepName,
           status,

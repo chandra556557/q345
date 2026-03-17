@@ -471,7 +471,7 @@ class BDDService {
       const targetMatch = text.match(/"([^"]+)"|'([^']+)'/);
       if (targetMatch) {
         const target = targetMatch[1] || targetMatch[2];
-        return `await expect(page.getByText('${this.escapeString(target)}')).toBeVisible();`;
+        return `await expect(page.getByText('${this.escapeString(target)}', { exact: true })).toBeVisible();`;
       }
       return `await expect(page.locator('/* selector */')).toBeVisible();`;
     }
@@ -542,10 +542,10 @@ class BDDService {
     await execAsync('npm install --omit=dev', { cwd: SHARED_BDD_DIR, timeout: 180000 });
 
     try {
-      await execAsync('npx playwright install chromium', { cwd: SHARED_BDD_DIR, timeout: 300000 });
-      logger.info('BDD: Chromium browser installed');
+      await execAsync('npx playwright install chrome', { cwd: SHARED_BDD_DIR, timeout: 300000 });
+      logger.info('BDD: Chrome browser installed');
     } catch (e: any) {
-      logger.warn(`BDD: Playwright install chromium warning: ${e.message}`);
+      logger.warn(`BDD: Playwright install chrome warning: ${e.message}`);
     }
 
     sharedEnvReady = true;
@@ -1013,12 +1013,14 @@ class BDDService {
     // BeforeAll: Launch browser once
     lines.push('// Launch browser once for all scenarios');
     lines.push(`BeforeAll(async function () {`);
-    lines.push(`  const launchOptions = { headless: ${headless} };`);
     if (browserType === 'firefox') {
+      lines.push(`  const launchOptions = { headless: ${headless} };`);
       lines.push(`  browser = await firefox.launch(launchOptions);`);
     } else if (browserType === 'webkit') {
+      lines.push(`  const launchOptions = { headless: ${headless} };`);
       lines.push(`  browser = await webkit.launch(launchOptions);`);
     } else {
+      lines.push(`  const launchOptions = { headless: ${headless}, channel: 'chrome' };`);
       lines.push(`  browser = await chromium.launch(launchOptions);`);
     }
     lines.push('});');
@@ -1276,11 +1278,11 @@ class BDDService {
       // Assertion steps
       lines.push(`// Assertion steps`);
       lines.push(`Then('I should see {string}', async function (text) {`);
-      lines.push(`  await expect(this.page.getByText(text).first()).toBeVisible({ timeout: 10000 });`);
+      lines.push(`  await expect(this.page.getByText(text, { exact: true }).first()).toBeVisible({ timeout: 10000 });`);
       lines.push('});');
       lines.push('');
       lines.push(`Then('I should not see {string}', async function (text) {`);
-      lines.push(`  await expect(this.page.getByText(text)).toBeHidden({ timeout: 5000 });`);
+      lines.push(`  await expect(this.page.getByText(text, { exact: true })).toBeHidden({ timeout: 5000 });`);
       lines.push('});');
       lines.push('');
       lines.push(`Then('the page title should be {string}', async function (title) {`);
