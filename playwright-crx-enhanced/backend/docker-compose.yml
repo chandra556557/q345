@@ -1,0 +1,76 @@
+version: "3.8"
+
+services:
+  # ======================================
+  # PostgreSQL Database
+  # ======================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: playwright-crx-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres124112
+      POSTGRES_DB: playwright_crx1
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ======================================
+  # Backend API
+  # ======================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: playwright-crx-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Use 3002 on host to avoid conflict with local dev server on 3001
+      # Change to 3001:3001 if local server is stopped
+      - "3002:3001"
+    environment:
+      # Database — points to the postgres service
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: playwright_crx1
+      DB_USER: postgres
+      DB_PASSWORD: postgres124112
+      DB_SCHEMA: public
+      DATABASE_URL: postgresql://postgres:postgres124112@postgres:5432/playwright_crx1?schema=public
+
+      # Server
+      PORT: 3001
+      NODE_ENV: production
+
+      # JWT (override in production!)
+      JWT_ACCESS_SECRET: your-super-secret-access-key-change-this-in-production
+      JWT_REFRESH_SECRET: your-super-secret-refresh-key-change-this-in-production
+
+      # CORS
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174,http://localhost:3001"
+
+      # Logging
+      LOG_LEVEL: info
+
+      # Queue (disabled by default)
+      ENABLE_QUEUE: "false"
+      ENABLE_WORKER_POOL: "false"
+    volumes:
+      # Persist reports and uploads outside container
+      - ./docker-data/reports:/app/playwright-crx-reports
+      - ./docker-data/results:/app/playwright-crx-results
+      - ./docker-data/uploads:/app/uploads
+      - ./docker-data/logs:/app/logs
+
+volumes:
+  pgdata:

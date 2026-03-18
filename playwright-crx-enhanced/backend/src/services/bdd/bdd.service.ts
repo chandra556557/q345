@@ -510,6 +510,28 @@ class BDDService {
   }
 
   /**
+   * Preprocess feature content to auto-quote raw URLs in step text.
+   * Cucumber Expression treats '/' as alternative separator and '{...}' as parameter types,
+   * so raw URLs like https://foo.com/{bar}/path break parsing.
+   * This wraps unquoted URLs in double quotes so they become {string} parameters.
+   */
+  private preprocessFeatureContent(content: string): string {
+    return content.split('\n').map(line => {
+      const trimmed = line.trim();
+      // Only process step lines (Given/When/Then/And/But)
+      if (/^(Given|When|Then|And|But)\s+/i.test(trimmed)) {
+        // Find unquoted URLs (http:// or https:// not already inside quotes)
+        // Match URLs that are NOT preceded by a double quote
+        return line.replace(
+          /(?<!")(https?:\/\/[^\s"]+)/g,
+          '"$1"'
+        );
+      }
+      return line;
+    }).join('\n');
+  }
+
+  /**
    * Ensure shared Cucumber environment is set up (one-time)
    */
   private async ensureSharedEnv(): Promise<void> {
@@ -638,7 +660,8 @@ class BDDService {
 
       // Write feature file
       const featuresPath = path.join(featuresDir, 'test.feature');
-      fs.writeFileSync(featuresPath, featureContent);
+      const processedContent = this.preprocessFeatureContent(featureContent);
+      fs.writeFileSync(featuresPath, processedContent);
 
       // Load reusable step library definitions from DB (scoped to user/org)
       const librarySteps = await this.loadStepLibrary(options, userId, organizationId);
@@ -670,7 +693,7 @@ class BDDService {
       const cucumberEntry = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
       const resultsPath = path.join(runDir, 'results.json');
 
-      let cmd = `node "${cucumberEntry}" --require "${stepsPath}" --format "json":"${resultsPath}" "${featuresPath}"`;
+      let cmd = `node "${cucumberEntry}" --require "${stepsPath}" --format json:"${resultsPath}" "${featuresPath}"`;
 
       // Tag-based filtering (e.g., "@smoke", "@smoke and not @wip")
       if (options.tags) {

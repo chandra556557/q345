@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ApiTesting from './ApiTesting.tsx';
+import OrganizationManagement from './OrganizationManagement.tsx';
+import ScriptExecutionModal from './ScriptExecutionModal.tsx';
 import ScriptEnhancementModal from './ScriptEnhancementModal';
 import ImportScriptModal from './ImportScriptModal';
 import ScriptValidationModal from './ScriptValidationModal';
 import ScriptCueCards from './ScriptCueCards';
+import BDDFeatureManager from './BDDFeatureManager';
 import './Dashboard.css';
 
 const API_URL = 'http://localhost:3001/api';
@@ -48,7 +51,9 @@ type ActiveView =
   | 'apitesting' 
   | 'allure'
   | 'analytics'
-  | 'settings';
+  | 'organizations'
+  | 'settings'
+  | 'bdd';
 
 export const Dashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<ActiveView>('overview');
@@ -72,11 +77,18 @@ export const Dashboard: React.FC = () => {
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [selectedScriptForAction, setSelectedScriptForAction] = useState<{ id: string; name: string } | null>(null);
   const [showImportScriptModal, setShowImportScriptModal] = useState(false);
+  const [showExecuteModal, setShowExecuteModal] = useState(false);
+  const [currentScriptForExecution, setCurrentScriptForExecution] = useState<{ id: string; name: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userRole, setUserRole] = useState<'admin' | 'editor' | 'user'>('user');
 
   const token = localStorage.getItem('accessToken');
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
+    // Load user role from localStorage
+    const storedRole = (localStorage.getItem('userRole') as 'admin' | 'editor' | 'user') || 'user';
+    setUserRole(storedRole);
     loadProjects();
   }, []);
 
@@ -240,8 +252,10 @@ export const Dashboard: React.FC = () => {
 
   const menuItems = [
     { id: 'overview', icon: '📊', label: 'Project Overview', category: 'Main' },
+    { id: 'organizations', icon: '🏢', label: 'Organizations', category: 'Main' },
     { id: 'scripts', icon: '📝', label: 'Scripts', category: 'Test Management' },
     { id: 'runs', icon: '▶️', label: 'Test Runs', category: 'Test Management' },
+    { id: 'bdd', icon: '🥒', label: 'BDD Features', category: 'Test Management' },
     { id: 'testdata', icon: '🗄️', label: 'Test Data', category: 'Data Management' },
     { id: 'apitesting', icon: '🔌', label: 'API Testing', category: 'Testing Tools' },
     { id: 'allure', icon: '📈', label: 'Test Execution Reports', category: 'Reports' },
@@ -417,50 +431,112 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
               
-              {/* Script Cue Cards - One for each script */}
-              {loading ? (
-                <div className="loading-state">Loading scripts...</div>
-              ) : scripts.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📝</div>
-                  <h3>No Scripts Yet</h3>
-                  <p>Create your first script by importing or recording one!</p>
-                  <button className="btn-primary" onClick={() => setShowImportDialog(true)}>
-                    📥 Import Script
-                  </button>
-                </div>
-              ) : (
-                <div className="cards-grid" style={{ marginBottom: 24 }}>
-                  {scripts.map((script) => (
-                    <div key={script.id} style={{ marginBottom: 16 }}>
-                      <ScriptCueCards
-                        script={{
-                          id: script.id,
-                          name: script.name,
-                          language: script.language
-                        }}
-                        onGenerate={() => setShowImportScriptModal(true)}
-                        onEnhance={(s) => {
-                          setSelectedScriptForAction({ id: s.id, name: s.name });
-                          setShowEnhancementModal(true);
-                        }}
-                        onValidate={(s) => {
-                          setSelectedScriptForAction({ id: s.id, name: s.name });
-                          setShowValidationModal(true);
-                        }}
-                        onFinalize={(s) => {
-                          alert(`Finalizing and executing script: ${s.name}`);
-                        }}
-                        onInsights={(s) => {
-                          alert(`Opening insights for script: ${s.name}`);
-                        }}
-                        layout="embedded"
-                        showHeader={true}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Standard 5-Step Workflow Template */}
+              <ScriptCueCards
+                script={{
+                  id: 'template',
+                  name: 'Standard Workflow',
+                  language: 'Template'
+                }}
+                onGenerate={() => setShowImportDialog(true)}
+                onEnhance={() => {
+                  if (scripts.length === 0) {
+                    alert('Please import a script first');
+                    return;
+                  }
+                  setSelectedScriptForAction({ id: scripts[0].id, name: scripts[0].name });
+                  setShowEnhancementModal(true);
+                }}
+                onValidate={() => {
+                  if (scripts.length === 0) {
+                    alert('Please import a script first');
+                    return;
+                  }
+                  setSelectedScriptForAction({ id: scripts[0].id, name: scripts[0].name });
+                  setShowValidationModal(true);
+                }}
+                onFinalize={() => {
+                  if (scripts.length === 0) {
+                    alert('Please import a script first');
+                    return;
+                  }
+                  // Open script selection modal
+                  setCurrentScriptForExecution({ id: scripts[0].id, name: scripts[0].name });
+                  setShowExecuteModal(true);
+                }}
+                onInsights={() => {
+                  if (scripts.length === 0) {
+                    alert('Please import a script first');
+                    return;
+                  }
+                  setActiveView('analytics');
+                }}
+                layout="standalone"
+                showHeader={true}
+              />
+              
+              {/* Database Scripts List */}
+              <div style={{ marginTop: 40 }}>
+                <h2 style={{ marginBottom: 16 }}>
+                  📝 Your Scripts {selectedProjectId && `in ${currentProjectName}`}
+                </h2>
+                {loading ? (
+                  <div className="loading-state">Loading scripts...</div>
+                ) : scripts.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">📝</div>
+                    <h3>No Scripts Yet</h3>
+                    <p>Use Step 1 above to import your first script!</p>
+                  </div>
+                ) : (
+                  <div className="cards-grid">
+                    {scripts
+                      .filter((script) =>
+                        searchQuery
+                          ? script.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (script.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+                          : true
+                      )
+                      .map((script) => (
+                        <div key={script.id} className="content-card">
+                          <div className="card-header">
+                            <h3>{script.name}</h3>
+                            <span className="language-badge">{script.language}</span>
+                          </div>
+                          {script.description && <p className="card-description">{script.description}</p>}
+                          <div className="card-meta">
+                            <span>👤 {script.user.name}</span>
+                            <span>📅 {new Date(script.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          {userRole !== 'user' && (
+                            <div className="card-actions" style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                              <button 
+                                className="btn-secondary"
+                                onClick={() => {
+                                  setSelectedScriptForAction({ id: script.id, name: script.name });
+                                  setShowEnhancementModal(true);
+                                }}
+                                style={{ flex: 1, fontSize: 13 }}
+                              >
+                                🚀 Enhance
+                              </button>
+                              <button 
+                                className="btn-secondary"
+                                onClick={() => {
+                                  setSelectedScriptForAction({ id: script.id, name: script.name });
+                                  setShowValidationModal(true);
+                                }}
+                                style={{ flex: 1, fontSize: 13 }}
+                              >
+                                🔍 Validate
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
 
               {/* Import Dialog */}
               {showImportDialog && (
@@ -644,8 +720,20 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
 
+          {/* BDD Features */}
+          {activeView === 'bdd' && (
+            <BDDFeatureManager
+              selectedProjectId={selectedProjectId}
+              currentProjectName={currentProjectName}
+              token={token}
+            />
+          )}
+
           {/* API Testing */}
           {activeView === 'apitesting' && <ApiTesting />}
+          
+                    {/* Organizations */}
+                    {activeView === 'organizations' && <OrganizationManagement />}
 
           {/* Allure Reports */}
           {activeView === 'allure' && (
@@ -675,6 +763,27 @@ export const Dashboard: React.FC = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Script Execution Modal */}
+          {showExecuteModal && currentScriptForExecution && (
+            <ScriptExecutionModal
+              script={{
+                id: currentScriptForExecution.id,
+                name: currentScriptForExecution.name,
+                language: 'javascript' // default language
+              }}
+              onClose={() => {
+                setShowExecuteModal(false);
+                setCurrentScriptForExecution(null);
+              }}
+              onExecuteSuccess={() => {
+                setShowExecuteModal(false);
+                setCurrentScriptForExecution(null);
+                // Optionally refresh runs after successful execution
+                loadData();
+              }}
+            />
           )}
 
           {/* Analytics */}

@@ -394,7 +394,7 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
 export const getRuns = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const organizationId = req.tenant?.organizationId || null;
-  const { featureId, status, page = '1', limit = '50' } = req.query;
+  const { featureId, status, projectId, page = '1', limit = '50' } = req.query;
   const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 50));
   const offset = (pageNum - 1) * limitNum;
@@ -413,6 +413,7 @@ export const getRuns = asyncHandler(async (req: Request, res: Response) => {
   let idx = 2;
 
   if (organizationId) { query += ` AND r."organizationId" = $${idx}`; params.push(organizationId); idx++; }
+  if (projectId) { query += ` AND r."featureId" IN (SELECT id FROM "BDDFeature" WHERE "projectId" = $${idx})`; params.push(projectId as string); idx++; }
   if (featureId) { query += ` AND r."featureId" = $${idx}`; params.push(featureId as string); idx++; }
   if (status) { query += ` AND r.status = $${idx}`; params.push(status as string); idx++; }
 

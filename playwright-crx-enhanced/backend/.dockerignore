@@ -12,3 +12,5 @@ coverage
 .vscode
 .idea
 *.log
+docker-data
+docker-compose*.yml
