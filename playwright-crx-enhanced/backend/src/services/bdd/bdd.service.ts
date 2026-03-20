@@ -1,6 +1,6 @@
 import pool from '../../db';
 import { logger } from '../../utils/logger';
-import { exec, ChildProcess } from 'child_process';
+import { exec, spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -23,12 +23,16 @@ const BDD_ARTIFACTS_DIR = path.join(process.cwd(), 'playwright-crx-reports', 'bd
 // Shared Cucumber environment to avoid per-run npm install
 const SHARED_BDD_DIR = path.join(os.tmpdir(), 'bdd-shared-env');
 let sharedEnvReady = false;
+let sharedEnvInitPromise: Promise<void> | null = null; // Mutex for concurrent init
+
+// Process timeout: configurable via env, default 5 minutes (scales better for large feature files)
+const BDD_PROCESS_TIMEOUT_MS = parseInt(process.env.BDD_PROCESS_TIMEOUT_MS || '300000', 10);
 
 // Concurrency control for multi-user execution
 const MAX_CONCURRENT_RUNS = parseInt(process.env.BDD_MAX_CONCURRENT_RUNS || '3', 10);
 const MAX_QUEUED_RUNS = parseInt(process.env.BDD_MAX_QUEUED_RUNS || '20', 10);
 let activeRunCount = 0;
-const pendingQueue: Array<{ runId: string; resolve: () => void }> = [];
+const pendingQueue: Array<{ runId: string; resolve: () => void; reject: (err: Error) => void }> = [];
 
 // Live execution streaming via SSE
 export const bddEventEmitter = new EventEmitter();
@@ -84,6 +88,7 @@ class BDDService {
     let exampleHeaders: string[] = [];
     let featureDescLines: string[] = [];
     let inFeatureDesc = false;
+    let pendingScenarioTags: string[] = [];
 
     for (const rawLine of lines) {
       const line = rawLine.trim();
@@ -112,14 +117,9 @@ class BDDService {
         const tags = line.split(/\s+/).filter(t => t.startsWith('@'));
         if (!feature.name) {
           feature.tags.push(...tags);
-        } else if (currentScenario === null || !currentStep) {
-          // Tags for next scenario
-          if (currentScenario) {
-            feature.scenarios.push(currentScenario);
-          }
-          currentScenario = null;
-          // Store tags temporarily - they'll be picked up by the next Scenario line
-          feature.tags.push(...tags.map(t => `scenario:${t}`));
+        } else {
+          // Tags for the next scenario — accumulate in pendingScenarioTags
+          pendingScenarioTags.push(...tags);
         }
         continue;
       }
@@ -136,16 +136,15 @@ class BDDService {
         if (currentScenario) feature.scenarios.push(currentScenario);
         inFeatureDesc = false;
         inExamples = false;
-        const scenarioTags = feature.tags.filter(t => t.startsWith('scenario:')).map(t => t.replace('scenario:', ''));
-        feature.tags = feature.tags.filter(t => !t.startsWith('scenario:'));
         currentScenario = {
           name: line.replace(/Scenario (Outline|Template):/, '').trim(),
           description: '',
           type: 'Scenario Outline',
-          tags: scenarioTags,
+          tags: pendingScenarioTags,
           steps: [],
           examples: [],
         };
+        pendingScenarioTags = [];
         currentStep = null;
         continue;
       }
@@ -153,15 +152,14 @@ class BDDService {
         if (currentScenario) feature.scenarios.push(currentScenario);
         inFeatureDesc = false;
         inExamples = false;
-        const scenarioTags = feature.tags.filter(t => t.startsWith('scenario:')).map(t => t.replace('scenario:', ''));
-        feature.tags = feature.tags.filter(t => !t.startsWith('scenario:'));
         currentScenario = {
           name: line.replace('Scenario:', '').trim(),
           description: '',
           type: 'Scenario',
-          tags: scenarioTags,
+          tags: pendingScenarioTags,
           steps: [],
         };
+        pendingScenarioTags = [];
         currentStep = null;
         continue;
       }
@@ -663,7 +661,7 @@ class BDDService {
   }
 
   private escapeString(s: string): string {
-    return s.replace(/'/g, "\\'").replace(/\n/g, '\\n');
+    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
   }
 
   /**
@@ -694,6 +692,21 @@ class BDDService {
   private async ensureSharedEnv(): Promise<void> {
     if (sharedEnvReady) return;
 
+    // Mutex: if another call is already initializing, wait for it
+    if (sharedEnvInitPromise) {
+      await sharedEnvInitPromise;
+      return;
+    }
+
+    sharedEnvInitPromise = this.doEnsureSharedEnv();
+    try {
+      await sharedEnvInitPromise;
+    } finally {
+      sharedEnvInitPromise = null;
+    }
+  }
+
+  private async doEnsureSharedEnv(): Promise<void> {
     const cucumberBin = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
     const cucumberExists = fs.existsSync(cucumberBin);
     const playwrightExists = fs.existsSync(path.join(SHARED_BDD_DIR, 'node_modules', 'playwright'));
@@ -749,8 +762,8 @@ class BDDService {
       [runId]
     );
 
-    await new Promise<void>((resolve) => {
-      pendingQueue.push({ runId, resolve });
+    await new Promise<void>((resolve, reject) => {
+      pendingQueue.push({ runId, resolve, reject });
     });
 
     activeRunCount++;
@@ -795,9 +808,11 @@ class BDDService {
   ): Promise<void> {
     const runDir = path.join(SHARED_BDD_DIR, 'runs', runId);
     const screenshotDir = path.join(BDD_ARTIFACTS_DIR, runId);
+    let slotAcquired = false;
 
     try {
       await this.acquireSlot(runId);
+      slotAcquired = true;
 
       // Emit live event: started
       this.emitEvent(runId, 'status', { status: 'running' });
@@ -873,32 +888,63 @@ class BDDService {
       let cucumberStderr = '';
 
       try {
+        // Use spawn instead of exec to avoid maxBuffer limits and enable true streaming
         const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-          const child = exec(cmd, {
+          // Parse the cmd string into spawn args: "node" is the command, rest are args
+          const cmdParts = cmd.match(/"[^"]*"|\S+/g) || [];
+          const spawnCmd = (cmdParts[0] || 'node').replace(/"/g, '');
+          const spawnArgs = cmdParts.slice(1).map(a => a.replace(/^"|"$/g, ''));
+
+          const child = spawn(spawnCmd, spawnArgs, {
             cwd: SHARED_BDD_DIR,
-            timeout: 120000,
             env: { ...process.env, NODE_PATH: path.join(SHARED_BDD_DIR, 'node_modules') },
-          }, (error, stdout, stderr) => {
-            runningProcesses.delete(runId);
-            if (error && (error as any).killed) {
-              reject(new Error('Run was cancelled'));
-            } else {
-              resolve({ stdout: stdout || '', stderr: stderr || '' });
-            }
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: false,
           });
+
+          let stdoutBuf = '';
+          let stderrBuf = '';
+          let settled = false;
+
+          // Configurable timeout (default 5 minutes via BDD_PROCESS_TIMEOUT_MS)
+          const timer = setTimeout(() => {
+            if (!settled) {
+              child.kill('SIGTERM');
+              reject(new Error(`Run timed out after ${BDD_PROCESS_TIMEOUT_MS / 1000}s`));
+            }
+          }, BDD_PROCESS_TIMEOUT_MS);
+
           runningProcesses.set(runId, child);
 
-          // Stream stdout lines for live updates
-          if (child.stdout) {
-            child.stdout.on('data', (chunk: string) => {
-              this.emitEvent(runId, 'output', { text: chunk.toString() });
-            });
-          }
-          if (child.stderr) {
-            child.stderr.on('data', (chunk: string) => {
-              this.emitEvent(runId, 'output', { text: chunk.toString(), isError: true });
-            });
-          }
+          // Stream stdout for live updates (no maxBuffer limit)
+          child.stdout.on('data', (chunk: Buffer) => {
+            const text = chunk.toString();
+            stdoutBuf += text;
+            this.emitEvent(runId, 'output', { text });
+          });
+          child.stderr.on('data', (chunk: Buffer) => {
+            const text = chunk.toString();
+            stderrBuf += text;
+            this.emitEvent(runId, 'output', { text, isError: true });
+          });
+
+          child.on('close', (_code, signal) => {
+            settled = true;
+            clearTimeout(timer);
+            runningProcesses.delete(runId);
+            if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+              reject(new Error('Run was cancelled'));
+            } else {
+              resolve({ stdout: stdoutBuf, stderr: stderrBuf });
+            }
+          });
+
+          child.on('error', (err) => {
+            settled = true;
+            clearTimeout(timer);
+            runningProcesses.delete(runId);
+            reject(err);
+          });
         });
         cucumberStdout = stdout;
         cucumberStderr = stderr;
@@ -911,9 +957,15 @@ class BDDService {
           );
           return;
         }
-        cucumberStdout = execError.stdout || '';
-        cucumberStderr = execError.stderr || '';
-        logger.info(`BDD Run ${runId}: Cucumber exit code: ${execError.code}`);
+        if (execError.message?.includes('timed out')) {
+          cucumberStdout = '';
+          cucumberStderr = execError.message;
+          logger.warn(`BDD Run ${runId}: Process timed out`);
+        } else {
+          cucumberStdout = execError.stdout || '';
+          cucumberStderr = execError.stderr || execError.message || '';
+          logger.info(`BDD Run ${runId}: Cucumber error: ${execError.message}`);
+        }
       }
 
       logger.info(`BDD Run ${runId}: stdout: ${cucumberStdout.substring(0, 1000)}`);
@@ -1038,7 +1090,9 @@ class BDDService {
         [error.message, runId, errorReportResult.reportUrl || null, errorReportResult.reportHtml || null]
       );
     } finally {
-      this.releaseSlot();
+      if (slotAcquired) {
+        this.releaseSlot();
+      }
 
       // Cleanup run directory only (keep shared env and screenshots)
       try {
@@ -1651,21 +1705,35 @@ class BDDService {
       // 11. DIALOG / ALERT
       // ========================================
       lines.push(`// --- Dialog / Alert ---`);
+      lines.push(`// These steps register a handler that fires on the NEXT dialog.`);
+      lines.push(`// Use them BEFORE the step that triggers the dialog.`);
       lines.push(`When('I accept the alert', async function () {`);
-      lines.push(`  this.page.once('dialog', async dialog => await dialog.accept());`);
+      lines.push(`  this.set('__dialogPromise', new Promise(resolve => {`);
+      lines.push(`    this.page.once('dialog', async dialog => { resolve(dialog); await dialog.accept(); });`);
+      lines.push(`  }));`);
       lines.push('});');
       lines.push(`When('I dismiss the alert', async function () {`);
-      lines.push(`  this.page.once('dialog', async dialog => await dialog.dismiss());`);
+      lines.push(`  this.set('__dialogPromise', new Promise(resolve => {`);
+      lines.push(`    this.page.once('dialog', async dialog => { resolve(dialog); await dialog.dismiss(); });`);
+      lines.push(`  }));`);
       lines.push('});');
       lines.push(`When('I accept the alert with {string}', async function (text) {`);
-      lines.push(`  this.page.once('dialog', async dialog => await dialog.accept(text));`);
+      lines.push(`  this.set('__dialogPromise', new Promise(resolve => {`);
+      lines.push(`    this.page.once('dialog', async dialog => { resolve(dialog); await dialog.accept(text); });`);
+      lines.push(`  }));`);
       lines.push('});');
-      lines.push(`When('I should see an alert with {string}', async function (expectedText) {`);
-      lines.push(`  const [dialog] = await Promise.all([`);
-      lines.push(`    new Promise(resolve => this.page.once('dialog', resolve)),`);
-      lines.push(`  ]);`);
-      lines.push(`  expect(dialog.message()).toContain(expectedText);`);
-      lines.push(`  await dialog.accept();`);
+      lines.push(`Then('I should see an alert with {string}', async function (expectedText) {`);
+      lines.push(`  // Wait for the dialog that was set up by a prior accept/dismiss step`);
+      lines.push(`  const dialogPromise = this.get('__dialogPromise');`);
+      lines.push(`  if (dialogPromise) {`);
+      lines.push(`    const dialog = await dialogPromise;`);
+      lines.push(`    expect(dialog.message()).toContain(expectedText);`);
+      lines.push(`  } else {`);
+      lines.push(`    // Fallback: wait for a new dialog`);
+      lines.push(`    const dialog = await new Promise(resolve => this.page.once('dialog', resolve));`);
+      lines.push(`    expect(dialog.message()).toContain(expectedText);`);
+      lines.push(`    await dialog.accept();`);
+      lines.push(`  }`);
       lines.push('});');
       lines.push('');
 
@@ -2150,7 +2218,7 @@ class BDDService {
   }
 
   /**
-   * Parse a simple cron expression and return the next run time.
+   * Parse a cron expression and return the next run time.
    * Supports: "every Xm", "every Xh", "every Xd", or standard 5-field cron (minute hour day month weekday).
    */
   private getNextCronRun(expression: string): Date {
@@ -2166,8 +2234,100 @@ class BDDService {
       if (unit.startsWith('d')) return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
     }
 
-    // Standard cron: just add 1 hour as fallback
+    // Standard 5-field cron: "minute hour dayOfMonth month dayOfWeek"
+    const cronParts = expression.trim().split(/\s+/);
+    if (cronParts.length === 5) {
+      return this.getNextCronDate(cronParts, now);
+    }
+
+    // Unrecognised expression — default to 1 hour
+    logger.warn(`BDD: Unrecognised cron expression "${expression}", defaulting to 1 hour`);
     return new Date(now.getTime() + 60 * 60 * 1000);
+  }
+
+  /**
+   * Compute next matching date for a standard 5-field cron expression.
+   * Supports: numbers, '*', comma-lists (1,15), and step values (star/N).
+   * Scans up to 366 days ahead to find a match.
+   */
+  private getNextCronDate(parts: string[], after: Date): Date {
+    const [minuteExpr, hourExpr, domExpr, monthExpr, dowExpr] = parts;
+
+    const expandField = (expr: string, min: number, max: number): number[] => {
+      const values: Set<number> = new Set();
+      for (const segment of expr.split(',')) {
+        const stepMatch = segment.match(/^(\*|\d+(?:-\d+)?)\/(\d+)$/);
+        if (stepMatch) {
+          const step = parseInt(stepMatch[2]);
+          let start = min;
+          let end = max;
+          if (stepMatch[1] !== '*') {
+            const rangeMatch = stepMatch[1].match(/^(\d+)(?:-(\d+))?$/);
+            if (rangeMatch) {
+              start = parseInt(rangeMatch[1]);
+              end = rangeMatch[2] !== undefined ? parseInt(rangeMatch[2]) : max;
+            }
+          }
+          for (let i = start; i <= end; i += step) values.add(i);
+        } else if (segment === '*') {
+          for (let i = min; i <= max; i++) values.add(i);
+        } else if (segment.includes('-')) {
+          const [a, b] = segment.split('-').map(Number);
+          for (let i = a; i <= b; i++) values.add(i);
+        } else {
+          values.add(parseInt(segment));
+        }
+      }
+      return [...values].sort((a, b) => a - b);
+    };
+
+    const minutes = expandField(minuteExpr, 0, 59);
+    const hours = expandField(hourExpr, 0, 23);
+    const doms = expandField(domExpr, 1, 31);
+    const months = expandField(monthExpr, 1, 12);
+    const dows = expandField(dowExpr, 0, 6); // 0=Sun
+
+    // Scan forward minute-by-minute starting from after+1min, up to 366 days
+    const candidate = new Date(after);
+    candidate.setSeconds(0, 0);
+    candidate.setMinutes(candidate.getMinutes() + 1); // start from next minute
+
+    const limit = after.getTime() + 366 * 24 * 60 * 60 * 1000;
+    while (candidate.getTime() < limit) {
+      const mo = candidate.getMonth() + 1; // 1-12
+      const dom = candidate.getDate();
+      const dow = candidate.getDay(); // 0=Sun
+      const hr = candidate.getHours();
+      const mn = candidate.getMinutes();
+
+      if (months.includes(mo) && doms.includes(dom) && dows.includes(dow) && hours.includes(hr) && minutes.includes(mn)) {
+        return candidate;
+      }
+
+      // Smart jump: if month doesn't match, skip to next matching month
+      if (!months.includes(mo)) {
+        candidate.setMonth(candidate.getMonth() + 1, 1);
+        candidate.setHours(0, 0, 0, 0);
+        continue;
+      }
+      // If day doesn't match, skip to next day
+      if (!doms.includes(dom) || !dows.includes(dow)) {
+        candidate.setDate(candidate.getDate() + 1);
+        candidate.setHours(0, 0, 0, 0);
+        continue;
+      }
+      // If hour doesn't match, skip to next hour
+      if (!hours.includes(hr)) {
+        candidate.setHours(candidate.getHours() + 1, 0, 0, 0);
+        continue;
+      }
+      // Otherwise advance by 1 minute
+      candidate.setMinutes(candidate.getMinutes() + 1);
+    }
+
+    // Fallback: 1 hour from now
+    logger.warn(`BDD: Could not find next cron match within 366 days for "${parts.join(' ')}"`);
+    return new Date(after.getTime() + 60 * 60 * 1000);
   }
 
   /**
@@ -2183,7 +2343,16 @@ class BDDService {
       if (unit.startsWith('d')) return value * 24 * 60 * 60 * 1000;
     }
 
-    // Standard cron fields: default to 1 hour
+    // Standard cron: compute interval from next two matches
+    const cronParts = expression.trim().split(/\s+/);
+    if (cronParts.length === 5) {
+      const now = new Date();
+      const first = this.getNextCronDate(cronParts, now);
+      const second = this.getNextCronDate(cronParts, first);
+      const interval = second.getTime() - first.getTime();
+      if (interval > 0) return interval;
+    }
+
     return 60 * 60 * 1000;
   }
 
@@ -2292,6 +2461,42 @@ class BDDService {
     } catch (error: any) {
       logger.warn(`BDD: Failed to initialize schedules: ${error.message}`);
     }
+
+    // Clean up old artifacts on startup (fire-and-forget)
+    this.cleanupOldArtifacts().catch(() => {});
+  }
+
+  // ===========================
+  // ARTIFACT CLEANUP
+  // ===========================
+
+  /**
+   * Clean up old screenshot artifacts older than maxAgeDays (default 7 days).
+   * Call periodically or on server startup.
+   */
+  async cleanupOldArtifacts(maxAgeDays: number = 7): Promise<number> {
+    let cleaned = 0;
+    try {
+      if (!fs.existsSync(BDD_ARTIFACTS_DIR)) return 0;
+      const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
+      const dirs = fs.readdirSync(BDD_ARTIFACTS_DIR);
+      for (const dir of dirs) {
+        const dirPath = path.join(BDD_ARTIFACTS_DIR, dir);
+        try {
+          const stat = fs.statSync(dirPath);
+          if (stat.isDirectory() && stat.mtimeMs < cutoff) {
+            fs.rmSync(dirPath, { recursive: true, force: true });
+            cleaned++;
+          }
+        } catch { /* ignore individual dir errors */ }
+      }
+      if (cleaned > 0) {
+        logger.info(`BDD: Cleaned up ${cleaned} artifact directories older than ${maxAgeDays} days`);
+      }
+    } catch (e: any) {
+      logger.warn(`BDD: Artifact cleanup failed: ${e.message}`);
+    }
+    return cleaned;
   }
 
   // ===========================
@@ -2310,7 +2515,14 @@ class BDDService {
   async cancelRun(runId: string): Promise<boolean> {
     const queueIdx = pendingQueue.findIndex(item => item.runId === runId);
     if (queueIdx !== -1) {
-      pendingQueue.splice(queueIdx, 1);
+      const [removed] = pendingQueue.splice(queueIdx, 1);
+      // Reject the promise so executeFeature caller unblocks
+      removed.reject(new Error('Run was cancelled'));
+      // Update DB status
+      await pool.query(
+        `UPDATE "BDDRun" SET status = 'cancelled', "errorMsg" = 'Run was cancelled while queued', "completedAt" = now(), "updatedAt" = now() WHERE id = $1`,
+        [runId]
+      );
       logger.info(`BDD: Cancelled queued run ${runId}`);
       return true;
     }
