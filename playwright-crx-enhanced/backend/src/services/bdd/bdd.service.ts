@@ -1389,8 +1389,22 @@ class BDDService {
       // ========================================
       lines.push(`// Smart locator helpers`);
       lines.push(`async function findInput(page, field) {`);
-      lines.push(`  // Wait for DOM to be ready before searching for inputs`);
+      lines.push(`  // Wait for page to be fully loaded (handles SPAs that render forms dynamically)`);
+      lines.push(`  await page.waitForLoadState('networkidle').catch(() => {});`);
       lines.push(`  await page.waitForLoadState('domcontentloaded');`);
+      lines.push('');
+      lines.push(`  // Build a combined CSS selector for waiting`);
+      lines.push(`  const cssSelector = \`input[name="\${field}" i], input[id="\${field}" i], textarea[name="\${field}" i], input[aria-label="\${field}" i], input[placeholder="\${field}" i]\`;`);
+      lines.push('');
+      lines.push(`  // Wait for at least one matching input to appear in DOM (up to 30s)`);
+      lines.push(`  try {`);
+      lines.push(`    await page.waitForSelector(cssSelector, { state: 'attached', timeout: 30000 });`);
+      lines.push(`  } catch (e) {`);
+      lines.push(`    // If CSS selector didn't find it, try waiting for any input/textarea to appear`);
+      lines.push(`    await page.waitForSelector('input, textarea', { state: 'attached', timeout: 10000 }).catch(() => {});`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  // Now try smart selectors in priority order`);
       lines.push(`  const byLabel = page.getByLabel(field);`);
       lines.push(`  if (await byLabel.count() > 0) return byLabel.first();`);
       lines.push(`  const byPlaceholder = page.getByPlaceholder(field);`);
@@ -1399,7 +1413,10 @@ class BDDService {
       lines.push(`  if (await byRole.count() > 0) return byRole.first();`);
       lines.push(`  const byTestId = page.getByTestId(field);`);
       lines.push(`  if (await byTestId.count() > 0) return byTestId.first();`);
-      lines.push(`  return page.locator(\`input[name="\${field}" i], input[id="\${field}" i], textarea[name="\${field}" i], input[aria-label="\${field}" i]\`).first();`);
+      lines.push(`  // Fallback to CSS attribute selectors`);
+      lines.push(`  const fallback = page.locator(cssSelector).first();`);
+      lines.push(`  await fallback.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});`);
+      lines.push(`  return fallback;`);
       lines.push('}');
       lines.push('');
       lines.push(`async function findElement(page, target) {`);
@@ -1421,11 +1438,11 @@ class BDDService {
       // 1. NAVIGATION
       // ========================================
       lines.push(`// --- Navigation steps ---`);
-      lines.push(`Given('I navigate to {string}', async function (url) { await this.page.goto(url); });`);
-      lines.push(`Given('I am on {string}', async function (url) { await this.page.goto(url); });`);
-      lines.push(`Given('I open the url {string}', async function (url) { await this.page.goto(url); });`);
-      lines.push(`Given('I go to {string}', async function (url) { await this.page.goto(url); });`);
-      lines.push(`Given('I visit {string}', async function (url) { await this.page.goto(url); });`);
+      lines.push(`Given('I navigate to {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I am on {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I open the url {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I go to {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I visit {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
       lines.push(`Given('I am on the {string} page', async function (pageName) {`);
       lines.push(`  await this.page.waitForLoadState('domcontentloaded');`);
       lines.push(`  console.log('On page:', pageName, 'URL:', this.page.url());`);
