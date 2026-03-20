@@ -850,7 +850,7 @@ class BDDService {
       const cucumberEntry = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
       const resultsPath = path.join(runDir, 'results.json');
 
-      let cmd = `node "${cucumberEntry}" --require "${stepsPath}" --format json:"${resultsPath}" "${featuresPath}"`;
+      let cmd = `node "${cucumberEntry}" --require "${stepsPath}" --format "json":"${resultsPath}" "${featuresPath}"`;
 
       // Tag-based filtering (e.g., "@smoke", "@smoke and not @wip")
       if (options.tags) {
@@ -1358,9 +1358,6 @@ class BDDService {
       lines.push(`  if (await byText.count() > 0) return byText.first();`);
       lines.push(`  return page.getByText(target).first();`);
       lines.push('}');
-      lines.push('');
-
-      lines.push(`const { expect } = require('@playwright/test');`);
       lines.push('');
 
       // ========================================
