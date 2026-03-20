@@ -1494,10 +1494,27 @@ class BDDService {
       lines.push('');
       lines.push(`Then('I should be logged in', async function () {`);
       lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push(`  // Verify we're no longer on a login page`);
+      lines.push(`  const url = this.page.url().toLowerCase();`);
+      lines.push(`  const loginIndicators = this.page.getByRole('button', { name: /sign in|login|log in/i });`);
+      lines.push(`  const onLoginPage = url.includes('login') || url.includes('signin');`);
+      lines.push(`  if (onLoginPage) {`);
+      lines.push(`    // If URL still contains login, check that login form is gone (e.g., redirecting)`);
+      lines.push(`    await expect(loginIndicators).toHaveCount(0, { timeout: 5000 });`);
+      lines.push(`  }`);
       lines.push('});');
       lines.push('');
       lines.push(`Then('I should be logged out', async function () {`);
       lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push(`  // Verify a login/signin element is visible (we're back on login page)`);
+      lines.push(`  const loginBtn = this.page.getByRole('button', { name: /sign in|login|log in/i });`);
+      lines.push(`  const loginLink = this.page.getByRole('link', { name: /sign in|login|log in/i });`);
+      lines.push(`  const hasLogin = (await loginBtn.count()) > 0 || (await loginLink.count()) > 0;`);
+      lines.push(`  const url = this.page.url().toLowerCase();`);
+      lines.push(`  const onLoginPage = url.includes('login') || url.includes('signin');`);
+      lines.push(`  if (!hasLogin && !onLoginPage) {`);
+      lines.push(`    console.warn('Warning: Could not verify logout — no login button or login URL detected');`);
+      lines.push(`  }`);
       lines.push('});');
       lines.push('');
 
@@ -1505,10 +1522,14 @@ class BDDService {
       // 3. FORM INPUT
       // ========================================
       lines.push(`// --- Form Input ---`);
+      lines.push(`// Convention: "fill FIELD with VALUE" (field first), "type/enter VALUE in/into FIELD" (value first)`);
       lines.push(`When('I fill {string} with {string}', async function (field, value) {`);
       lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
       lines.push('});');
       lines.push(`When('I type {string} into {string}', async function (value, field) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('I type {string} in {string}', async function (value, field) {`);
       lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
       lines.push('});');
       lines.push(`When('I enter {string} in {string}', async function (value, field) {`);
@@ -1521,6 +1542,9 @@ class BDDService {
       lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
       lines.push('});');
       lines.push(`When('I set {string} to {string}', async function (field, value) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('I set the {string} field to {string}', async function (field, value) {`);
       lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
       lines.push('});');
       lines.push(`When('I clear the {string} field', async function (field) {`);
@@ -1763,18 +1787,35 @@ class BDDService {
       lines.push(`// --- Redirect / Dashboard ---`);
       lines.push(`Then('I should be redirected to the {string}', async function (pageName) {`);
       lines.push(`  await this.page.waitForLoadState('networkidle');`);
-      lines.push(`  console.log('Redirected to:', pageName, 'URL:', this.page.url());`);
+      lines.push(`  // Verify URL or page content contains the page name`);
+      lines.push(`  const url = this.page.url().toLowerCase();`);
+      lines.push(`  const nameLC = pageName.toLowerCase();`);
+      lines.push(`  if (!url.includes(nameLC)) {`);
+      lines.push(`    // URL doesn't match — check page content as fallback`);
+      lines.push(`    await expect(this.page.locator('body')).toContainText(pageName, { timeout: 5000 });`);
+      lines.push(`  }`);
       lines.push('});');
       lines.push(`Then('I should be redirected to {string}', async function (url) {`);
       lines.push(`  await this.page.waitForURL(new RegExp(url), { timeout: 15000 });`);
       lines.push('});');
       lines.push(`Then('I should be on the {string} page', async function (pageName) {`);
       lines.push(`  await this.page.waitForLoadState('networkidle');`);
-      lines.push(`  console.log('On page:', pageName, 'URL:', this.page.url());`);
+      lines.push(`  // Verify URL or page content contains the page name`);
+      lines.push(`  const url = this.page.url().toLowerCase();`);
+      lines.push(`  const nameLC = pageName.toLowerCase();`);
+      lines.push(`  if (!url.includes(nameLC)) {`);
+      lines.push(`    await expect(this.page.locator('body')).toContainText(pageName, { timeout: 5000 });`);
+      lines.push(`  }`);
       lines.push('});');
       lines.push(`Then('I should see the {string} open successfully', async function (section) {`);
       lines.push(`  await this.page.waitForLoadState('networkidle');`);
-      lines.push(`  console.log('Section opened:', section);`);
+      lines.push(`  // Verify the section text/heading is visible on the page`);
+      lines.push(`  const heading = this.page.getByRole('heading', { name: section });`);
+      lines.push(`  if (await heading.count() > 0) {`);
+      lines.push(`    await expect(heading.first()).toBeVisible();`);
+      lines.push(`  } else {`);
+      lines.push(`    await expect(this.page.getByText(section).first()).toBeVisible({ timeout: 10000 });`);
+      lines.push(`  }`);
       lines.push('});');
       lines.push('');
 
@@ -1925,10 +1966,25 @@ class BDDService {
       // 24. NEW TAB / WINDOW
       // ========================================
       lines.push(`// --- New Tab / Window ---`);
+      lines.push(`// Use "prepare for a new tab" BEFORE clicking a link that opens a tab, then "switch to the new tab" after.`);
+      lines.push(`When('I prepare for a new tab', async function () {`);
+      lines.push(`  this.set('__newTabPromise', this.context.waitForEvent('page'));`);
+      lines.push('});');
       lines.push(`When('I switch to the new tab', async function () {`);
-      lines.push(`  const [newPage] = await Promise.all([`);
-      lines.push(`    this.context.waitForEvent('page'),`);
-      lines.push(`  ]);`);
+      lines.push(`  let newPage;`);
+      lines.push(`  const pending = this.get('__newTabPromise');`);
+      lines.push(`  if (pending) {`);
+      lines.push(`    newPage = await pending;`);
+      lines.push(`    this.set('__newTabPromise', null);`);
+      lines.push(`  } else {`);
+      lines.push(`    // Fallback: check if a new page already appeared`);
+      lines.push(`    const pages = this.context.pages();`);
+      lines.push(`    if (pages.length > 1) {`);
+      lines.push(`      newPage = pages[pages.length - 1];`);
+      lines.push(`    } else {`);
+      lines.push(`      newPage = await this.context.waitForEvent('page', { timeout: 10000 });`);
+      lines.push(`    }`);
+      lines.push(`  }`);
       lines.push(`  await newPage.waitForLoadState('domcontentloaded');`);
       lines.push(`  this.set('previousPage', this.page);`);
       lines.push(`  this.page = newPage;`);
@@ -1974,8 +2030,9 @@ class BDDService {
         /^I click the login button$/, /^I submit the login form$/, /^I log out$/,
         /^I should be logged in$/, /^I should be logged out$/,
         // Input
-        /^I fill ".*" with ".*"$/, /^I type ".*" into ".*"$/, /^I enter ".*" in ".*"$/,
+        /^I fill ".*" with ".*"$/, /^I type ".*" into ".*"$/, /^I type ".*" in ".*"$/, /^I enter ".*" in ".*"$/,
         /^I enter ".*" in the ".*" field$/, /^I fill in the ".*" field with ".*"$/, /^I set ".*" to ".*"$/,
+        /^I set the ".*" field to ".*"$/,
         /^I clear the ".*" field$/, /^I clear ".*"$/, /^I append ".*" to ".*"$/,
         // Click
         /^I click ".*"$/, /^I click the ".*" button$/, /^I click the ".*" link$/,
@@ -2043,6 +2100,7 @@ class BDDService {
         // Drag
         /^I drag ".*" to ".*"$/,
         // Tab
+        /^I prepare for a new tab$/,
         /^I switch to the new tab$/, /^I switch back to the original tab$/, /^I close the current tab$/,
         // API
         /^I intercept ".*" requests to ".*"$/, /^I should have intercepted \d+ ".*" requests$/,
@@ -2050,6 +2108,8 @@ class BDDService {
 
       const seenSteps = new Set<string>();
       for (const scenario of parsed.scenarios) {
+        // Skip Background scenarios — their steps are shared setup, not unique test steps
+        if (scenario.tags.includes('@background')) continue;
         for (const step of scenario.steps) {
           const matchesBuiltin = builtInPatterns.some(p => p.test(step.text));
           if (matchesBuiltin) continue;
