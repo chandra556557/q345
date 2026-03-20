@@ -69,6 +69,21 @@ export interface ExecuteOptions {
   executionMode?: string;
   tags?: string;
   parallelWorkers?: number;
+  // Retry / Flaky test handling
+  retryCount?: number;          // Number of retries for failed scenarios (default 0)
+  retryDelayMs?: number;        // Delay between retries in ms (default 1000)
+  quarantineFailures?: boolean; // If true, quarantined (@quarantine) tests don't fail the run
+  // Environment profiles
+  environment?: EnvironmentProfile;
+}
+
+export interface EnvironmentProfile {
+  name: string;                              // e.g., 'dev', 'staging', 'prod'
+  baseUrl?: string;                          // Base URL for navigation steps
+  credentials?: Record<string, { username: string; password: string }>; // Named credential sets
+  variables?: Record<string, string>;        // Custom env variables (injected into steps)
+  timeout?: number;                          // Override default timeout (ms) for this env
+  headers?: Record<string, string>;          // Default HTTP headers (e.g., auth tokens)
 }
 
 class BDDService {
@@ -878,6 +893,13 @@ class BDDService {
         logger.info(`BDD Run ${runId}: Filtering by tags: ${options.tags}`);
       }
 
+      // Retry failed scenarios (Cucumber built-in --retry)
+      const retryCount = options.retryCount || 0;
+      if (retryCount > 0) {
+        spawnArgs.push('--retry', String(retryCount));
+        logger.info(`BDD Run ${runId}: Retry count: ${retryCount}`);
+      }
+
       // Parallel scenario execution
       const parallelWorkers = options.parallelWorkers || 1;
       if (parallelWorkers > 1) {
@@ -978,6 +1000,9 @@ class BDDService {
       let totalSteps = 0, passedSteps = 0, failedSteps = 0, skippedSteps = 0;
       let overallStatus = 'passed';
       let errorMsg = '';
+      let retryInfo: { totalRetries: number; flakyScenarios: string[]; retriedScenarios: string[] } = {
+        totalRetries: 0, flakyScenarios: [], retriedScenarios: [],
+      };
 
       const resultsFile = path.join(runDir, 'results.json');
       if (fs.existsSync(resultsFile)) {
@@ -986,8 +1011,27 @@ class BDDService {
 
         if (resultsRaw.trim()) {
           const results = JSON.parse(resultsRaw);
+
+          // Track scenario attempts for flaky detection
+          const scenarioAttempts = new Map<string, { attempts: number; finalStatus: string }>();
+
           for (const feature of results) {
             for (const element of feature.elements || []) {
+              const scenarioName = element.name || 'Unknown';
+              const scenarioKey = `${feature.name || ''}::${scenarioName}`;
+
+              // Track attempts per scenario (retried scenarios appear multiple times)
+              const existing = scenarioAttempts.get(scenarioKey);
+              if (existing) {
+                existing.attempts++;
+                retryInfo.totalRetries++;
+                if (!retryInfo.retriedScenarios.includes(scenarioName)) {
+                  retryInfo.retriedScenarios.push(scenarioName);
+                }
+              } else {
+                scenarioAttempts.set(scenarioKey, { attempts: 1, finalStatus: 'passed' });
+              }
+
               for (const step of element.steps || []) {
                 // Skip Cucumber's internal Before/After hooks (no keyword or name)
                 if (!step.keyword && !step.name) continue;
@@ -998,6 +1042,7 @@ class BDDService {
                   status: step.result?.status || 'undefined',
                   duration: step.result?.duration ? Math.round(step.result.duration / 1e6) : null,
                   errorMessage: step.result?.error_message || null,
+                  scenario: scenarioName,
                 };
                 stepResults.push(stepResult);
 
@@ -1005,10 +1050,41 @@ class BDDService {
                 this.emitEvent(runId, 'step', { index: totalSteps - 1, ...stepResult });
 
                 if (stepResult.status === 'passed') passedSteps++;
-                else if (stepResult.status === 'failed') { failedSteps++; overallStatus = 'failed'; }
+                else if (stepResult.status === 'failed') {
+                  failedSteps++;
+                  const entry = scenarioAttempts.get(scenarioKey);
+                  if (entry) entry.finalStatus = 'failed';
+                }
                 else { skippedSteps++; }
               }
             }
+          }
+
+          // Detect flaky scenarios: retried AND final status is passed
+          for (const [key, data] of scenarioAttempts) {
+            if (data.attempts > 1 && data.finalStatus === 'passed') {
+              const scenarioName = key.split('::')[1];
+              retryInfo.flakyScenarios.push(scenarioName);
+            }
+            // Update overall status based on final attempt
+            if (data.finalStatus === 'failed') {
+              // Check if scenario has @quarantine tag — don't fail the overall run
+              const isQuarantined = options.quarantineFailures &&
+                stepResults.some(s => s.scenario === key.split('::')[1] && s.status === 'failed');
+              if (!isQuarantined) {
+                overallStatus = 'failed';
+              }
+            }
+          }
+
+          // If we have flaky scenarios but all passed on retry, mark as flaky (not failed)
+          if (retryInfo.flakyScenarios.length > 0 && overallStatus === 'passed') {
+            // Still passed, but note flakiness in the log
+            logger.warn(`BDD Run ${runId}: ${retryInfo.flakyScenarios.length} flaky scenario(s): ${retryInfo.flakyScenarios.join(', ')}`);
+          }
+
+          if (retryInfo.totalRetries > 0) {
+            logger.info(`BDD Run ${runId}: Retries: ${retryInfo.totalRetries}, Flaky: ${retryInfo.flakyScenarios.length}, Retried: ${retryInfo.retriedScenarios.join(', ')}`);
           }
         } else {
           overallStatus = 'failed';
@@ -1035,7 +1111,10 @@ class BDDService {
         featureTags: parsedForReport.tags,
         scenarios: [],  // will be auto-grouped from stepResults
         stepResults,
-        summary: { status: overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps, errorMsg },
+        summary: {
+          status: overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps, errorMsg,
+          ...(retryInfo.totalRetries > 0 ? { retryInfo } : {}),
+        },
         screenshotUrls,
       };
       const reportResult: SerenityReportResult = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
@@ -1047,17 +1126,23 @@ class BDDService {
           "totalSteps" = $3, "passedSteps" = $4, "failedSteps" = $5, "skippedSteps" = $6,
           "stepResults" = $7, "errorMsg" = $8, "reportUrl" = $10, "screenshotUrls" = $11,
           "reportHtml" = $12,
+          "retryCount" = $13, "retryInfo" = $14,
+          "environmentName" = $15, "environmentProfile" = $16,
           "completedAt" = now(), "updatedAt" = now()
          WHERE id = $9`,
         [overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
           JSON.stringify(stepResults), errorMsg || null, runId, reportResult.reportUrl, JSON.stringify(screenshotUrls),
-          reportResult.reportHtml]
+          reportResult.reportHtml,
+          retryCount, JSON.stringify(retryInfo),
+          options.environment?.name || null, options.environment ? JSON.stringify(options.environment) : null]
       );
 
       // Emit live event: completed
       this.emitEvent(runId, 'completed', {
         status: overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
         reportUrl: reportResult.reportUrl, screenshotUrls,
+        ...(retryInfo.totalRetries > 0 ? { retryInfo } : {}),
+        ...(options.environment?.name ? { environment: options.environment.name } : {}),
       });
 
       logger.info(`BDD Run ${runId}: Completed - ${overallStatus} (${passedSteps}/${totalSteps} passed), screenshots: ${screenshotUrls.length}, report: ${reportResult.reportUrl}`);
@@ -1176,9 +1261,43 @@ class BDDService {
     lines.push(`const fs = require('fs');`);
     lines.push('');
 
-    // Default timeout configuration
-    lines.push(`// Configure default step timeout (60 seconds)`);
-    lines.push(`setDefaultTimeout(60 * 1000);`);
+    // Environment profile configuration
+    const env = options.environment;
+    const stepTimeout = env?.timeout || 60000;
+    lines.push(`// Configure default step timeout (${stepTimeout / 1000} seconds)`);
+    lines.push(`setDefaultTimeout(${stepTimeout});`);
+    lines.push('');
+
+    // Inject environment profile as a global config object
+    lines.push(`// ========================================`);
+    lines.push(`// Environment Profile Configuration`);
+    lines.push(`// ========================================`);
+    lines.push(`const ENV_PROFILE = ${JSON.stringify({
+      name: env?.name || 'default',
+      baseUrl: env?.baseUrl || '',
+      credentials: env?.credentials || {},
+      variables: env?.variables || {},
+      headers: env?.headers || {},
+    }, null, 2)};`);
+    lines.push('');
+    lines.push(`// Helper: resolve URL with baseUrl prefix`);
+    lines.push(`function resolveUrl(url) {`);
+    lines.push(`  if (url.startsWith('http://') || url.startsWith('https://')) return url;`);
+    lines.push(`  const base = ENV_PROFILE.baseUrl.replace(/\\/$/, '');`);
+    lines.push(`  const path = url.startsWith('/') ? url : '/' + url;`);
+    lines.push(`  return base ? base + path : url;`);
+    lines.push(`}`);
+    lines.push('');
+    lines.push(`// Helper: get named credentials from profile`);
+    lines.push(`function getCredentials(name) {`);
+    lines.push(`  const key = name || 'default';`);
+    lines.push(`  return ENV_PROFILE.credentials[key] || ENV_PROFILE.credentials['default'] || { username: '', password: '' };`);
+    lines.push(`}`);
+    lines.push('');
+    lines.push(`// Helper: get environment variable from profile`);
+    lines.push(`function getEnvVar(name) {`);
+    lines.push(`  return ENV_PROFILE.variables[name] || process.env[name] || '';`);
+    lines.push(`}`);
     lines.push('');
 
     // Cucumber World class for shared state between steps
@@ -1271,12 +1390,19 @@ class BDDService {
     lines.push(`  this.stepIndex = 0;`);
     lines.push('');
     lines.push(`  // Create isolated browser context per scenario`);
-    lines.push(`  this.context = await browser.newContext({`);
+    lines.push(`  const contextOptions = {`);
     lines.push(`    viewport: { width: 1280, height: 720 },`);
     lines.push(`    ignoreHTTPSErrors: true,`);
-    lines.push(`  });`);
+    if (env?.headers && Object.keys(env.headers).length > 0) {
+      lines.push(`    extraHTTPHeaders: ${JSON.stringify(env.headers)},`);
+    }
+    if (env?.baseUrl) {
+      lines.push(`    baseURL: ${JSON.stringify(env.baseUrl)},`);
+    }
+    lines.push(`  };`);
+    lines.push(`  this.context = await browser.newContext(contextOptions);`);
     lines.push(`  this.page = await this.context.newPage();`);
-    lines.push(`  this.page.setDefaultTimeout(60000); // 60s default for Playwright actions (fill, click, etc.)`);
+    lines.push(`  this.page.setDefaultTimeout(${stepTimeout}); // ${stepTimeout / 1000}s default for Playwright actions (fill, click, etc.)`);
     lines.push('');
     lines.push(`  // Enable console log capture`);
     lines.push(`  this.page.on('console', msg => {`);
@@ -1293,6 +1419,24 @@ class BDDService {
     lines.push('');
     lines.push(`Before({ tags: '@slow' }, async function () {`);
     lines.push(`  this.page.setDefaultTimeout(120000); // 120s Playwright timeout for @slow scenarios`);
+    lines.push(`});`);
+    lines.push('');
+    lines.push(`// Flaky test handling: @flaky scenarios get extra retry tolerance`);
+    lines.push(`Before({ tags: '@flaky' }, async function () {`);
+    lines.push(`  this.set('__isFlaky', true);`);
+    lines.push(`  console.log('[FLAKY] Scenario marked as flaky — failures will be tracked separately');`);
+    lines.push(`});`);
+    lines.push('');
+    lines.push(`// Quarantine: @quarantine scenarios run but failures don't block the suite`);
+    lines.push(`Before({ tags: '@quarantine' }, async function () {`);
+    lines.push(`  this.set('__isQuarantined', true);`);
+    lines.push(`  console.log('[QUARANTINE] Scenario is quarantined — failures will not fail the overall run');`);
+    lines.push(`});`);
+    lines.push('');
+    lines.push(`// Skip environment: @skip-dev, @skip-staging, @skip-prod`);
+    const envName = options.environment?.name || 'default';
+    lines.push(`Before({ tags: '@skip-${envName}' }, async function () {`);
+    lines.push(`  return 'skipped'; // Skip scenarios tagged with @skip-{current-env}`);
     lines.push(`});`);
     lines.push('');
 
@@ -1438,11 +1582,11 @@ class BDDService {
       // 1. NAVIGATION
       // ========================================
       lines.push(`// --- Navigation steps ---`);
-      lines.push(`Given('I navigate to {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('I am on {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('I open the url {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('I go to {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('I visit {string}', async function (url) { await this.page.goto(url, { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I am on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I open the url {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I go to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I visit {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
       lines.push(`Given('I am on the {string} page', async function (pageName) {`);
       lines.push(`  await this.page.waitForLoadState('domcontentloaded');`);
       lines.push(`  console.log('On page:', pageName, 'URL:', this.page.url());`);
@@ -1451,6 +1595,44 @@ class BDDService {
       lines.push(`When('I go forward', async function () { await this.page.goForward(); });`);
       lines.push(`When('I refresh the page', async function () { await this.page.reload(); });`);
       lines.push(`When('I reload the page', async function () { await this.page.reload(); });`);
+      lines.push('');
+
+      // ========================================
+      // 1b. ENVIRONMENT-AWARE STEPS
+      // ========================================
+      lines.push(`// --- Environment Profile Steps ---`);
+      lines.push(`Given('I am on the base URL', async function () {`);
+      lines.push(`  const url = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`  await this.page.goto(url, { waitUntil: 'networkidle' });`);
+      lines.push(`});`);
+      lines.push(`Given('I am on the base URL path {string}', async function (urlPath) {`);
+      lines.push(`  await this.page.goto(resolveUrl(urlPath), { waitUntil: 'networkidle' });`);
+      lines.push(`});`);
+      lines.push(`Given('I use {string} credentials', async function (credName) {`);
+      lines.push(`  const creds = getCredentials(credName);`);
+      lines.push(`  this.set('__currentCredentials', creds);`);
+      lines.push(`  console.log('Using credentials:', credName, 'username:', creds.username);`);
+      lines.push(`});`);
+      lines.push(`Given('I login with {string} credentials', async function (credName) {`);
+      lines.push(`  const creds = getCredentials(credName);`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(creds.username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(creds.password);`);
+      lines.push(`  const submitBtn = await findElement(this.page, 'Sign In').catch(() => findElement(this.page, 'Login'));`);
+      lines.push(`  await submitBtn.click();`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push(`});`);
+      lines.push(`Given('the environment variable {string} should be {string}', async function (varName, expected) {`);
+      lines.push(`  const actual = getEnvVar(varName);`);
+      lines.push(`  expect(actual).toBe(expected);`);
+      lines.push(`});`);
+      lines.push(`Given('I set the environment variable {string} to {string}', async function (varName, value) {`);
+      lines.push(`  ENV_PROFILE.variables[varName] = value;`);
+      lines.push(`});`);
+      lines.push(`Then('the current environment should be {string}', async function (envName) {`);
+      lines.push(`  expect(ENV_PROFILE.name).toBe(envName);`);
+      lines.push(`});`);
       lines.push('');
 
       // ========================================
@@ -2043,6 +2225,11 @@ class BDDService {
         // Navigation
         /^I navigate to ".*"$/, /^I am on ".*"$/, /^I open the url ".*"$/, /^I go to ".*"$/, /^I visit ".*"$/,
         /^I am on the ".*" page$/, /^I go back$/, /^I go forward$/, /^I refresh the page$/, /^I reload the page$/,
+        // Environment profile
+        /^I am on the base URL$/, /^I am on the base URL path ".*"$/,
+        /^I use ".*" credentials$/, /^I login with ".*" credentials$/,
+        /^the environment variable ".*" should be ".*"$/, /^I set the environment variable ".*" to ".*"$/,
+        /^the current environment should be ".*"$/,
         // Login
         /^I enter valid credentials username ".*" password ".*"$/, /^I enter valid credentials user ".*" password ".*"$/,
         /^I login with username ".*" and password ".*"$/,

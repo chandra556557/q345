@@ -339,10 +339,21 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const organizationId = req.tenant?.organizationId || null;
   const { id } = req.params;
-  const { scenarioId, browser = 'chromium', executionMode = 'headless', stepDefinitions = {}, tags, parallelWorkers } = req.body;
+  const {
+    scenarioId, browser = 'chromium', executionMode = 'headless', stepDefinitions = {}, tags, parallelWorkers,
+    // Retry / flaky test options
+    retryCount, retryDelayMs, quarantineFailures,
+    // Environment profile
+    environment,
+  } = req.body;
 
   if (!VALID_BROWSERS.includes(browser)) {
     return res.status(400).json({ error: `browser must be one of: ${VALID_BROWSERS.join(', ')}` });
+  }
+
+  // Validate retry count (0-5)
+  if (retryCount !== undefined && (retryCount < 0 || retryCount > 5)) {
+    return res.status(400).json({ error: 'retryCount must be between 0 and 5' });
   }
 
   const { rows } = await pool.query(
@@ -367,10 +378,15 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
 
   const run = runRows[0];
 
-  // Execute asynchronously with tags and parallel options
+  // Execute asynchronously with all options
   setImmediate(() => {
     bddService.executeFeature(run.id, feature.featureContent, stepDefinitions, {
-      browser, executionMode, tags, parallelWorkers: parallelWorkers ? parseInt(parallelWorkers, 10) : undefined,
+      browser, executionMode, tags,
+      parallelWorkers: parallelWorkers ? parseInt(parallelWorkers, 10) : undefined,
+      retryCount: retryCount ? parseInt(retryCount, 10) : undefined,
+      retryDelayMs: retryDelayMs ? parseInt(retryDelayMs, 10) : undefined,
+      quarantineFailures: quarantineFailures === true || quarantineFailures === 'true',
+      environment: environment || undefined,
     }, userId, organizationId).catch(async (err: any) => {
       logger.error(`BDD Run ${run.id}: Unhandled error: ${err.message}`);
       await pool.query(
