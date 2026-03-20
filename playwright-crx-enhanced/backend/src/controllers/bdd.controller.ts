@@ -445,6 +445,28 @@ export const getRun = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
+ * Get BDD run report HTML from database
+ * GET /api/bdd/runs/:id/report
+ */
+export const getRunReport = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const { rows } = await pool.query(
+    `SELECT "reportHtml", "reportUrl", status FROM "BDDRun" WHERE id = $1`,
+    [id]
+  );
+  if (rows.length === 0) return res.status(404).json({ error: 'Run not found' });
+
+  const run = rows[0];
+  if (!run.reportHtml) {
+    return res.status(404).json({ error: 'Report not yet generated or unavailable' });
+  }
+
+  res.setHeader('Content-Type', 'text/html');
+  return res.send(run.reportHtml);
+});
+
+/**
  * Cancel a running BDD execution
  * POST /api/bdd/runs/:id/cancel
  */

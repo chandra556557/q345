@@ -202,7 +202,12 @@ function formatDuration(ms?: number): string {
   return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`;
 }
 
-export async function generateSerenityReport(data: SerenityReportData, reportsDir: string): Promise<string> {
+export interface SerenityReportResult {
+  reportUrl: string;
+  reportHtml: string;
+}
+
+export async function generateSerenityReport(data: SerenityReportData, reportsDir: string): Promise<SerenityReportResult> {
   try {
     const reportDir = path.join(reportsDir, `bdd-${data.runId}`);
     await fs.promises.mkdir(reportDir, { recursive: true });
@@ -610,12 +615,12 @@ export async function generateSerenityReport(data: SerenityReportData, reportsDi
 </html>`;
 
     await fs.promises.writeFile(path.join(reportDir, 'index.html'), html);
-    const reportUrl = `/playwright-crx-reports/bdd-${data.runId}/index.html`;
-    logger.info(`BDD Run ${data.runId}: Serenity-style report generated at ${reportUrl}`);
-    return reportUrl;
+    const reportUrl = `/api/bdd/runs/${data.runId}/report`;
+    logger.info(`BDD Run ${data.runId}: Serenity-style report generated, stored in DB and file`);
+    return { reportUrl, reportHtml: html };
   } catch (e: any) {
     logger.warn(`BDD Run ${data.runId}: Failed to generate Serenity report: ${e.message}\n${e.stack}`);
-    return '';
+    return { reportUrl: '', reportHtml: '' };
   }
 }
 

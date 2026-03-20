@@ -6,7 +6,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
-import { generateSerenityReport, SerenityReportData } from './serenityReport.service';
+import { generateSerenityReport, SerenityReportData, SerenityReportResult } from './serenityReport.service';
 import { screenplayService } from './screenplay.service';
 
 const execAsync = promisify(exec);
@@ -434,73 +434,230 @@ class BDDService {
 
   private generateStepCode(keyword: string, text: string): string {
     const lower = text.toLowerCase();
+    const quotes = (text.match(/"([^"]+)"/g) || []).map(m => m.replace(/"/g, ''));
 
-    if (lower.includes('navigate') || lower.includes('go to') || lower.includes('open') || lower.includes('visit')) {
-      const urlMatch = text.match(/"([^"]+)"|'([^']+)'|(\S+(?:\.com|\.org|\.net|\.io)\S*)/);
-      if (urlMatch) {
-        const url = urlMatch[1] || urlMatch[2] || urlMatch[3];
-        return `await page.goto('${url}');`;
-      }
-      return `await page.goto('/* URL */');`;
+    // Navigation
+    if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit) /)) {
+      const url = quotes[0] || '/* URL */';
+      return `await page.goto('${this.escapeString(url)}');`;
     }
+    if (lower === 'i go back') return `await page.goBack();`;
+    if (lower === 'i go forward') return `await page.goForward();`;
+    if (lower.includes('refresh') || lower.includes('reload')) return `await page.reload();`;
 
+    // Login / Credentials
+    if (lower.includes('enter valid credentials') || lower.includes('login with username')) {
+      if (quotes.length >= 2) {
+        return `await page.getByLabel('Username').fill('${this.escapeString(quotes[0])}');\n    await page.getByLabel('Password').fill('${this.escapeString(quotes[1])}');`;
+      }
+    }
+    if (lower.match(/^i enter (username|email) /)) {
+      const val = quotes[0] || '/* value */';
+      const field = lower.includes('email') ? 'Email' : 'Username';
+      return `await page.getByLabel('${field}').fill('${this.escapeString(val)}');`;
+    }
+    if (lower.match(/^i enter password /)) {
+      const val = quotes[0] || '/* value */';
+      return `await page.getByLabel('Password').fill('${this.escapeString(val)}');`;
+    }
+    if (lower.includes('login button') || lower.includes('submit the login')) {
+      return `await page.getByRole('button', { name: /sign in|login|submit/i }).click();`;
+    }
+    if (lower.match(/^i log ?out/)) return `await page.getByRole('button', { name: /log ?out|sign ?out/i }).click();`;
+
+    // Click
+    if (lower.includes('click on the') && lower.includes('tab')) {
+      const tab = quotes[0] || '/* tab */';
+      return `await page.getByRole('tab', { name: '${this.escapeString(tab)}' }).click();`;
+    }
+    if (lower.includes('click on the') && lower.includes('menu')) {
+      const menu = quotes[0] || '/* menu */';
+      return `await page.getByRole('menuitem', { name: '${this.escapeString(menu)}' }).click();`;
+    }
+    if (lower.includes('click') && lower.includes('button')) {
+      const btn = quotes[0] || '/* button */';
+      return `await page.getByRole('button', { name: '${this.escapeString(btn)}' }).click();`;
+    }
+    if (lower.includes('click') && lower.includes('link')) {
+      const link = quotes[0] || '/* link */';
+      return `await page.getByRole('link', { name: '${this.escapeString(link)}' }).click();`;
+    }
+    if (lower.includes('double click')) {
+      const target = quotes[0] || '/* target */';
+      return `await page.getByText('${this.escapeString(target)}').first().dblclick();`;
+    }
+    if (lower.includes('right click')) {
+      const target = quotes[0] || '/* target */';
+      return `await page.getByText('${this.escapeString(target)}').first().click({ button: 'right' });`;
+    }
     if (lower.includes('click')) {
-      const targetMatch = text.match(/"([^"]+)"|'([^']+)'/);
-      if (targetMatch) {
-        const target = targetMatch[1] || targetMatch[2];
-        return `await page.getByRole('button', { name: '${this.escapeString(target)}' }).click();`;
-      }
-      return `await page.click('/* selector */');`;
+      const target = quotes[0] || '/* target */';
+      return `await page.getByRole('button', { name: '${this.escapeString(target)}' }).click();`;
     }
 
-    if (lower.includes('fill') || lower.includes('type') || lower.includes('enter')) {
-      const matches = text.match(/"([^"]+)"/g);
-      if (matches && matches.length >= 2) {
-        const value = matches[matches.length - 1].replace(/"/g, '');
-        const field = matches[0].replace(/"/g, '');
-        return `await page.getByLabel('${this.escapeString(field)}').fill('${this.escapeString(value)}');`;
-      }
-      if (matches && matches.length === 1) {
-        const value = matches[0].replace(/"/g, '');
-        return `await page.locator('/* field selector */').fill('${this.escapeString(value)}');`;
-      }
-      return `await page.locator('/* field selector */').fill('/* value */');`;
+    // Hover / Focus
+    if (lower.includes('hover')) {
+      const target = quotes[0] || '/* target */';
+      return `await page.getByText('${this.escapeString(target)}').first().hover();`;
+    }
+    if (lower.includes('focus')) {
+      const target = quotes[0] || '/* target */';
+      return `await page.getByLabel('${this.escapeString(target)}').focus();`;
     }
 
-    if (lower.includes('see') || lower.includes('visible') || lower.includes('displayed') || lower.includes('shown')) {
-      const targetMatch = text.match(/"([^"]+)"|'([^']+)'/);
-      if (targetMatch) {
-        const target = targetMatch[1] || targetMatch[2];
-        return `await expect(page.getByText('${this.escapeString(target)}', { exact: true })).toBeVisible();`;
-      }
-      return `await expect(page.locator('/* selector */')).toBeVisible();`;
+    // Keyboard
+    if (lower === 'i press enter') return `await page.keyboard.press('Enter');`;
+    if (lower === 'i press tab') return `await page.keyboard.press('Tab');`;
+    if (lower === 'i press escape') return `await page.keyboard.press('Escape');`;
+    if (lower.includes('press')) {
+      const key = quotes[0] || '/* key */';
+      return `await page.keyboard.press('${this.escapeString(key)}');`;
     }
 
-    if (lower.includes('contain') || lower.includes('have text')) {
-      const targetMatch = text.match(/"([^"]+)"|'([^']+)'/);
-      if (targetMatch) {
-        const target = targetMatch[1] || targetMatch[2];
-        return `await expect(page.locator('body')).toContainText('${this.escapeString(target)}');`;
+    // Fill / Type / Enter (form input) - must be after credentials check
+    if (lower.includes('fill') || lower.includes('type') || lower.includes('enter') || lower.includes('set')) {
+      if (quotes.length >= 2) {
+        return `await page.getByLabel('${this.escapeString(quotes[0])}').fill('${this.escapeString(quotes[1])}');`;
       }
-      return `await expect(page.locator('/* selector */')).toContainText('/* text */');`;
+      if (quotes.length === 1) {
+        return `await page.locator('/* field */').fill('${this.escapeString(quotes[0])}');`;
+      }
     }
 
+    // Select / Dropdown
+    if (lower.includes('select') && !lower.includes('radio')) {
+      if (quotes.length >= 2) {
+        return `await page.getByLabel('${this.escapeString(quotes[1])}').selectOption('${this.escapeString(quotes[0])}');`;
+      }
+      if (quotes.length === 1) {
+        return `await page.selectOption('/* selector */', '${this.escapeString(quotes[0])}');`;
+      }
+    }
+
+    // Checkbox / Radio
+    if (lower.includes('check') && !lower.includes('uncheck')) {
+      const label = quotes[0] || '/* label */';
+      return `await page.getByLabel('${this.escapeString(label)}').check();`;
+    }
+    if (lower.includes('uncheck')) {
+      const label = quotes[0] || '/* label */';
+      return `await page.getByLabel('${this.escapeString(label)}').uncheck();`;
+    }
+    if (lower.includes('radio')) {
+      const label = quotes[0] || '/* label */';
+      return `await page.getByRole('radio', { name: '${this.escapeString(label)}' }).check();`;
+    }
+
+    // Upload
+    if (lower.includes('upload') || lower.includes('attach')) {
+      if (quotes.length >= 2) {
+        return `await page.getByLabel('${this.escapeString(quotes[1])}').setInputFiles('${this.escapeString(quotes[0])}');`;
+      }
+      if (quotes.length === 1) {
+        return `await page.locator('input[type="file"]').setInputFiles('${this.escapeString(quotes[0])}');`;
+      }
+    }
+
+    // Wait
     if (lower.includes('wait')) {
       const timeMatch = text.match(/(\d+)\s*(seconds?|ms|milliseconds?)/);
       if (timeMatch) {
         const ms = timeMatch[2].startsWith('s') ? parseInt(timeMatch[1]) * 1000 : parseInt(timeMatch[1]);
         return `await page.waitForTimeout(${ms});`;
       }
+      if (lower.includes('visible') && quotes[0]) {
+        return `await page.getByText('${this.escapeString(quotes[0])}').first().waitFor({ state: 'visible' });`;
+      }
+      if (lower.includes('disappear') && quotes[0]) {
+        return `await page.getByText('${this.escapeString(quotes[0])}').first().waitFor({ state: 'hidden' });`;
+      }
+      if (lower.includes('page to load') || lower.includes('navigation')) {
+        return `await page.waitForLoadState('networkidle');`;
+      }
       return `await page.waitForTimeout(1000);`;
     }
 
-    if (lower.includes('select') || lower.includes('choose')) {
-      const matches = text.match(/"([^"]+)"/g);
-      if (matches && matches.length >= 1) {
-        const value = matches[matches.length - 1].replace(/"/g, '');
-        return `await page.selectOption('/* selector */', '${this.escapeString(value)}');`;
-      }
+    // Scroll
+    if (lower.includes('scroll to the bottom')) return `await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));`;
+    if (lower.includes('scroll to the top')) return `await page.evaluate(() => window.scrollTo(0, 0));`;
+    if (lower.includes('scroll down')) return `await page.evaluate(() => window.scrollBy(0, 500));`;
+    if (lower.includes('scroll up')) return `await page.evaluate(() => window.scrollBy(0, -500));`;
+    if (lower.includes('scroll to') && quotes[0]) {
+      return `await page.getByText('${this.escapeString(quotes[0])}').first().scrollIntoViewIfNeeded();`;
     }
+
+    // Redirected / on page
+    if (lower.includes('redirected') || lower.match(/should be on/)) {
+      if (quotes[0]) return `await page.waitForURL(new RegExp('${this.escapeString(quotes[0])}'));`;
+      return `await page.waitForLoadState('networkidle');`;
+    }
+
+    // Visibility assertions
+    if (lower.includes('should not see') || lower.includes('should not be visible')) {
+      const target = quotes[0] || '/* text */';
+      return `await expect(page.getByText('${this.escapeString(target)}')).toBeHidden();`;
+    }
+    if (lower.includes('see') || lower.includes('visible') || lower.includes('displayed') || lower.includes('shown')) {
+      const target = quotes[0] || '/* text */';
+      return `await expect(page.getByText('${this.escapeString(target)}', { exact: true })).toBeVisible();`;
+    }
+
+    // URL assertions
+    if (lower.includes('url should contain')) {
+      const val = quotes[0] || '/* url part */';
+      return `await expect(page).toHaveURL(new RegExp('${this.escapeString(val)}'));`;
+    }
+    if (lower.includes('url should be')) {
+      const val = quotes[0] || '/* url */';
+      return `await expect(page).toHaveURL('${this.escapeString(val)}');`;
+    }
+
+    // Title
+    if (lower.includes('title should be')) {
+      const val = quotes[0] || '/* title */';
+      return `await expect(page).toHaveTitle('${this.escapeString(val)}');`;
+    }
+    if (lower.includes('title should contain')) {
+      const val = quotes[0] || '/* title */';
+      return `await expect(page).toHaveTitle(new RegExp('${this.escapeString(val)}'));`;
+    }
+
+    // Contain text
+    if (lower.includes('contain') || lower.includes('have text')) {
+      const target = quotes[0] || '/* text */';
+      return `await expect(page.locator('body')).toContainText('${this.escapeString(target)}');`;
+    }
+
+    // Disabled / Enabled
+    if (lower.includes('disabled')) {
+      const val = quotes[0] || '/* name */';
+      return `await expect(page.getByRole('button', { name: '${this.escapeString(val)}' })).toBeDisabled();`;
+    }
+    if (lower.includes('enabled')) {
+      const val = quotes[0] || '/* name */';
+      return `await expect(page.getByRole('button', { name: '${this.escapeString(val)}' })).toBeEnabled();`;
+    }
+
+    // Screenshot
+    if (lower.includes('screenshot')) {
+      const name = quotes[0] || 'screenshot';
+      return `await page.screenshot({ path: '${this.escapeString(name)}.png', fullPage: true });`;
+    }
+
+    // Drag & Drop
+    if (lower.includes('drag') && quotes.length >= 2) {
+      return `await page.getByText('${this.escapeString(quotes[0])}').first().dragTo(page.getByText('${this.escapeString(quotes[1])}').first());`;
+    }
+
+    // Table assertions
+    if (lower.includes('table') && lower.includes('rows')) {
+      const countMatch = text.match(/(\d+)/);
+      if (countMatch) return `await expect(page.locator('table tbody tr')).toHaveCount(${countMatch[1]});`;
+    }
+
+    // Alert
+    if (lower.includes('accept') && lower.includes('alert')) return `page.once('dialog', async d => await d.accept());`;
+    if (lower.includes('dismiss') && lower.includes('alert')) return `page.once('dialog', async d => await d.dismiss());`;
 
     return `// TODO: Implement step - ${keyword} ${text}`;
   }
@@ -829,33 +986,35 @@ class BDDService {
         summary: { status: overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps, errorMsg },
         screenshotUrls,
       };
-      const reportUrl = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
+      const reportResult: SerenityReportResult = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
 
-      // Update run in DB
+      // Update run in DB (store HTML report in database)
       await pool.query(
         `UPDATE "BDDRun" SET
           status = $1, duration = $2,
           "totalSteps" = $3, "passedSteps" = $4, "failedSteps" = $5, "skippedSteps" = $6,
           "stepResults" = $7, "errorMsg" = $8, "reportUrl" = $10, "screenshotUrls" = $11,
+          "reportHtml" = $12,
           "completedAt" = now(), "updatedAt" = now()
          WHERE id = $9`,
         [overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
-          JSON.stringify(stepResults), errorMsg || null, runId, reportUrl, JSON.stringify(screenshotUrls)]
+          JSON.stringify(stepResults), errorMsg || null, runId, reportResult.reportUrl, JSON.stringify(screenshotUrls),
+          reportResult.reportHtml]
       );
 
       // Emit live event: completed
       this.emitEvent(runId, 'completed', {
         status: overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
-        reportUrl, screenshotUrls,
+        reportUrl: reportResult.reportUrl, screenshotUrls,
       });
 
-      logger.info(`BDD Run ${runId}: Completed - ${overallStatus} (${passedSteps}/${totalSteps} passed), screenshots: ${screenshotUrls.length}, report: ${reportUrl}`);
+      logger.info(`BDD Run ${runId}: Completed - ${overallStatus} (${passedSteps}/${totalSteps} passed), screenshots: ${screenshotUrls.length}, report: ${reportResult.reportUrl}`);
     } catch (error: any) {
       logger.error(`BDD Run ${runId}: Execution error: ${error.message}`);
       this.emitEvent(runId, 'error', { message: error.message });
 
       // Generate report even for errored runs
-      let reportUrl = '';
+      let errorReportResult: SerenityReportResult = { reportUrl: '', reportHtml: '' };
       try {
         const parsedForReport = this.parseFeatureContent(featureContent);
         const serenityData: SerenityReportData = {
@@ -869,14 +1028,14 @@ class BDDService {
           summary: { status: 'failed', duration: 0, totalSteps: 0, passedSteps: 0, failedSteps: 0, skippedSteps: 0, errorMsg: error.message },
           screenshotUrls: [],
         };
-        reportUrl = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
+        errorReportResult = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
       } catch (reportErr: any) {
         logger.warn(`BDD Run ${runId}: Failed to generate error report: ${reportErr.message}`);
       }
 
       await pool.query(
-        `UPDATE "BDDRun" SET status = 'failed', "errorMsg" = $1, "reportUrl" = $3, "completedAt" = now(), "updatedAt" = now() WHERE id = $2`,
-        [error.message, runId, reportUrl || null]
+        `UPDATE "BDDRun" SET status = 'failed', "errorMsg" = $1, "reportUrl" = $3, "reportHtml" = $4, "completedAt" = now(), "updatedAt" = now() WHERE id = $2`,
+        [error.message, runId, errorReportResult.reportUrl || null, errorReportResult.reportHtml || null]
       );
     } finally {
       this.releaseSlot();
@@ -1170,23 +1329,10 @@ class BDDService {
       lines.push(`const { expect } = require('@playwright/test');`);
       lines.push('');
 
-      // Navigation steps
-      lines.push(`// Navigation steps`);
-      lines.push(`Given('I navigate to {string}', async function (url) {`);
-      lines.push(`  await this.page.goto(url);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`Given('I am on {string}', async function (url) {`);
-      lines.push(`  await this.page.goto(url);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`Given('I open the url {string}', async function (url) {`);
-      lines.push(`  await this.page.goto(url);`);
-      lines.push('});');
-      lines.push('');
-
-      // Helper to find input by label, placeholder, role, or test-id
-      lines.push(`// Smart input locator helper`);
+      // ========================================
+      // Smart locator helpers
+      // ========================================
+      lines.push(`// Smart locator helpers`);
       lines.push(`async function findInput(page, field) {`);
       lines.push(`  const byLabel = page.getByLabel(field);`);
       lines.push(`  if (await byLabel.count() > 0) return byLabel.first();`);
@@ -1196,196 +1342,645 @@ class BDDService {
       lines.push(`  if (await byRole.count() > 0) return byRole.first();`);
       lines.push(`  const byTestId = page.getByTestId(field);`);
       lines.push(`  if (await byTestId.count() > 0) return byTestId.first();`);
-      lines.push(`  return page.locator(\`input[name="\${field}" i], input[id="\${field}" i], textarea[name="\${field}" i]\`).first();`);
+      lines.push(`  return page.locator(\`input[name="\${field}" i], input[id="\${field}" i], textarea[name="\${field}" i], input[aria-label="\${field}" i]\`).first();`);
+      lines.push('}');
+      lines.push('');
+      lines.push(`async function findElement(page, target) {`);
+      lines.push(`  const btn = page.getByRole('button', { name: target });`);
+      lines.push(`  if (await btn.count() > 0) return btn.first();`);
+      lines.push(`  const link = page.getByRole('link', { name: target });`);
+      lines.push(`  if (await link.count() > 0) return link.first();`);
+      lines.push(`  const tab = page.getByRole('tab', { name: target });`);
+      lines.push(`  if (await tab.count() > 0) return tab.first();`);
+      lines.push(`  const menuitem = page.getByRole('menuitem', { name: target });`);
+      lines.push(`  if (await menuitem.count() > 0) return menuitem.first();`);
+      lines.push(`  const byText = page.getByText(target, { exact: true });`);
+      lines.push(`  if (await byText.count() > 0) return byText.first();`);
+      lines.push(`  return page.getByText(target).first();`);
       lines.push('}');
       lines.push('');
 
-      // Input steps with {string} parameter types
-      lines.push(`// Input steps`);
-      lines.push(`When('I fill {string} with {string}', async function (field, value) {`);
-      lines.push(`  const input = await findInput(this.page, field);`);
-      lines.push(`  await input.fill(value);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I type {string} into {string}', async function (value, field) {`);
-      lines.push(`  const input = await findInput(this.page, field);`);
-      lines.push(`  await input.fill(value);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I enter {string} in {string}', async function (value, field) {`);
-      lines.push(`  const input = await findInput(this.page, field);`);
-      lines.push(`  await input.fill(value);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I fill in the {string} field with {string}', async function (field, value) {`);
-      lines.push(`  const input = await findInput(this.page, field);`);
-      lines.push(`  await input.fill(value);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I clear the {string} field', async function (field) {`);
-      lines.push(`  const input = await findInput(this.page, field);`);
-      lines.push(`  await input.clear();`);
-      lines.push('});');
+      lines.push(`const { expect } = require('@playwright/test');`);
       lines.push('');
 
-      // Interaction steps
-      lines.push(`// Interaction steps`);
-      lines.push(`When('I click {string}', async function (target) {`);
-      lines.push(`  const btn = this.page.getByRole('button', { name: target });`);
-      lines.push(`  if (await btn.count() > 0) { await btn.first().click(); return; }`);
-      lines.push(`  const link = this.page.getByRole('link', { name: target });`);
+      // ========================================
+      // 1. NAVIGATION
+      // ========================================
+      lines.push(`// --- Navigation steps ---`);
+      lines.push(`Given('I navigate to {string}', async function (url) { await this.page.goto(url); });`);
+      lines.push(`Given('I am on {string}', async function (url) { await this.page.goto(url); });`);
+      lines.push(`Given('I open the url {string}', async function (url) { await this.page.goto(url); });`);
+      lines.push(`Given('I go to {string}', async function (url) { await this.page.goto(url); });`);
+      lines.push(`Given('I visit {string}', async function (url) { await this.page.goto(url); });`);
+      lines.push(`Given('I am on the {string} page', async function (pageName) {`);
+      lines.push(`  await this.page.waitForLoadState('domcontentloaded');`);
+      lines.push(`  console.log('On page:', pageName, 'URL:', this.page.url());`);
+      lines.push('});');
+      lines.push(`When('I go back', async function () { await this.page.goBack(); });`);
+      lines.push(`When('I go forward', async function () { await this.page.goForward(); });`);
+      lines.push(`When('I refresh the page', async function () { await this.page.reload(); });`);
+      lines.push(`When('I reload the page', async function () { await this.page.reload(); });`);
+      lines.push('');
+
+      // ========================================
+      // 2. LOGIN / AUTHENTICATION
+      // ========================================
+      lines.push(`// --- Login / Authentication ---`);
+      lines.push(`When('I enter valid credentials username {string} password {string}', async function (username, password) {`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(password);`);
+      lines.push('});');
+      lines.push('');
+      lines.push(`When('I enter valid credentials user {string} password {string}', async function (username, password) {`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(password);`);
+      lines.push('});');
+      lines.push('');
+      lines.push(`When('I login with username {string} and password {string}', async function (username, password) {`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(password);`);
+      lines.push('});');
+      lines.push('');
+      lines.push(`When('I enter username {string}', async function (username) {`);
+      lines.push(`  const input = await findInput(this.page, 'Username');`);
+      lines.push(`  await input.fill(username);`);
+      lines.push('});');
+      lines.push('');
+      lines.push(`When('I enter password {string}', async function (password) {`);
+      lines.push(`  const input = await findInput(this.page, 'Password');`);
+      lines.push(`  await input.fill(password);`);
+      lines.push('});');
+      lines.push('');
+      lines.push(`When('I enter email {string}', async function (email) {`);
+      lines.push(`  const input = await findInput(this.page, 'Email');`);
+      lines.push(`  await input.fill(email);`);
+      lines.push('});');
+      lines.push('');
+      lines.push(`When('I click the login button', async function () {`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); return; }`);
+      lines.push(`  await this.page.locator('button[type="submit"]').first().click();`);
+      lines.push('});');
+      lines.push('');
+      lines.push(`When('I submit the login form', async function () {`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); return; }`);
+      lines.push(`  await this.page.locator('button[type="submit"]').first().click();`);
+      lines.push('});');
+      lines.push('');
+      lines.push(`When('I log out', async function () {`);
+      lines.push(`  const logout = this.page.getByRole('button', { name: /log ?out|sign ?out/i });`);
+      lines.push(`  if (await logout.count() > 0) { await logout.first().click(); return; }`);
+      lines.push(`  const link = this.page.getByRole('link', { name: /log ?out|sign ?out/i });`);
       lines.push(`  if (await link.count() > 0) { await link.first().click(); return; }`);
-      lines.push(`  await this.page.getByText(target, { exact: true }).first().click();`);
       lines.push('});');
       lines.push('');
-      lines.push(`When('I click the {string} button', async function (name) {`);
-      lines.push(`  await this.page.getByRole('button', { name }).click();`);
+      lines.push(`Then('I should be logged in', async function () {`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
       lines.push('});');
       lines.push('');
-      lines.push(`When('I click the {string} link', async function (name) {`);
-      lines.push(`  await this.page.getByRole('link', { name }).click();`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I double click {string}', async function (target) {`);
-      lines.push(`  await this.page.getByText(target, { exact: true }).first().dblclick();`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I right click {string}', async function (target) {`);
-      lines.push(`  await this.page.getByText(target, { exact: true }).first().click({ button: 'right' });`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I hover over {string}', async function (target) {`);
-      lines.push(`  await this.page.getByText(target, { exact: true }).first().hover();`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I press {string}', async function (key) {`);
-      lines.push(`  await this.page.keyboard.press(key);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I select {string} from {string}', async function (value, selector) {`);
-      lines.push(`  await this.page.getByLabel(selector).selectOption(value);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I check {string}', async function (label) {`);
-      lines.push(`  await this.page.getByLabel(label).check();`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I uncheck {string}', async function (label) {`);
-      lines.push(`  await this.page.getByLabel(label).uncheck();`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I upload {string} to {string}', async function (filePath, label) {`);
-      lines.push(`  await this.page.getByLabel(label).setInputFiles(filePath);`);
-      lines.push('});');
-      lines.push('');
-
-      // Wait steps with {int} and {float} parameter types
-      lines.push(`// Wait steps`);
-      lines.push(`When('I wait for {int} seconds', async function (seconds) {`);
-      lines.push(`  await this.page.waitForTimeout(seconds * 1000);`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I wait for {float} seconds', async function (seconds) {`);
-      lines.push(`  await this.page.waitForTimeout(Math.round(seconds * 1000));`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I wait for {string} to be visible', async function (text) {`);
-      lines.push(`  await this.page.getByText(text).first().waitFor({ state: 'visible', timeout: 10000 });`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`When('I wait for the page to load', async function () {`);
+      lines.push(`Then('I should be logged out', async function () {`);
       lines.push(`  await this.page.waitForLoadState('networkidle');`);
       lines.push('});');
       lines.push('');
 
-      // Assertion steps
-      lines.push(`// Assertion steps`);
+      // ========================================
+      // 3. FORM INPUT
+      // ========================================
+      lines.push(`// --- Form Input ---`);
+      lines.push(`When('I fill {string} with {string}', async function (field, value) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('I type {string} into {string}', async function (value, field) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('I enter {string} in {string}', async function (value, field) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('I enter {string} in the {string} field', async function (value, field) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('I fill in the {string} field with {string}', async function (field, value) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('I set {string} to {string}', async function (field, value) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('I clear the {string} field', async function (field) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.clear();`);
+      lines.push('});');
+      lines.push(`When('I clear {string}', async function (field) {`);
+      lines.push(`  const input = await findInput(this.page, field); await input.clear();`);
+      lines.push('});');
+      lines.push(`When('I append {string} to {string}', async function (value, field) {`);
+      lines.push(`  const input = await findInput(this.page, field);`);
+      lines.push(`  await input.click(); await this.page.keyboard.press('End'); await input.type(value);`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 4. CLICK / INTERACTION
+      // ========================================
+      lines.push(`// --- Click / Interaction ---`);
+      lines.push(`When('I click {string}', async function (target) { const el = await findElement(this.page, target); await el.click(); });`);
+      lines.push(`When('I click the {string} button', async function (name) { await this.page.getByRole('button', { name }).click(); });`);
+      lines.push(`When('I click the {string} link', async function (name) { await this.page.getByRole('link', { name }).click(); });`);
+      lines.push(`When('I click on {string}', async function (target) { const el = await findElement(this.page, target); await el.click(); });`);
+      lines.push(`When('I click on the {string} button', async function (name) { await this.page.getByRole('button', { name }).click(); });`);
+      lines.push(`When('I click on the {string} link', async function (name) { await this.page.getByRole('link', { name }).click(); });`);
+      lines.push(`When('I click on the {string} tab', async function (tabName) {`);
+      lines.push(`  const tab = this.page.getByRole('tab', { name: tabName });`);
+      lines.push(`  if (await tab.count() > 0) { await tab.first().click(); return; }`);
+      lines.push(`  const link = this.page.getByRole('link', { name: tabName });`);
+      lines.push(`  if (await link.count() > 0) { await link.first().click(); return; }`);
+      lines.push(`  await this.page.getByText(tabName, { exact: true }).first().click();`);
+      lines.push('});');
+      lines.push(`When('I click on {string} project tab', async function (tabName) {`);
+      lines.push(`  const el = await findElement(this.page, tabName); await el.click();`);
+      lines.push('});');
+      lines.push(`When('I click on the {string} menu', async function (name) {`);
+      lines.push(`  const mi = this.page.getByRole('menuitem', { name });`);
+      lines.push(`  if (await mi.count() > 0) { await mi.first().click(); return; }`);
+      lines.push(`  const el = await findElement(this.page, name); await el.click();`);
+      lines.push('});');
+      lines.push(`When('I click on the {string} menu item', async function (name) {`);
+      lines.push(`  const mi = this.page.getByRole('menuitem', { name });`);
+      lines.push(`  if (await mi.count() > 0) { await mi.first().click(); return; }`);
+      lines.push(`  const el = await findElement(this.page, name); await el.click();`);
+      lines.push('});');
+      lines.push(`When('I click the {string} icon', async function (name) {`);
+      lines.push(`  const el = await findElement(this.page, name); await el.click();`);
+      lines.push('});');
+      lines.push(`When('I click the {string} element', async function (selector) {`);
+      lines.push(`  await this.page.locator(selector).first().click();`);
+      lines.push('});');
+      lines.push(`When('I click the first {string}', async function (target) {`);
+      lines.push(`  await this.page.getByText(target).first().click();`);
+      lines.push('});');
+      lines.push(`When('I click the last {string}', async function (target) {`);
+      lines.push(`  await this.page.getByText(target).last().click();`);
+      lines.push('});');
+      lines.push(`When('I click the {int}st {string}', async function (n, target) {`);
+      lines.push(`  await this.page.getByText(target).nth(n - 1).click();`);
+      lines.push('});');
+      lines.push(`When('I click the {int}nd {string}', async function (n, target) {`);
+      lines.push(`  await this.page.getByText(target).nth(n - 1).click();`);
+      lines.push('});');
+      lines.push(`When('I click the {int}rd {string}', async function (n, target) {`);
+      lines.push(`  await this.page.getByText(target).nth(n - 1).click();`);
+      lines.push('});');
+      lines.push(`When('I click the {int}th {string}', async function (n, target) {`);
+      lines.push(`  await this.page.getByText(target).nth(n - 1).click();`);
+      lines.push('});');
+      lines.push(`When('I double click {string}', async function (target) {`);
+      lines.push(`  await this.page.getByText(target, { exact: true }).first().dblclick();`);
+      lines.push('});');
+      lines.push(`When('I right click {string}', async function (target) {`);
+      lines.push(`  await this.page.getByText(target, { exact: true }).first().click({ button: 'right' });`);
+      lines.push('});');
+      lines.push(`When('I hover over {string}', async function (target) {`);
+      lines.push(`  await this.page.getByText(target, { exact: true }).first().hover();`);
+      lines.push('});');
+      lines.push(`When('I hover on {string}', async function (target) {`);
+      lines.push(`  await this.page.getByText(target, { exact: true }).first().hover();`);
+      lines.push('});');
+      lines.push(`When('I focus on {string}', async function (target) {`);
+      lines.push(`  const input = await findInput(this.page, target); await input.focus();`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 5. KEYBOARD
+      // ========================================
+      lines.push(`// --- Keyboard ---`);
+      lines.push(`When('I press {string}', async function (key) { await this.page.keyboard.press(key); });`);
+      lines.push(`When('I press the {string} key', async function (key) { await this.page.keyboard.press(key); });`);
+      lines.push(`When('I press Enter', async function () { await this.page.keyboard.press('Enter'); });`);
+      lines.push(`When('I press Tab', async function () { await this.page.keyboard.press('Tab'); });`);
+      lines.push(`When('I press Escape', async function () { await this.page.keyboard.press('Escape'); });`);
+      lines.push('');
+
+      // ========================================
+      // 6. SELECT / DROPDOWN / CHECKBOX / RADIO
+      // ========================================
+      lines.push(`// --- Dropdown / Checkbox / Radio ---`);
+      lines.push(`When('I select {string} from {string}', async function (value, selector) {`);
+      lines.push(`  await this.page.getByLabel(selector).selectOption(value);`);
+      lines.push('});');
+      lines.push(`When('I select {string} from the {string} dropdown', async function (value, selector) {`);
+      lines.push(`  await this.page.getByLabel(selector).selectOption(value);`);
+      lines.push('});');
+      lines.push(`When('I select the option {string} in {string}', async function (value, selector) {`);
+      lines.push(`  await this.page.getByLabel(selector).selectOption(value);`);
+      lines.push('});');
+      lines.push(`When('I check {string}', async function (label) { await this.page.getByLabel(label).check(); });`);
+      lines.push(`When('I uncheck {string}', async function (label) { await this.page.getByLabel(label).uncheck(); });`);
+      lines.push(`When('I check the {string} checkbox', async function (label) { await this.page.getByLabel(label).check(); });`);
+      lines.push(`When('I uncheck the {string} checkbox', async function (label) { await this.page.getByLabel(label).uncheck(); });`);
+      lines.push(`When('I select the {string} radio button', async function (label) {`);
+      lines.push(`  await this.page.getByRole('radio', { name: label }).check();`);
+      lines.push('});');
+      lines.push(`When('I toggle {string}', async function (label) {`);
+      lines.push(`  const cb = this.page.getByLabel(label);`);
+      lines.push(`  if (await cb.isChecked()) await cb.uncheck(); else await cb.check();`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 7. FILE UPLOAD
+      // ========================================
+      lines.push(`// --- File Upload ---`);
+      lines.push(`When('I upload {string} to {string}', async function (filePath, label) {`);
+      lines.push(`  await this.page.getByLabel(label).setInputFiles(filePath);`);
+      lines.push('});');
+      lines.push(`When('I attach the file {string}', async function (filePath) {`);
+      lines.push(`  await this.page.locator('input[type="file"]').first().setInputFiles(filePath);`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 8. WAIT / TIMING
+      // ========================================
+      lines.push(`// --- Wait / Timing ---`);
+      lines.push(`When('I wait for {int} seconds', async function (s) { await this.page.waitForTimeout(s * 1000); });`);
+      lines.push(`When('I wait for {float} seconds', async function (s) { await this.page.waitForTimeout(Math.round(s * 1000)); });`);
+      lines.push(`When('I wait for {string} to be visible', async function (text) {`);
+      lines.push(`  await this.page.getByText(text).first().waitFor({ state: 'visible', timeout: 15000 });`);
+      lines.push('});');
+      lines.push(`When('I wait for {string} to disappear', async function (text) {`);
+      lines.push(`  await this.page.getByText(text).first().waitFor({ state: 'hidden', timeout: 15000 });`);
+      lines.push('});');
+      lines.push(`When('I wait for the page to load', async function () { await this.page.waitForLoadState('networkidle'); });`);
+      lines.push(`When('I wait for navigation', async function () { await this.page.waitForLoadState('networkidle'); });`);
+      lines.push(`When('I wait until the page is ready', async function () { await this.page.waitForLoadState('domcontentloaded'); });`);
+      lines.push(`When('I wait for the {string} element to appear', async function (selector) {`);
+      lines.push(`  await this.page.locator(selector).first().waitFor({ state: 'visible', timeout: 15000 });`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 9. SCROLL
+      // ========================================
+      lines.push(`// --- Scroll ---`);
+      lines.push(`When('I scroll down', async function () { await this.page.evaluate(() => window.scrollBy(0, 500)); });`);
+      lines.push(`When('I scroll up', async function () { await this.page.evaluate(() => window.scrollBy(0, -500)); });`);
+      lines.push(`When('I scroll to the bottom', async function () { await this.page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); });`);
+      lines.push(`When('I scroll to the top', async function () { await this.page.evaluate(() => window.scrollTo(0, 0)); });`);
+      lines.push(`When('I scroll to {string}', async function (text) {`);
+      lines.push(`  await this.page.getByText(text, { exact: true }).first().scrollIntoViewIfNeeded();`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 10. IFRAME
+      // ========================================
+      lines.push(`// --- iFrame ---`);
+      lines.push(`When('I switch to iframe {string}', async function (selector) {`);
+      lines.push(`  const frame = this.page.frameLocator(selector);`);
+      lines.push(`  this.set('iframe', frame);`);
+      lines.push('});');
+      lines.push(`When('I switch to the main frame', async function () {`);
+      lines.push(`  this.set('iframe', null);`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 11. DIALOG / ALERT
+      // ========================================
+      lines.push(`// --- Dialog / Alert ---`);
+      lines.push(`When('I accept the alert', async function () {`);
+      lines.push(`  this.page.once('dialog', async dialog => await dialog.accept());`);
+      lines.push('});');
+      lines.push(`When('I dismiss the alert', async function () {`);
+      lines.push(`  this.page.once('dialog', async dialog => await dialog.dismiss());`);
+      lines.push('});');
+      lines.push(`When('I accept the alert with {string}', async function (text) {`);
+      lines.push(`  this.page.once('dialog', async dialog => await dialog.accept(text));`);
+      lines.push('});');
+      lines.push(`When('I should see an alert with {string}', async function (expectedText) {`);
+      lines.push(`  const [dialog] = await Promise.all([`);
+      lines.push(`    new Promise(resolve => this.page.once('dialog', resolve)),`);
+      lines.push(`  ]);`);
+      lines.push(`  expect(dialog.message()).toContain(expectedText);`);
+      lines.push(`  await dialog.accept();`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 12. TABLE
+      // ========================================
+      lines.push(`// --- Table ---`);
+      lines.push(`Then('the table should have {int} rows', async function (count) {`);
+      lines.push(`  await expect(this.page.locator('table tbody tr')).toHaveCount(count);`);
+      lines.push('});');
+      lines.push(`Then('I should see {string} in row {int}', async function (text, row) {`);
+      lines.push(`  await expect(this.page.locator(\`table tbody tr:nth-child(\${row})\`)).toContainText(text);`);
+      lines.push('});');
+      lines.push(`Then('I should see {string} in column {int}', async function (text, col) {`);
+      lines.push(`  const cells = this.page.locator(\`table tbody tr td:nth-child(\${col})\`);`);
+      lines.push(`  const allText = await cells.allTextContents();`);
+      lines.push(`  expect(allText.some(t => t.includes(text))).toBeTruthy();`);
+      lines.push('});');
+      lines.push(`When('I click on row {int} in the table', async function (row) {`);
+      lines.push(`  await this.page.locator(\`table tbody tr:nth-child(\${row})\`).click();`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 13. REDIRECT / DASHBOARD ASSERTIONS
+      // ========================================
+      lines.push(`// --- Redirect / Dashboard ---`);
+      lines.push(`Then('I should be redirected to the {string}', async function (pageName) {`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push(`  console.log('Redirected to:', pageName, 'URL:', this.page.url());`);
+      lines.push('});');
+      lines.push(`Then('I should be redirected to {string}', async function (url) {`);
+      lines.push(`  await this.page.waitForURL(new RegExp(url), { timeout: 15000 });`);
+      lines.push('});');
+      lines.push(`Then('I should be on the {string} page', async function (pageName) {`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push(`  console.log('On page:', pageName, 'URL:', this.page.url());`);
+      lines.push('});');
+      lines.push(`Then('I should see the {string} open successfully', async function (section) {`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push(`  console.log('Section opened:', section);`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 14. TEXT / VISIBILITY ASSERTIONS
+      // ========================================
+      lines.push(`// --- Text / Visibility Assertions ---`);
       lines.push(`Then('I should see {string}', async function (text) {`);
       lines.push(`  await expect(this.page.getByText(text, { exact: true }).first()).toBeVisible({ timeout: 10000 });`);
       lines.push('});');
-      lines.push('');
       lines.push(`Then('I should not see {string}', async function (text) {`);
       lines.push(`  await expect(this.page.getByText(text, { exact: true })).toBeHidden({ timeout: 5000 });`);
       lines.push('});');
-      lines.push('');
-      lines.push(`Then('the page title should be {string}', async function (title) {`);
-      lines.push(`  await expect(this.page).toHaveTitle(title);`);
+      lines.push(`Then('I should see text containing {string}', async function (text) {`);
+      lines.push(`  await expect(this.page.locator('body')).toContainText(text);`);
       lines.push('});');
-      lines.push('');
-      lines.push(`Then('the page title should contain {string}', async function (title) {`);
-      lines.push(`  await expect(this.page).toHaveTitle(new RegExp(title));`);
+      lines.push(`Then('I should see {string} in the {string}', async function (text, section) {`);
+      lines.push(`  await expect(this.page.locator(\`[aria-label="\${section}"], [data-testid="\${section}"], .\${section}\`).first()).toContainText(text);`);
       lines.push('});');
-      lines.push('');
+      lines.push(`Then('{string} should be visible', async function (text) {`);
+      lines.push(`  await expect(this.page.getByText(text).first()).toBeVisible({ timeout: 10000 });`);
+      lines.push('});');
+      lines.push(`Then('{string} should not be visible', async function (text) {`);
+      lines.push(`  await expect(this.page.getByText(text)).toBeHidden({ timeout: 5000 });`);
+      lines.push('});');
+      lines.push(`Then('I should see a {string} message', async function (text) {`);
+      lines.push(`  await expect(this.page.getByText(text).first()).toBeVisible({ timeout: 10000 });`);
+      lines.push('});');
       lines.push(`Then('the page should contain {string}', async function (text) {`);
       lines.push(`  await expect(this.page.locator('body')).toContainText(text);`);
       lines.push('});');
-      lines.push('');
-      lines.push(`Then('the URL should contain {string}', async function (urlPart) {`);
-      lines.push(`  await expect(this.page).toHaveURL(new RegExp(urlPart));`);
+      lines.push(`Then('the page should not contain {string}', async function (text) {`);
+      lines.push(`  const body = await this.page.locator('body').textContent();`);
+      lines.push(`  expect(body).not.toContain(text);`);
       lines.push('});');
       lines.push('');
-      lines.push(`Then('the URL should be {string}', async function (url) {`);
-      lines.push(`  await expect(this.page).toHaveURL(url);`);
+
+      // ========================================
+      // 15. URL ASSERTIONS
+      // ========================================
+      lines.push(`// --- URL Assertions ---`);
+      lines.push(`Then('the URL should contain {string}', async function (urlPart) { await expect(this.page).toHaveURL(new RegExp(urlPart)); });`);
+      lines.push(`Then('the URL should be {string}', async function (url) { await expect(this.page).toHaveURL(url); });`);
+      lines.push(`Then('the URL should not contain {string}', async function (urlPart) {`);
+      lines.push(`  expect(this.page.url()).not.toContain(urlPart);`);
       lines.push('});');
       lines.push('');
-      lines.push(`Then('the {string} field should contain {string}', async function (field, value) {`);
-      lines.push(`  await expect(this.page.getByLabel(field)).toHaveValue(value);`);
+
+      // ========================================
+      // 16. TITLE ASSERTIONS
+      // ========================================
+      lines.push(`// --- Title Assertions ---`);
+      lines.push(`Then('the page title should be {string}', async function (title) { await expect(this.page).toHaveTitle(title); });`);
+      lines.push(`Then('the page title should contain {string}', async function (title) { await expect(this.page).toHaveTitle(new RegExp(title)); });`);
+      lines.push('');
+
+      // ========================================
+      // 17. FORM FIELD ASSERTIONS
+      // ========================================
+      lines.push(`// --- Form Field Assertions ---`);
+      lines.push(`Then('the {string} field should contain {string}', async function (field, value) { await expect(this.page.getByLabel(field)).toHaveValue(value); });`);
+      lines.push(`Then('the {string} field should be empty', async function (field) { await expect(this.page.getByLabel(field)).toHaveValue(''); });`);
+      lines.push(`Then('the {string} field should not be empty', async function (field) {`);
+      lines.push(`  const val = await this.page.getByLabel(field).inputValue(); expect(val.length).toBeGreaterThan(0);`);
+      lines.push('});');
+      lines.push(`Then('the {string} checkbox should be checked', async function (label) { await expect(this.page.getByLabel(label)).toBeChecked(); });`);
+      lines.push(`Then('the {string} checkbox should not be checked', async function (label) { await expect(this.page.getByLabel(label)).not.toBeChecked(); });`);
+      lines.push(`Then('the {string} dropdown should have value {string}', async function (label, value) { await expect(this.page.getByLabel(label)).toHaveValue(value); });`);
+      lines.push('');
+
+      // ========================================
+      // 18. BUTTON / ELEMENT STATE ASSERTIONS
+      // ========================================
+      lines.push(`// --- Button / Element State ---`);
+      lines.push(`Then('the {string} button should be disabled', async function (name) { await expect(this.page.getByRole('button', { name })).toBeDisabled(); });`);
+      lines.push(`Then('the {string} button should be enabled', async function (name) { await expect(this.page.getByRole('button', { name })).toBeEnabled(); });`);
+      lines.push(`Then('the {string} button should be visible', async function (name) { await expect(this.page.getByRole('button', { name })).toBeVisible(); });`);
+      lines.push(`Then('the {string} button should not be visible', async function (name) { await expect(this.page.getByRole('button', { name })).toBeHidden(); });`);
+      lines.push(`Then('{string} should be disabled', async function (label) {`);
+      lines.push(`  const input = await findInput(this.page, label); await expect(input).toBeDisabled();`);
+      lines.push('});');
+      lines.push(`Then('{string} should be enabled', async function (label) {`);
+      lines.push(`  const input = await findInput(this.page, label); await expect(input).toBeEnabled();`);
       lines.push('});');
       lines.push('');
-      lines.push(`Then('the {string} field should be empty', async function (field) {`);
-      lines.push(`  await expect(this.page.getByLabel(field)).toHaveValue('');`);
+
+      // ========================================
+      // 19. COUNT ASSERTIONS
+      // ========================================
+      lines.push(`// --- Count Assertions ---`);
+      lines.push(`Then('I should see {int} {string} elements', async function (count, role) { await expect(this.page.getByRole(role)).toHaveCount(count); });`);
+      lines.push(`Then('there should be {int} {string}', async function (count, selector) { await expect(this.page.locator(selector)).toHaveCount(count); });`);
+      lines.push(`Then('I should see at least {int} {string}', async function (count, selector) {`);
+      lines.push(`  const n = await this.page.locator(selector).count(); expect(n).toBeGreaterThanOrEqual(count);`);
       lines.push('});');
       lines.push('');
-      lines.push(`Then('the {string} checkbox should be checked', async function (label) {`);
-      lines.push(`  await expect(this.page.getByLabel(label)).toBeChecked();`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`Then('the {string} button should be disabled', async function (name) {`);
-      lines.push(`  await expect(this.page.getByRole('button', { name })).toBeDisabled();`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`Then('the {string} button should be enabled', async function (name) {`);
-      lines.push(`  await expect(this.page.getByRole('button', { name })).toBeEnabled();`);
-      lines.push('});');
-      lines.push('');
-      lines.push(`Then('I should see {int} {string} elements', async function (count, role) {`);
-      lines.push(`  await expect(this.page.getByRole(role)).toHaveCount(count);`);
-      lines.push('});');
-      lines.push('');
+
+      // ========================================
+      // 20. ATTRIBUTE / CSS ASSERTIONS
+      // ========================================
+      lines.push(`// --- Attribute / CSS ---`);
       lines.push(`Then('the element {string} should have attribute {string} with value {string}', async function (selector, attr, value) {`);
       lines.push(`  await expect(this.page.locator(selector)).toHaveAttribute(attr, value);`);
       lines.push('});');
-      lines.push('');
-
-      // Screenshot step
-      lines.push(`// Screenshot step`);
-      lines.push(`When('I take a screenshot named {string}', async function (name) {`);
-      lines.push(`  await this.takeScreenshot(name);`);
+      lines.push(`Then('{string} should have class {string}', async function (selector, className) {`);
+      lines.push(`  await expect(this.page.locator(selector)).toHaveClass(new RegExp(className));`);
+      lines.push('});');
+      lines.push(`Then('the element {string} should have CSS {string} with value {string}', async function (selector, prop, value) {`);
+      lines.push(`  await expect(this.page.locator(selector)).toHaveCSS(prop, value);`);
       lines.push('});');
       lines.push('');
 
-      // State sharing steps
-      lines.push(`// State sharing steps`);
+      // ========================================
+      // 21. SCREENSHOT / DEBUGGING
+      // ========================================
+      lines.push(`// --- Screenshot / Debug ---`);
+      lines.push(`When('I take a screenshot named {string}', async function (name) { await this.takeScreenshot(name); });`);
+      lines.push(`When('I take a screenshot', async function () { await this.takeScreenshot('step-' + this.stepIndex); });`);
+      lines.push(`When('I print the current URL', async function () { console.log('Current URL:', this.page.url()); });`);
+      lines.push(`When('I print the page title', async function () { console.log('Page title:', await this.page.title()); });`);
+      lines.push('');
+
+      // ========================================
+      // 22. STATE SHARING
+      // ========================================
+      lines.push(`// --- State Sharing ---`);
       lines.push(`When('I store the text of {string} as {string}', async function (selector, key) {`);
-      lines.push(`  const text = await this.page.locator(selector).first().textContent();`);
-      lines.push(`  this.set(key, text);`);
+      lines.push(`  const text = await this.page.locator(selector).first().textContent(); this.set(key, text);`);
+      lines.push('});');
+      lines.push(`When('I store the value of {string} as {string}', async function (field, key) {`);
+      lines.push(`  const input = await findInput(this.page, field); this.set(key, await input.inputValue());`);
+      lines.push('});');
+      lines.push(`When('I store the current URL as {string}', async function (key) { this.set(key, this.page.url()); });`);
+      lines.push(`Then('the stored value {string} should equal {string}', async function (key, expected) { expect(this.get(key)).toBe(expected); });`);
+      lines.push(`Then('the stored value {string} should contain {string}', async function (key, expected) { expect(this.get(key)).toContain(expected); });`);
+      lines.push('');
+
+      // ========================================
+      // 23. DRAG & DROP
+      // ========================================
+      lines.push(`// --- Drag & Drop ---`);
+      lines.push(`When('I drag {string} to {string}', async function (source, target) {`);
+      lines.push(`  await this.page.getByText(source).first().dragTo(this.page.getByText(target).first());`);
       lines.push('});');
       lines.push('');
-      lines.push(`Then('the stored value {string} should equal {string}', async function (key, expected) {`);
-      lines.push(`  expect(this.get(key)).toBe(expected);`);
+
+      // ========================================
+      // 24. NEW TAB / WINDOW
+      // ========================================
+      lines.push(`// --- New Tab / Window ---`);
+      lines.push(`When('I switch to the new tab', async function () {`);
+      lines.push(`  const [newPage] = await Promise.all([`);
+      lines.push(`    this.context.waitForEvent('page'),`);
+      lines.push(`  ]);`);
+      lines.push(`  await newPage.waitForLoadState('domcontentloaded');`);
+      lines.push(`  this.set('previousPage', this.page);`);
+      lines.push(`  this.page = newPage;`);
+      lines.push('});');
+      lines.push(`When('I switch back to the original tab', async function () {`);
+      lines.push(`  const prev = this.get('previousPage');`);
+      lines.push(`  if (prev) this.page = prev;`);
+      lines.push('});');
+      lines.push(`When('I close the current tab', async function () {`);
+      lines.push(`  await this.page.close();`);
+      lines.push(`  const pages = this.context.pages();`);
+      lines.push(`  if (pages.length > 0) this.page = pages[pages.length - 1];`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 25. API / NETWORK
+      // ========================================
+      lines.push(`// --- API / Network ---`);
+      lines.push(`When('I intercept {string} requests to {string}', async function (method, url) {`);
+      lines.push(`  const responses = [];`);
+      lines.push(`  this.page.on('response', resp => {`);
+      lines.push(`    if (resp.request().method() === method.toUpperCase() && resp.url().includes(url)) responses.push(resp);`);
+      lines.push(`  });`);
+      lines.push(`  this.set('intercepted_' + url, responses);`);
+      lines.push('});');
+      lines.push(`Then('I should have intercepted {int} {string} requests', async function (count, url) {`);
+      lines.push(`  const responses = this.get('intercepted_' + url) || [];`);
+      lines.push(`  expect(responses.length).toBe(count);`);
       lines.push('});');
       lines.push('');
 
       // Auto-generate any custom steps that don't match built-in patterns
       const parsed = this.parseFeatureContent(featureContent);
       const builtInPatterns = [
-        /^I navigate to ".*"$/, /^I am on ".*"$/,
+        // Navigation
+        /^I navigate to ".*"$/, /^I am on ".*"$/, /^I open the url ".*"$/, /^I go to ".*"$/, /^I visit ".*"$/,
+        /^I am on the ".*" page$/, /^I go back$/, /^I go forward$/, /^I refresh the page$/, /^I reload the page$/,
+        // Login
+        /^I enter valid credentials username ".*" password ".*"$/, /^I enter valid credentials user ".*" password ".*"$/,
+        /^I login with username ".*" and password ".*"$/,
+        /^I enter username ".*"$/, /^I enter password ".*"$/, /^I enter email ".*"$/,
+        /^I click the login button$/, /^I submit the login form$/, /^I log out$/,
+        /^I should be logged in$/, /^I should be logged out$/,
+        // Input
         /^I fill ".*" with ".*"$/, /^I type ".*" into ".*"$/, /^I enter ".*" in ".*"$/,
-        /^I click ".*"$/, /^I press ".*"$/,
-        /^I select ".*" from ".*"$/, /^I wait for \d+ seconds$/,
-        /^I should see ".*"$/, /^I should not see ".*"$/,
-        /^the page title should be ".*"$/, /^the page should contain ".*"$/,
-        /^the URL should contain ".*"$/,
+        /^I enter ".*" in the ".*" field$/, /^I fill in the ".*" field with ".*"$/, /^I set ".*" to ".*"$/,
+        /^I clear the ".*" field$/, /^I clear ".*"$/, /^I append ".*" to ".*"$/,
+        // Click
+        /^I click ".*"$/, /^I click the ".*" button$/, /^I click the ".*" link$/,
+        /^I click on ".*"$/, /^I click on the ".*" button$/, /^I click on the ".*" link$/,
+        /^I click on the ".*" tab$/, /^I click on ".*" project tab$/,
+        /^I click on the ".*" menu$/, /^I click on the ".*" menu item$/, /^I click the ".*" icon$/,
+        /^I click the ".*" element$/, /^I click the first ".*"$/, /^I click the last ".*"$/,
+        /^I click the \d+(st|nd|rd|th) ".*"$/,
+        /^I double click ".*"$/, /^I right click ".*"$/, /^I hover over ".*"$/, /^I hover on ".*"$/,
+        /^I focus on ".*"$/,
+        // Keyboard
+        /^I press ".*"$/, /^I press the ".*" key$/, /^I press Enter$/, /^I press Tab$/, /^I press Escape$/,
+        // Select / Checkbox
+        /^I select ".*" from ".*"$/, /^I select ".*" from the ".*" dropdown$/, /^I select the option ".*" in ".*"$/,
+        /^I check ".*"$/, /^I uncheck ".*"$/, /^I check the ".*" checkbox$/, /^I uncheck the ".*" checkbox$/,
+        /^I select the ".*" radio button$/, /^I toggle ".*"$/,
+        // File
+        /^I upload ".*" to ".*"$/, /^I attach the file ".*"$/,
+        // Wait
+        /^I wait for \d+ seconds$/, /^I wait for [\d.]+ seconds$/,
+        /^I wait for ".*" to be visible$/, /^I wait for ".*" to disappear$/,
+        /^I wait for the page to load$/, /^I wait for navigation$/, /^I wait until the page is ready$/,
+        /^I wait for the ".*" element to appear$/,
+        // Scroll
+        /^I scroll down$/, /^I scroll up$/, /^I scroll to the bottom$/, /^I scroll to the top$/, /^I scroll to ".*"$/,
+        // iframe
+        /^I switch to iframe ".*"$/, /^I switch to the main frame$/,
+        // Dialog
+        /^I accept the alert$/, /^I dismiss the alert$/, /^I accept the alert with ".*"$/, /^I should see an alert with ".*"$/,
+        // Table
+        /^the table should have \d+ rows$/, /^I should see ".*" in row \d+$/, /^I should see ".*" in column \d+$/,
+        /^I click on row \d+ in the table$/,
+        // Redirect
+        /^I should be redirected to the ".*"$/, /^I should be redirected to ".*"$/,
+        /^I should be on the ".*" page$/, /^I should see the ".*" open successfully$/,
+        // Visibility
+        /^I should see ".*"$/, /^I should not see ".*"$/, /^I should see text containing ".*"$/,
+        /^I should see ".*" in the ".*"$/, /^".*" should be visible$/, /^".*" should not be visible$/,
+        /^I should see a ".*" message$/,
+        /^the page should contain ".*"$/, /^the page should not contain ".*"$/,
+        // URL
+        /^the URL should contain ".*"$/, /^the URL should be ".*"$/, /^the URL should not contain ".*"$/,
+        // Title
+        /^the page title should be ".*"$/, /^the page title should contain ".*"$/,
+        // Form assertions
+        /^the ".*" field should contain ".*"$/, /^the ".*" field should be empty$/, /^the ".*" field should not be empty$/,
+        /^the ".*" checkbox should be checked$/, /^the ".*" checkbox should not be checked$/,
+        /^the ".*" dropdown should have value ".*"$/,
+        // Button state
+        /^the ".*" button should be disabled$/, /^the ".*" button should be enabled$/,
+        /^the ".*" button should be visible$/, /^the ".*" button should not be visible$/,
+        /^".*" should be disabled$/, /^".*" should be enabled$/,
+        // Count
+        /^I should see \d+ ".*" elements$/, /^there should be \d+ ".*"$/, /^I should see at least \d+ ".*"$/,
+        // Attribute
+        /^the element ".*" should have attribute ".*" with value ".*"$/,
+        /^".*" should have class ".*"$/,
+        /^the element ".*" should have CSS ".*" with value ".*"$/,
+        // Screenshot
+        /^I take a screenshot named ".*"$/, /^I take a screenshot$/,
+        /^I print the current URL$/, /^I print the page title$/,
+        // State
+        /^I store the text of ".*" as ".*"$/, /^I store the value of ".*" as ".*"$/, /^I store the current URL as ".*"$/,
+        /^the stored value ".*" should equal ".*"$/, /^the stored value ".*" should contain ".*"$/,
+        // Drag
+        /^I drag ".*" to ".*"$/,
+        // Tab
+        /^I switch to the new tab$/, /^I switch back to the original tab$/, /^I close the current tab$/,
+        // API
+        /^I intercept ".*" requests to ".*"$/, /^I should have intercepted \d+ ".*" requests$/,
       ];
 
       const seenSteps = new Set<string>();
@@ -1399,9 +1994,18 @@ class BDDService {
           seenSteps.add(normalizedText);
 
           const cucumberKeyword = step.keyword === 'And' || step.keyword === 'But' ? 'Given' : step.keyword;
-          lines.push(`${cucumberKeyword}('${this.escapeString(normalizedText)}', async function () {`);
-          lines.push(`  // TODO: Implement custom step`);
-          lines.push(`  console.log('Step: ${this.escapeString(step.text)}');`);
+
+          // Count {string} and {int} placeholders to generate matching function parameters
+          const paramMatches = normalizedText.match(/\{(string|int|float)\}/g) || [];
+          const paramNames = paramMatches.map((p: string, i: number) => {
+            const type = p.replace(/[{}]/g, '');
+            return type === 'string' ? `arg${i + 1}` : type === 'int' ? `num${i + 1}` : `val${i + 1}`;
+          });
+          const paramList = paramNames.join(', ');
+
+          lines.push(`${cucumberKeyword}('${this.escapeString(normalizedText)}', async function (${paramList}) {`);
+          lines.push(`  // Auto-generated step — customize as needed`);
+          lines.push(`  console.log('Step: ${this.escapeString(step.keyword)} ${this.escapeString(normalizedText)}'${paramNames.length > 0 ? `, ${paramNames.join(', ')}` : ''});`);
           lines.push('});');
           lines.push('');
         }

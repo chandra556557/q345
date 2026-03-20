@@ -13,6 +13,7 @@ import {
   getRun,
   deleteRun,
   cancelRun,
+  getRunReport,
   getExecutionStatus,
   createStepLibEntry,
   getStepLibrary,
@@ -44,6 +45,7 @@ router.post('/features/:id/generate', authMiddleware, generateCode);
 router.post('/features/:id/run', authMiddleware, optionalTenantMiddleware, runFeature);
 router.get('/runs', authMiddleware, getRuns);
 router.get('/runs/:id', authMiddleware, getRun);
+router.get('/runs/:id/report', getRunReport); // No auth — serves HTML report directly (linked from UI)
 router.get('/runs/:id/stream', streamRun); // No authMiddleware — SSE uses token query param (EventSource can't send headers)
 router.post('/runs/:id/cancel', authMiddleware, cancelRun);
 router.delete('/runs/:id', authMiddleware, deleteRun);
