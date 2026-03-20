@@ -861,26 +861,31 @@ class BDDService {
 
       logger.info(`BDD Run ${runId}: Generated step defs:\n${stepDefCode.substring(0, 2000)}`);
 
-      // Build cucumber command with optional tags and parallel workers
+      // Build cucumber command args as array (avoids shell quoting issues with spawn)
       const cucumberEntry = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
       const resultsPath = path.join(runDir, 'results.json');
 
-      let cmd = `node "${cucumberEntry}" --require "${stepsPath}" --format "json":"${resultsPath}" "${featuresPath}"`;
+      const spawnArgs: string[] = [
+        cucumberEntry,
+        '--require', stepsPath,
+        '--format', `json:${resultsPath}`,
+        featuresPath,
+      ];
 
       // Tag-based filtering (e.g., "@smoke", "@smoke and not @wip")
       if (options.tags) {
-        cmd += ` --tags "${options.tags}"`;
+        spawnArgs.push('--tags', options.tags);
         logger.info(`BDD Run ${runId}: Filtering by tags: ${options.tags}`);
       }
 
       // Parallel scenario execution
       const parallelWorkers = options.parallelWorkers || 1;
       if (parallelWorkers > 1) {
-        cmd += ` --parallel ${parallelWorkers}`;
+        spawnArgs.push('--parallel', String(parallelWorkers));
         logger.info(`BDD Run ${runId}: Running with ${parallelWorkers} parallel workers`);
       }
 
-      logger.info(`BDD Run ${runId}: Command: ${cmd}`);
+      logger.info(`BDD Run ${runId}: Command: node ${spawnArgs.map(a => a.includes(' ') ? `"${a}"` : a).join(' ')}`);
 
       // Run cucumber with child process tracking
       const startTime = Date.now();
@@ -890,12 +895,7 @@ class BDDService {
       try {
         // Use spawn instead of exec to avoid maxBuffer limits and enable true streaming
         const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-          // Parse the cmd string into spawn args: "node" is the command, rest are args
-          const cmdParts = cmd.match(/"[^"]*"|\S+/g) || [];
-          const spawnCmd = (cmdParts[0] || 'node').replace(/"/g, '');
-          const spawnArgs = cmdParts.slice(1).map(a => a.replace(/^"|"$/g, ''));
-
-          const child = spawn(spawnCmd, spawnArgs, {
+          const child = spawn('node', spawnArgs, {
             cwd: SHARED_BDD_DIR,
             env: { ...process.env, NODE_PATH: path.join(SHARED_BDD_DIR, 'node_modules') },
             stdio: ['pipe', 'pipe', 'pipe'],
