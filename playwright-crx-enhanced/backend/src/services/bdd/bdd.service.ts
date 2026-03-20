@@ -1276,6 +1276,7 @@ class BDDService {
     lines.push(`    ignoreHTTPSErrors: true,`);
     lines.push(`  });`);
     lines.push(`  this.page = await this.context.newPage();`);
+    lines.push(`  this.page.setDefaultTimeout(60000); // 60s default for Playwright actions (fill, click, etc.)`);
     lines.push('');
     lines.push(`  // Enable console log capture`);
     lines.push(`  this.page.on('console', msg => {`);
@@ -1291,7 +1292,7 @@ class BDDService {
     lines.push(`});`);
     lines.push('');
     lines.push(`Before({ tags: '@slow' }, async function () {`);
-    lines.push(`  this.page.setDefaultTimeout(30000);`);
+    lines.push(`  this.page.setDefaultTimeout(120000); // 120s Playwright timeout for @slow scenarios`);
     lines.push(`});`);
     lines.push('');
 
@@ -1388,6 +1389,8 @@ class BDDService {
       // ========================================
       lines.push(`// Smart locator helpers`);
       lines.push(`async function findInput(page, field) {`);
+      lines.push(`  // Wait for DOM to be ready before searching for inputs`);
+      lines.push(`  await page.waitForLoadState('domcontentloaded');`);
       lines.push(`  const byLabel = page.getByLabel(field);`);
       lines.push(`  if (await byLabel.count() > 0) return byLabel.first();`);
       lines.push(`  const byPlaceholder = page.getByPlaceholder(field);`);
