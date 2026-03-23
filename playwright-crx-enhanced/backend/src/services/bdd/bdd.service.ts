@@ -725,8 +725,9 @@ class BDDService {
     const cucumberBin = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
     const cucumberExists = fs.existsSync(cucumberBin);
     const playwrightExists = fs.existsSync(path.join(SHARED_BDD_DIR, 'node_modules', 'playwright'));
+    const serenityExists = fs.existsSync(path.join(SHARED_BDD_DIR, 'node_modules', '@serenity-js', 'core'));
 
-    if (cucumberExists && playwrightExists) {
+    if (cucumberExists && playwrightExists && serenityExists) {
       logger.info('BDD: Shared environment already exists on disk, skipping install');
       sharedEnvReady = true;
       return;
@@ -742,6 +743,10 @@ class BDDService {
         '@cucumber/cucumber': '^10.0.0',
         'playwright': '^1.49.0',
         '@playwright/test': '^1.49.0',
+        // Serenity BDD integration (actual Serenity CLI for rich reports)
+        '@serenity-js/core': '^3.29.0',
+        '@serenity-js/cucumber': '^3.29.0',
+        '@serenity-js/serenity-bdd': '^3.29.0',
       },
     };
     fs.writeFileSync(path.join(SHARED_BDD_DIR, 'package.json'), JSON.stringify(pkgJson, null, 2));
@@ -753,6 +758,14 @@ class BDDService {
       logger.info('BDD: Chrome browser installed');
     } catch (e: any) {
       logger.warn(`BDD: Playwright install chrome warning: ${e.message}`);
+    }
+
+    // Download Serenity BDD CLI JAR (requires Java JRE 8+ at runtime)
+    try {
+      await execAsync('npx serenity-bdd update', { cwd: SHARED_BDD_DIR, timeout: 120000 });
+      logger.info('BDD: Serenity BDD CLI JAR downloaded');
+    } catch (e: any) {
+      logger.warn(`BDD: Serenity BDD CLI download warning (Java may not be installed): ${e.message}`);
     }
 
     sharedEnvReady = true;
@@ -876,6 +889,25 @@ class BDDService {
 
       logger.info(`BDD Run ${runId}: Generated step defs:\n${stepDefCode.substring(0, 2000)}`);
 
+      // Serenity BDD output directory (intermediate JSON for Serenity CLI)
+      const serenityOutputDir = path.join(runDir, 'target', 'site', 'serenity');
+      fs.mkdirSync(serenityOutputDir, { recursive: true });
+
+      // Write Serenity-JS configuration for this run
+      const serenityConfigPath = path.join(runDir, 'serenity.config.js');
+      const serenityConfig = `
+const { SerenityBDDReporter } = require('@serenity-js/serenity-bdd');
+const { ArtifactArchiver } = require('@serenity-js/core');
+
+module.exports = {
+  crew: [
+    ArtifactArchiver.storingArtifactsAt('${serenityOutputDir.replace(/\\/g, '/')}'),
+    new SerenityBDDReporter(),
+  ],
+};
+`;
+      fs.writeFileSync(serenityConfigPath, serenityConfig);
+
       // Build cucumber command args as array (avoids shell quoting issues with spawn)
       const cucumberEntry = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
       const resultsPath = path.join(runDir, 'results.json');
@@ -884,6 +916,7 @@ class BDDService {
         cucumberEntry,
         '--require', stepsPath,
         '--format', `json:${resultsPath}`,
+        '--format', `@serenity-js/cucumber`,
         featuresPath,
       ];
 
@@ -918,8 +951,12 @@ class BDDService {
         // Use spawn instead of exec to avoid maxBuffer limits and enable true streaming
         const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
           const child = spawn('node', spawnArgs, {
-            cwd: SHARED_BDD_DIR,
-            env: { ...process.env, NODE_PATH: path.join(SHARED_BDD_DIR, 'node_modules') },
+            cwd: runDir,
+            env: {
+              ...process.env,
+              NODE_PATH: path.join(SHARED_BDD_DIR, 'node_modules'),
+              SERENITY_OUTPUT_DIR: serenityOutputDir,
+            },
             stdio: ['pipe', 'pipe', 'pipe'],
             shell: false,
           });
@@ -1099,10 +1136,54 @@ class BDDService {
       // Collect screenshot URLs
       const screenshotUrls = this.collectScreenshots(runId, screenshotDir);
 
+      // ========================================
+      // SERENITY BDD CLI — Generate actual Serenity report
+      // ========================================
+      let serenityReportUrl = '';
+      const serenityReportDir = path.join(BDD_REPORTS_DIR, `serenity-${runId}`);
+      try {
+        // Copy Cucumber JSON results to Serenity source dir (Serenity reads from here)
+        const serenitySourceDir = path.join(runDir, 'target', 'site', 'serenity');
+        fs.mkdirSync(serenitySourceDir, { recursive: true });
+
+        // Serenity BDD CLI can work with Cucumber JSON directly
+        // Copy results.json as a Cucumber-compatible source
+        if (fs.existsSync(resultsFile)) {
+          fs.copyFileSync(resultsFile, path.join(serenitySourceDir, `cucumber-results-${runId}.json`));
+        }
+
+        // Run Serenity BDD CLI to generate the full HTML report
+        const serenityBddCli = path.join(SHARED_BDD_DIR, 'node_modules', '.bin', 'serenity-bdd');
+        const serenityBin = fs.existsSync(serenityBddCli) ? serenityBddCli : 'npx serenity-bdd';
+
+        fs.mkdirSync(serenityReportDir, { recursive: true });
+
+        const serenityCmd = `"${serenityBin}" run --source "${serenitySourceDir}" --destination "${serenityReportDir}" --features "${path.join(runDir, 'features')}"`;
+        logger.info(`BDD Run ${runId}: Running Serenity BDD CLI: ${serenityCmd}`);
+
+        await execAsync(serenityCmd, {
+          cwd: SHARED_BDD_DIR,
+          timeout: 120000,
+          env: { ...process.env, NODE_PATH: path.join(SHARED_BDD_DIR, 'node_modules') },
+        });
+
+        // Verify the report was generated
+        const serenityIndexPath = path.join(serenityReportDir, 'index.html');
+        if (fs.existsSync(serenityIndexPath)) {
+          serenityReportUrl = `/playwright-crx-reports/serenity-${runId}/index.html`;
+          logger.info(`BDD Run ${runId}: Serenity BDD report generated at ${serenityReportUrl}`);
+        } else {
+          logger.warn(`BDD Run ${runId}: Serenity BDD index.html not found after CLI run`);
+        }
+      } catch (serenityErr: any) {
+        logger.warn(`BDD Run ${runId}: Serenity BDD CLI report generation failed (Java may not be installed): ${serenityErr.message}`);
+        // Non-fatal — we still have the custom Serenity-style report as fallback
+      }
+
       // Parse feature for narrative and scenario info
       const parsedForReport = this.parseFeatureContent(featureContent);
 
-      // Generate Serenity-style HTML report with narrative/business context
+      // Generate custom Serenity-style HTML report (always works, no Java needed)
       const serenityData: SerenityReportData = {
         runId,
         featureName: parsedForReport.name || 'BDD Test',
@@ -1119,7 +1200,7 @@ class BDDService {
       };
       const reportResult: SerenityReportResult = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
 
-      // Update run in DB (store HTML report in database)
+      // Update run in DB (store both reports)
       await pool.query(
         `UPDATE "BDDRun" SET
           status = $1, duration = $2,
@@ -1128,19 +1209,22 @@ class BDDService {
           "reportHtml" = $12,
           "retryCount" = $13, "retryInfo" = $14,
           "environmentName" = $15, "environmentProfile" = $16,
+          "serenityReportUrl" = $17,
           "completedAt" = now(), "updatedAt" = now()
          WHERE id = $9`,
         [overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
           JSON.stringify(stepResults), errorMsg || null, runId, reportResult.reportUrl, JSON.stringify(screenshotUrls),
           reportResult.reportHtml,
           retryCount, JSON.stringify(retryInfo),
-          options.environment?.name || null, options.environment ? JSON.stringify(options.environment) : null]
+          options.environment?.name || null, options.environment ? JSON.stringify(options.environment) : null,
+          serenityReportUrl || null]
       );
 
       // Emit live event: completed
       this.emitEvent(runId, 'completed', {
         status: overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
         reportUrl: reportResult.reportUrl, screenshotUrls,
+        ...(serenityReportUrl ? { serenityReportUrl } : {}),
         ...(retryInfo.totalRetries > 0 ? { retryInfo } : {}),
         ...(options.environment?.name ? { environment: options.environment.name } : {}),
       });

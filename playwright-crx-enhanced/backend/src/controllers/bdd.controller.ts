@@ -466,14 +466,28 @@ export const getRun = asyncHandler(async (req: Request, res: Response) => {
  */
 export const getRunReport = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const reportType = req.query.type as string; // 'serenity' for actual Serenity BDD report
 
   const { rows } = await pool.query(
-    `SELECT "reportHtml", "reportUrl", status FROM "BDDRun" WHERE id = $1`,
+    `SELECT "reportHtml", "reportUrl", "serenityReportUrl", status FROM "BDDRun" WHERE id = $1`,
     [id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'Run not found' });
 
   const run = rows[0];
+
+  // If requesting the actual Serenity BDD report, redirect to the static file
+  if (reportType === 'serenity') {
+    if (!run.serenityReportUrl) {
+      return res.status(404).json({
+        error: 'Serenity BDD report not available. Possible causes: Java not installed, or report generation failed.',
+        fallbackReportUrl: `/api/bdd/runs/${id}/report`,
+      });
+    }
+    return res.redirect(run.serenityReportUrl);
+  }
+
+  // Default: return the custom Serenity-style report (always available)
   if (!run.reportHtml) {
     return res.status(404).json({ error: 'Report not yet generated or unavailable' });
   }
