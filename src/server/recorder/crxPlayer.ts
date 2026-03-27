@@ -32,6 +32,9 @@ import type { Crx } from '../crx';
 import type { InstrumentationListener } from 'playwright-core/lib/server/instrumentation';
 import { traceParamsForAction } from './recorderUtils';
 import { yaml } from 'playwright-core/lib/utilsBundle';
+import { domSnapshotManager, type DOMSnapshot } from '../snapshot/domSnapshot';
+import { selfHealingEngine } from '../snapshot/selfHealing';
+import { ActionBatcher, actionBatcher, type ActionBatch, type ExecutionMetrics } from './actionBatcher';
 
 class Stopped extends Error {}
 
@@ -71,6 +74,9 @@ export default class CrxPlayer extends EventEmitter {
     await this._pause;
   }
 
+  private _parallelExecutionEnabled = true;
+  private _executionMetrics?: ExecutionMetrics;
+
   async run(pageOrContext: Page | BrowserContext, actions: PerformAction[]) {
     if (this.isPlaying())
       return;
@@ -107,11 +113,10 @@ export default class CrxPlayer extends EventEmitter {
     this.emit('start');
 
     try {
-      for (const action of actions) {
-        if (action.action.name === 'openPage' && action.frame.pageAlias === 'page')
-          continue;
-        this._currAction = action;
-        await this._performAction(context, action);
+      if (this._parallelExecutionEnabled) {
+        await this._runBatched(context, actions);
+      } else {
+        await this._runSequential(context, actions);
       }
     } catch (e) {
       if (e instanceof Stopped)
@@ -123,6 +128,106 @@ export default class CrxPlayer extends EventEmitter {
       if (instrumentationListener)
         context.instrumentation.removeListener(instrumentationListener);
     }
+  }
+
+  /**
+   * Run actions sequentially (original behavior)
+   */
+  private async _runSequential(context: BrowserContext, actions: PerformAction[]) {
+    for (const action of actions) {
+      if (action.action.name === 'openPage' && action.frame.pageAlias === 'page')
+        continue;
+      this._currAction = action;
+      await this._performAction(context, action);
+    }
+  }
+
+  /**
+   * Run actions with parallel batching for independent operations
+   */
+  private async _runBatched(context: BrowserContext, actions: PerformAction[]) {
+    // Create optimized batches
+    const batches = actionBatcher.createBatches(actions);
+    
+    // Calculate and store metrics
+    this._executionMetrics = actionBatcher.calculateMetrics(batches, actions.length);
+    
+    // Emit metrics for monitoring
+    this.emit('metrics', this._executionMetrics);
+
+    for (const batch of batches) {
+      if (batch.type === 'sequential' || batch.actions.length === 1) {
+        // Execute sequentially
+        for (const action of batch.actions) {
+          if (action.action.name === 'openPage' && action.frame.pageAlias === 'page')
+            continue;
+          this._currAction = action;
+          await this._performAction(context, action);
+        }
+      } else {
+        // Execute in parallel
+        await this._executeParallelBatch(context, batch);
+      }
+    }
+  }
+
+  /**
+   * Execute a batch of actions in parallel
+   */
+  private async _executeParallelBatch(context: BrowserContext, batch: ActionBatch): Promise<void> {
+    // Filter out openPage actions for 'page' alias
+    const actionsToExecute = batch.actions.filter(
+      a => !(a.action.name === 'openPage' && a.frame.pageAlias === 'page')
+    );
+
+    if (actionsToExecute.length === 0) return;
+    if (actionsToExecute.length === 1) {
+      this._currAction = actionsToExecute[0];
+      await this._performAction(context, actionsToExecute[0]);
+      return;
+    }
+
+    // Execute all actions in parallel with individual error handling
+    const results = await Promise.allSettled(
+      actionsToExecute.map(async (action) => {
+        // Note: We don't set _currAction for parallel actions to avoid confusion
+        // Individual action errors are collected but don't fail the batch
+        try {
+          await this._performAction(context, action);
+          return { action, success: true };
+        } catch (error) {
+          return { action, success: false, error };
+        }
+      })
+    );
+
+    // Check for failures
+    const failures = results
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+      .map(r => r.value)
+      .filter(r => !r.success);
+
+    if (failures.length > 0) {
+      const errorMessages = failures.map(f => 
+        `  - ${f.action.action.name}: ${f.error?.message || 'Unknown error'}`
+      ).join('\n');
+      
+      throw new Error(`Parallel batch execution failed with ${failures.length} error(s):\n${errorMessages}`);
+    }
+  }
+
+  /**
+   * Enable/disable parallel execution
+   */
+  setParallelExecution(enabled: boolean) {
+    this._parallelExecutionEnabled = enabled;
+  }
+
+  /**
+   * Get execution metrics from last run
+   */
+  getExecutionMetrics(): ExecutionMetrics | undefined {
+    return this._executionMetrics;
   }
 
   isPlaying() {
@@ -186,7 +291,7 @@ export default class CrxPlayer extends EventEmitter {
     };
 
     // similar to playwright/packages/playwright-core/src/server/recorder/recorderRunner.ts
-    const kActionTimeout = isUnderTest() ? 2000 : 5000;
+    const kActionTimeout = isUnderTest() ? 2000 : 30000;
 
     const { action } = actionInContext;
     const pageAliases = this._pageAliases;
@@ -294,6 +399,42 @@ export default class CrxPlayer extends EventEmitter {
         isNot: false,
         timeout: kActionTimeout,
       }));
+    }
+    if (action.name === 'assertDOMSnapshot') {
+      return await innerPerformAction(mainFrame, actionInContext, async callMetadata => {
+        // Get the page from frame
+        const page = mainFrame._page;
+        
+        // Capture current DOM snapshot
+        const currentSnapshot = await domSnapshotManager.capture(page, selector, {
+          includeStyles: true,
+          includeBoundingBoxes: true,
+          includeHidden: false,
+        });
+
+        // Try to load expected snapshot from file
+        const snapshotPath = `/tmp/snapshots/${action.name}.json`;
+        let expectedSnapshot: DOMSnapshot;
+        
+        try {
+          expectedSnapshot = await domSnapshotManager.loadFromFile(snapshotPath);
+        } catch (e) {
+          // First run - save as baseline
+          await domSnapshotManager.saveToFile(currentSnapshot, snapshotPath);
+          return;
+        }
+
+        // Compare snapshots
+        const diffs = domSnapshotManager.compare(expectedSnapshot, currentSnapshot, {
+          ignoreAttributes: ['data-reactroot', 'data-reactid'],
+          ignoreStyles: ['animation', 'transition'],
+        });
+
+        if (diffs.length > 0) {
+          const diffMessage = diffs.map(d => `${d.type}: ${d.path} - ${d.changes?.join(', ')}`).join('\n');
+          throw new Error(`DOM Snapshot mismatch:\n${diffMessage}`);
+        }
+      });
     }
     throw new Error('Internal error: unexpected action ' + (action as any).name);
   }

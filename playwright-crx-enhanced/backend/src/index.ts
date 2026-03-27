@@ -32,6 +32,8 @@ import queueRoutes from './routes/queue.routes';
 import dataDrivenRoutes from './routes/dataDriven.routes';
 import bddRoutes from './routes/bdd.routes';
 import screenplayRoutes from './routes/screenplay.routes';
+import mcpRoutes from './routes/mcp.routes';
+import pythonApiRoutes from './routes/python-api.routes';
 import pool from './db';
 
 // Services
@@ -164,6 +166,9 @@ app.get('/api', (_req, res) => {
       '/api/queue/*',
       '/api/data-driven-runs/*',
       '/api/bdd/*',
+      '/api/screenplay/*',
+      '/api/mcp/*',
+      '/api/python-api/*',
       '/api-docs',
       '/api-docs.json'
     ]
@@ -199,6 +204,8 @@ app.use('/api/queue', queueRoutes);
 app.use('/api/data-driven-runs', dataDrivenRoutes);
 app.use('/api/bdd', bddRoutes);
 app.use('/api/screenplay', screenplayRoutes);
+app.use('/api/mcp', mcpRoutes);
+app.use('/api/python-api', pythonApiRoutes);
 
 app.use((_req, res) => { res.status(404).json({ error: 'Route not found' }); });
 app.use(errorHandler);
@@ -234,10 +241,14 @@ httpServer.listen(PORT, async () => {
   }
 
   // Pre-warm BDD/Cucumber environment in background (non-blocking)
-  bddService.warmup().catch(() => {});
+  bddService.warmup().catch((err: any) => {
+    logger.warn(`BDD warmup failed (non-fatal): ${err?.message || err}`);
+  });
 
   // Initialize BDD scheduled runs
-  bddService.initializeSchedules().catch(() => {});
+  bddService.initializeSchedules().catch((err: any) => {
+    logger.warn(`BDD schedule initialization failed (non-fatal): ${err?.message || err}`);
+  });
 });
 
 // Graceful shutdown

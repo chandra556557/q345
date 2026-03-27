@@ -5,6 +5,7 @@ import {
   getReportUrl,
   getAllReports,
   cleanupOldReports,
+  generateBDDReport,
 } from '../controllers/allure.controller';
 
 const router = Router();
@@ -16,5 +17,9 @@ router.get('/report/:testRunId', authMiddleware, getReportUrl);
 router.get('/reports', authMiddleware, getAllReports);
 
 router.post('/cleanup', authMiddleware, cleanupOldReports);
+
+// BDD-specific Allure report generation
+router.post('/bdd-report/:runId', authMiddleware, generateBDDReport);
+router.get('/bdd-report/:runId', authMiddleware, generateBDDReport);
 
 export default router;

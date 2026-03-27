@@ -720,3 +720,62 @@
   border-radius: 4px;
   display: inline-block;
 }
+
+/* Script Replay Toolbar */
+.replay-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-top: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editor-background);
+}
+
+.replay-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.replay-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.replay-btn-play {
+  color: var(--vscode-testing-iconPassed, #388a34);
+}
+
+.replay-btn-stop {
+  color: var(--vscode-testing-iconFailed, #f14c4c);
+}
+
+/* Script Replay Status Styles */
+.replay-status {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.replay-error {
+  color: var(--vscode-errorForeground);
+  background: var(--vscode-inputValidation-errorBackground);
+  border-top-color: var(--vscode-inputValidation-errorBorder);
+}
+
+.replay-running {
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+.replay-done {
+  color: var(--vscode-testing-iconPassed);
+  background: var(--vscode-editor-background);
+}

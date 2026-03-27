@@ -138,7 +138,7 @@ const DataDrivenTesting = () => {
     setExtractingFields(true);
     setExtractedFields([]);
     try {
-      const response = await axios.post(`${API_URL}/ai-analysis/xpath-deep-analysis`, { scriptCode }, { headers });
+      const response = await axios.post(`${API_URL}/ai-analysis/xpath-analyze`, { scriptCode }, { headers });
       setExtractedFields(response.data?.fields || []);
       setShowFields(true);
     } catch {

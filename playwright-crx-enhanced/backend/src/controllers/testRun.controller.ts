@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { AppError } from '../middleware/errorHandler';
 import { allureService } from '../services/allure.service';
+import { queueService } from '../services/queue';
+import { tenantService } from '../services/tenant';
 import pool from '../db';
 import { randomUUID } from 'crypto';
 
@@ -16,7 +18,7 @@ export const getTestRuns = async (req: Request, res: Response) => {
     let query = `SELECT tr.*, s.name AS script_name, s."projectId" AS script_project_id
        FROM "TestRun" tr
        JOIN "Script" s ON s.id = tr."scriptId"
-       WHERE tr."userId" = $1`;
+       WHERE tr."userId" = $1 AND tr."dataDrivenRunId" IS NULL`;
     
     const params = [userId];
     
@@ -102,7 +104,11 @@ export const startTestRun = async (req: Request, res: Response) => {
     const testRun = rows[0];
 
     try {
-      await allureService.startTest(testRun.id, script.name);
+      await allureService.startTest(testRun.id, script.name, {
+        browser: browser || 'chromium',
+        environment: environment || 'development',
+        suiteName: script.name,
+      });
     } catch (error) {
       console.error('Failed to start Allure test:', error);
     }
@@ -185,7 +191,11 @@ export const executeCurrentScript = async (req: Request, res: Response) => {
     const testRun = rows[0];
 
     try {
-      await allureService.startTest(testRun.id, `Current Script (${language})`);
+      await allureService.startTest(testRun.id, `Current Script (${language})`, {
+        browser: browser || 'chromium',
+        environment: environment || 'development',
+        suiteName: `Current Script (${language})`,
+      });
     } catch (error) {
       console.error('Failed to start Allure test:', error);
     }
@@ -454,3 +464,245 @@ export const reportTestResult = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Start a test run with queue-based execution (multi-tenant)
+ * Supports parallel execution across worker nodes
+ */
+export const startQueuedTestRun = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const organizationId = (req as any).tenant?.organizationId || null;
+    const { 
+      scriptId, 
+      environmentId, 
+      executionMode = 'headless', 
+      browser = 'chromium',
+      priority = 0 
+    } = req.body;
+
+    if (!scriptId) throw new AppError('Script ID is required', 400);
+
+    // Validate script ownership
+    const scriptRes = await pool.query(
+      `SELECT id, name FROM "Script" WHERE id = $1 AND "userId" = $2`,
+      [scriptId, userId]
+    );
+    const script = scriptRes.rows[0];
+    if (!script) throw new AppError('Script not found', 404);
+
+    // Check organization concurrency limits
+    if (organizationId) {
+      const canExecute = await tenantService.checkConcurrencyLimit(organizationId);
+      if (!canExecute) {
+        throw new AppError('Organization concurrent execution limit reached. Please wait for running tests to complete.', 429);
+      }
+    }
+
+    // Validate execution mode
+    if (!['headless', 'headed', 'api'].includes(executionMode)) {
+      throw new AppError('Invalid execution mode. Allowed: headless, headed, api', 400);
+    }
+
+    // Create test run
+    const testRunId = randomUUID();
+    const { rows } = await pool.query(
+      `INSERT INTO "TestRun" (
+        id, "scriptId", "userId", "organizationId", "environmentId", 
+        status, "executionMode", browser, "startedAt"
+      )
+      VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7, now())
+      RETURNING *`,
+      [testRunId, scriptId, userId, organizationId, environmentId || null, executionMode, browser]
+    );
+    const testRun = rows[0];
+
+    // Check if queue is ready
+    if (!queueService.isReady()) {
+      // Fallback to immediate execution if queue not available
+      console.warn('Queue service not ready, using fallback execution');
+      
+      await pool.query(
+        `UPDATE "TestRun" SET status = 'running' WHERE id = $1`,
+        [testRunId]
+      );
+      
+      res.status(201).json({ 
+        success: true, 
+        data: { ...testRun, status: 'running' },
+        message: 'Test started (queue unavailable, using fallback)'
+      });
+      return;
+    }
+
+    // Add to job queue
+    await queueService.addTestJob({
+      testRunId,
+      scriptId,
+      userId,
+      organizationId: organizationId || 'default',
+      environmentId,
+      executionMode: executionMode as 'headless' | 'headed' | 'api',
+      browser,
+      priority,
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      data: testRun,
+      message: 'Test queued for execution'
+    });
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ success: false, error: error.message });
+    } else {
+      res.status(500).json({ success: false, error: error.message || 'Failed to queue test run' });
+    }
+  }
+};
+
+/**
+ * Start batch test runs (multiple scripts at once)
+ */
+export const startBatchTestRuns = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const organizationId = (req as any).tenant?.organizationId || null;
+    const { 
+      scriptIds, 
+      environmentId, 
+      executionMode = 'headless',
+      browser = 'chromium',
+      priority = 0 
+    } = req.body;
+
+    if (!scriptIds || !Array.isArray(scriptIds) || scriptIds.length === 0) {
+      throw new AppError('scriptIds array is required', 400);
+    }
+
+    if (scriptIds.length > 50) {
+      throw new AppError('Maximum 50 scripts per batch', 400);
+    }
+
+    // Check organization limits
+    if (organizationId) {
+      const canExecute = await tenantService.checkConcurrencyLimit(organizationId);
+      if (!canExecute) {
+        throw new AppError('Organization concurrent execution limit reached', 429);
+      }
+    }
+
+    // Validate all scripts belong to user
+    const scriptsRes = await pool.query(
+      `SELECT id, name FROM "Script" WHERE id = ANY($1) AND "userId" = $2`,
+      [scriptIds, userId]
+    );
+    
+    if (scriptsRes.rows.length !== scriptIds.length) {
+      throw new AppError('One or more scripts not found or access denied', 404);
+    }
+
+    const testRuns = [];
+    const jobsData = [];
+
+    // Create test runs for each script
+    for (const scriptId of scriptIds) {
+      const testRunId = randomUUID();
+      
+      const { rows } = await pool.query(
+        `INSERT INTO "TestRun" (
+          id, "scriptId", "userId", "organizationId", "environmentId", 
+          status, "executionMode", browser, "startedAt"
+        )
+        VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7, now())
+        RETURNING *`,
+        [testRunId, scriptId, userId, organizationId, environmentId || null, executionMode, browser]
+      );
+      
+      testRuns.push(rows[0]);
+      
+      jobsData.push({
+        testRunId,
+        scriptId,
+        userId,
+        organizationId: organizationId || 'default',
+        environmentId,
+        executionMode: executionMode as 'headless' | 'headed' | 'api',
+        browser,
+        priority,
+      });
+    }
+
+    // Add all to queue
+    if (queueService.isReady()) {
+      await queueService.addBulkTestJobs(jobsData);
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      data: testRuns,
+      message: `${testRuns.length} tests queued for execution`
+    });
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ success: false, error: error.message });
+    } else {
+      res.status(500).json({ success: false, error: error.message || 'Failed to queue batch test runs' });
+    }
+  }
+};
+
+/**
+ * Get test runs with organization filter
+ */
+export const getOrganizationTestRuns = async (req: Request, res: Response) => {
+  try {
+    // const userId = (req as any).user.userId; // Available if needed
+    const organizationId = (req as any).tenant?.organizationId;
+    const { projectId, status, limit = 50, offset = 0 } = req.query;
+
+    if (!organizationId) {
+      throw new AppError('Organization context required', 400);
+    }
+
+    let query = `
+      SELECT tr.*, s.name AS script_name, s."projectId" AS script_project_id,
+             u.name AS user_name, u.email AS user_email
+      FROM "TestRun" tr
+      JOIN "Script" s ON s.id = tr."scriptId"
+      JOIN "User" u ON u.id = tr."userId"
+      WHERE tr."organizationId" = $1
+    `;
+    
+    const params: any[] = [organizationId];
+    let paramIndex = 2;
+    
+    if (projectId) {
+      query += ` AND s."projectId" = $${paramIndex++}`;
+      params.push(projectId as string);
+    }
+    
+    if (status) {
+      query += ` AND tr.status = $${paramIndex++}`;
+      params.push(status as string);
+    }
+    
+    query += ` ORDER BY tr."startedAt" DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    params.push(parseInt(limit as string), parseInt(offset as string));
+
+    const { rows } = await pool.query(query, params);
+
+    const testRuns = rows.map(r => ({
+      ...r,
+      script: { name: r.script_name },
+      user: { name: r.user_name, email: r.user_email }
+    }));
+
+    res.status(200).json({ success: true, data: testRuns });
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({ success: false, error: error.message });
+    } else {
+      res.status(500).json({ success: false, error: error.message || 'Failed to get organization test runs' });
+    }
+  }
+};

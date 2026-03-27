@@ -5,10 +5,19 @@
   "author": "",
   "scripts": {
     "build": "tsc -p ./test-extension/tsconfig.json && vite build ./test-extension",
-    "serve": "vite ./server --host 127.0.0.1 --port 3000"
+    "serve": "vite ./server --host 127.0.0.1 --port 3000",
+    "test": "playwright test",
+    "test:allure": "playwright test --reporter=allure-playwright",
+    "allure:generate": "allure generate allure-results -o allure-report --clean",
+    "allure:open": "allure open allure-report",
+    "allure:serve": "allure serve allure-results",
+    "allure:clean": "rimraf allure-results allure-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.0",
+    "allure-commandline": "^2.30.0",
+    "allure-playwright": "^3.0.0",
+    "rimraf": "^6.0.1",
     "vite": "^6.4.1",
     "yauzl": "^3.2.0"
   }

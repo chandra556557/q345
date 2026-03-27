@@ -554,13 +554,13 @@ const extractFieldsFromScript = (scriptCode: string): Array<{ selector?: string;
     fields.push({ selector: f.selector, fieldName: f.fieldName, fieldType, action: f.action });
   };
 
-  const byLabelRegex = /getByLabel\((['"])\s*([^\1]+?)\s*\1\)/g;
-  const byPlaceholderRegex = /getByPlaceholder\((['"])\s*([^\1]+?)\s*\1\)/g;
+  const byLabelRegex = /getByLabel\((['"])\s*([^)]+?)\s*\1\)/g;
+  const byPlaceholderRegex = /getByPlaceholder\((['"])\s*([^)]+?)\s*\1\)/g;
   const byRoleTextboxRegex = /getByRole\(\s*['"]textbox['"]\s*,\s*\{[^}]*name:\s*(['"])\s*([^'"}]+)\s*\1[^}]*\}\s*\)/g;
-  const fillRegex = /page\.(?:fill|type)\(\s*(['"])\s*([^\1]+?)\s*\1\s*,/g;
-  const locatorFillRegex = /locator\(\s*(['"])\s*([^\1]+?)\s*\1\s*\)\.(?:fill|type)\(/g;
-  const selectOptionRegex = /selectOption\(\s*(['"])\s*([^\1]+?)\s*\1\s*,/g;
-  const checkRegex = /check\(\s*(['"])\s*([^\1]+?)\s*\1\s*\)/g;
+  const fillRegex = /page\.(?:fill|type)\(\s*(['"])\s*([^)]+?)\s*\1\s*,/g;
+  const locatorFillRegex = /locator\(\s*(['"])\s*([^)]+?)\s*\1\s*\)\.(?:fill|type)\(/g;
+  const selectOptionRegex = /selectOption\(\s*(['"])\s*([^)]+?)\s*\1\s*,/g;
+  const checkRegex = /check\(\s*(['"])\s*([^)]+?)\s*\1\s*\)/g;
 
   let m: RegExpExecArray | null;
   while ((m = byLabelRegex.exec(scriptCode))) pushField({ fieldName: m[2], action: 'fill' });

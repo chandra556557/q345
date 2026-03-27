@@ -186,7 +186,8 @@ export class CrxRecorderApp extends EventEmitter implements IRecorderApp {
     if (!code)
       return;
 
-    this._editedCode = new EditedCode(this._recorder, code, () => this._updateLocator(this._currentCursorPosition));
+    const isJavaScript = !this._filename || this._filename === 'playwright-test' || this._filename === 'javascript';
+    this._editedCode = new EditedCode(this._recorder, code, isJavaScript, () => this._updateLocator(this._currentCursorPosition));
   }
 
   private async _updateLocator(position?: { line: number}) {
@@ -299,14 +300,16 @@ export class CrxRecorderApp extends EventEmitter implements IRecorderApp {
 class EditedCode {
   readonly code: string;
   private _recorder: Recorder;
+  private _isJavaScript: boolean;
   private _actions: ActionInContextWithLocation[] = [];
   private _highlight: SourceHighlight[] = [];
   private _codeLoadDebounceTimeout: NodeJS.Timeout | undefined;
   private _onLoaded?: () => any;
 
-  constructor(recorder: Recorder, code: string, onLoaded?: () => any) {
+  constructor(recorder: Recorder, code: string, isJavaScript: boolean, onLoaded?: () => any) {
     this.code = code;
     this._recorder = recorder;
+    this._isJavaScript = isJavaScript;
     this._onLoaded = onLoaded;
     this._codeLoadDebounceTimeout = setTimeout(this.load.bind(this), 500);
   }
@@ -344,6 +347,15 @@ class EditedCode {
       return;
 
     this.stopLoad();
+
+    // Only parse JavaScript/Playwright Test code with acorn parser.
+    // Non-JS languages (Java, Python, C#) cannot be parsed by acorn and
+    // use the recorded actions mapped back via language generators instead.
+    if (!this._isJavaScript) {
+      this._onLoaded?.();
+      return;
+    }
+
     try {
       const [{ actions, options }] = parse(this.code);
       this._actions = actions;

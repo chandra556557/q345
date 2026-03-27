@@ -24,7 +24,18 @@ export default defineConfig<CrxFixtureOptions>({
   workers: process.env.CI ? 1 : 2,
   reporter: [
     ['html'],
-    ['./crx/db-reporter.js']
+    ['./crx/db-reporter.js'],
+    ['allure-playwright', {
+      detail: true,
+      outputFolder: 'allure-results',
+      suiteTitle: true,
+      environmentInfo: {
+        os_platform: process.platform,
+        os_release: require('os').release(),
+        node_version: process.version,
+        playwright_version: require('@playwright/test/package.json').version
+      }
+    }]
   ],
   use: {
     baseURL: 'http://127.0.0.1:3000',

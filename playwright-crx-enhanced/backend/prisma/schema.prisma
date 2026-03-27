@@ -8,21 +8,30 @@ datasource db {
 }
 
 model User {
-  id                String            @id @default(cuid())
-  email             String            @unique
-  password          String
-  name              String
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  extensionScripts  ExtensionScript[]
-  projects          Project[]
-  refreshTokens     RefreshToken[]
-  scripts           Script[]
-  testRuns          TestRun[]
-  testSuites        TestSuite[]
-  apiRequests       ApiRequest[]
+  id                  String              @id @default(cuid())
+  email               String              @unique
+  password            String
+  name                String
+  avatar              String?
+  globalRole          String              @default("user")
+  status              String              @default("active")
+  lastLoginAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  extensionScripts    ExtensionScript[]
+  projects            Project[]
+  refreshTokens       RefreshToken[]
+  scripts             Script[]
+  testRuns            TestRun[]
+  testSuites          TestSuite[]
+  apiRequests         ApiRequest[]
+  userOrganizations   UserOrganization[]
+  dataDrivenRuns      DataDrivenRun[]
+  bddFeatures         BDDFeature[]
+  bddRuns             BDDRun[]
 
   @@index([email])
+  @@index([status])
 }
 
 model RefreshToken {
@@ -39,67 +48,97 @@ model RefreshToken {
 }
 
 model Project {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  userId      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scripts     Script[]
+  id             String        @id @default(cuid())
+  name           String
+  description    String?
+  userId         String
+  organizationId String?
+  visibility     String        @default("private")
+  settings       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scripts        Script[]
+  bddFeatures    BDDFeature[]
 
   @@index([userId])
+  @@index([organizationId])
+  @@index([visibility])
   @@index([createdAt])
 }
 
 model Script {
-  id                  String               @id @default(cuid())
+  id                  String           @id @default(cuid())
   name                String
   description         String?
-  language            String               @default("typescript")
+  language            String           @default("typescript")
   code                String
   projectId           String?
   userId              String
-  browserType         String               @default("chromium")
+  applicationTypeId   String?
+  browserType         String           @default("chromium")
   viewport            Json?
-  testIdAttribute     String               @default("data-testid")
-  workflowStatus      String               @default("draft")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  testIdAttribute     String           @default("data-testid")
+  workflowStatus      String           @default("draft")
+  tags                Json?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   breakpoints         Breakpoint[]
-  project             Project?             @relation(fields: [projectId], references: [id])
-  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project             Project?         @relation(fields: [projectId], references: [id])
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationType     ApplicationType? @relation(fields: [applicationTypeId], references: [id])
   testRuns            TestRun[]
   variables           Variable[]
+  dataDrivenRuns      DataDrivenRun[]
 
   @@index([userId])
   @@index([projectId])
+  @@index([applicationTypeId])
   @@index([createdAt])
   @@index([workflowStatus])
 }
 
 model TestRun {
-  id              String     @id @default(cuid())
-  scriptId        String
-  userId          String
-  status          String
-  duration        Int?
-  errorMsg        String?
-  traceUrl        String?
-  screenshotUrls  Json?
-  videoUrl        String?
-  environment     String?
-  browser         String     @default("chromium")
-  viewport        Json?
-  startedAt       DateTime   @default(now())
-  completedAt     DateTime?
+  id                 String         @id @default(cuid())
+  scriptId           String
+  userId             String
+  organizationId     String?
+  environmentId      String?
+  workerNodeId       String?
+  dataDrivenRunId    String?
+  dataRowIndex       Int?
+  dataRowValues      Json?
+  status             String
+  duration           Int?
+  errorMsg           String?
+  traceUrl           String?
+  screenshotUrls     Json?
+  videoUrl           String?
+  environment        String?
+  browser            String         @default("chromium")
+  viewport           Json?
+  executionMode      String         @default("headless")
+  retryCount         Int            @default(0)
+  metadata           Json?
+  startedAt          DateTime       @default(now())
+  completedAt        DateTime?
   executionReportUrl String?
-  script          Script     @relation(fields: [scriptId], references: [id], onDelete: Cascade)
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  steps           TestStep[]
+  script             Script         @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization       Organization?  @relation(fields: [organizationId], references: [id])
+  environmentRef     Environment?   @relation(fields: [environmentId], references: [id])
+  workerNode         WorkerNode?    @relation(fields: [workerNodeId], references: [id])
+  dataDrivenRun      DataDrivenRun? @relation(fields: [dataDrivenRunId], references: [id], onDelete: SetNull)
+  steps              TestStep[]
+  jobQueue           JobQueue?
 
   @@index([scriptId])
   @@index([userId])
+  @@index([organizationId])
+  @@index([environmentId])
+  @@index([workerNodeId])
+  @@index([dataDrivenRunId])
   @@index([status])
   @@index([startedAt])
 }
@@ -173,8 +212,9 @@ model TestSuite {
   userId      String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  testData    TestData[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testData       TestData[]
+  dataDrivenRuns DataDrivenRun[]
 
   @@index([userId])
 }
@@ -197,18 +237,422 @@ model TestData {
 
 // API Testing Models
 model ApiRequest {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  method      String
-  url         String
-  headers     Json?
-  body        Json?
-  environment String   @default("dev")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  userId         String
+  organizationId String?
+  name           String
+  method         String
+  url            String
+  headers        Json?
+  body           Json?
+  environment    String        @default("dev")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   @@index([userId])
+  @@index([organizationId])
   @@index([environment])
+}
+
+// ============================================
+// MULTI-TENANCY MODELS
+// ============================================
+
+model Organization {
+  id                String             @id @default(cuid())
+  name              String
+  slug              String             @unique
+  domain            String?            @unique
+  subscription      String             @default("free")
+  maxConcurrentRuns Int                @default(5)
+  maxUsers          Int                @default(10)
+  settings          Json?
+  logoUrl           String?
+  status            String             @default("active")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  userOrganizations UserOrganization[]
+  projects          Project[]
+  environments      Environment[]
+  testRuns          TestRun[]
+  apiRequests       ApiRequest[]
+  dataDrivenRuns    DataDrivenRun[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model UserOrganization {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String       @default("member")
+  permissions    Json?
+  invitedBy      String?
+  invitedAt      DateTime?
+  joinedAt       DateTime     @default(now())
+  status         String       @default("active")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([role])
+}
+
+model Environment {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  displayName    String
+  description    String?
+  config         Json
+  variables      Json?
+  baseUrl        String?
+  isDefault      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  testRuns     TestRun[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([isDefault])
+}
+
+// ============================================
+// APPLICATION TYPE SUPPORT
+// ============================================
+
+model ApplicationType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  config      Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  scripts Script[]
+
+  @@index([isActive])
+}
+
+// ============================================
+// WORKER POOL & JOB QUEUE
+// ============================================
+
+model WorkerNode {
+  id             String    @id @default(cuid())
+  name           String
+  hostname       String
+  ipAddress      String?
+  port           Int       @default(3001)
+  status         String    @default("idle")
+  capabilities   Json
+  maxConcurrency Int       @default(5)
+  currentLoad    Int       @default(0)
+  lastHeartbeat  DateTime  @default(now())
+  metadata       Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  testRuns TestRun[]
+
+  @@unique([hostname, port])
+  @@index([status])
+  @@index([lastHeartbeat])
+}
+
+model JobQueue {
+  id             String    @id @default(cuid())
+  testRunId      String    @unique
+  organizationId String
+  priority       Int       @default(0)
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
+  scheduledAt    DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  errorMsg       String?
+  metadata       Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  testRun TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([priority])
+  @@index([organizationId])
+  @@index([scheduledAt])
+  @@index([createdAt])
+}
+
+// ============================================
+// BDD / CUCUMBER TESTING
+// ============================================
+
+model BDDFeature {
+  id             String        @id @default(cuid())
+  userId         String
+  organizationId String?
+  projectId      String?
+  name           String
+  description    String?
+  featureContent String
+  tags           Json?         @default("[]")
+  status         String        @default("draft")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  scenarios    BDDScenario[]
+  runs         BDDRun[]
+  schedules    BDDSchedule[]
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BDDScenario {
+  id           String    @id @default(cuid())
+  featureId    String
+  name         String
+  description  String?
+  scenarioType String    @default("Scenario")
+  tags         Json?     @default("[]")
+  examplesData Json?
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  feature  BDDFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  steps    BDDStep[]
+  runs     BDDRun[]
+
+  @@index([featureId])
+  @@index([scenarioType])
+}
+
+model BDDStep {
+  id             String   @id @default(cuid())
+  scenarioId     String
+  keyword        String
+  text           String
+  dataTable      Json?
+  docString      String?
+  stepDefinition String?
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  scenario BDDScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@index([scenarioId])
+  @@index([keyword])
+}
+
+model BDDRun {
+  id                 String    @id @default(cuid())
+  featureId          String
+  scenarioId         String?
+  userId             String
+  organizationId     String?
+  status             String    @default("pending")
+  duration           Int?
+  totalSteps         Int       @default(0)
+  passedSteps        Int       @default(0)
+  failedSteps        Int       @default(0)
+  skippedSteps       Int       @default(0)
+  errorMsg           String?
+  stepResults        Json?     @default("[]")
+  browser            String    @default("chromium")
+  executionMode      String    @default("headless")
+  reportUrl          String?
+  reportHtml         String?
+  screenshotUrls     Json?     @default("[]")
+  tags               String?
+  parallelWorkers    Int?      @default(1)
+  retryCount         Int?      @default(0)
+  retryInfo          Json?     @default("{}")
+  environmentName    String?
+  environmentProfile Json?
+  serenityReportUrl  String?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  feature  BDDFeature   @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  scenario BDDScenario? @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([featureId])
+  @@index([scenarioId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([environmentName])
+}
+
+// ============================================
+// BDD STEP LIBRARY (reusable step definitions)
+// ============================================
+
+model BDDStepLibrary {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String?
+  pattern        String
+  code           String
+  description    String?
+  keyword        String   @default("Given")
+  tags           Json?    @default("[]")
+  usageCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([pattern, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+// ============================================
+// BDD SCHEDULES (cron-based execution)
+// ============================================
+
+model BDDSchedule {
+  id             String    @id @default(cuid())
+  featureId      String
+  userId         String
+  organizationId String?
+  cronExpression String
+  tags           String?
+  browser        String?   @default("chromium")
+  executionMode  String?   @default("headless")
+  enabled        Boolean   @default(true)
+  lastRunAt      DateTime?
+  nextRunAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  feature BDDFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@index([featureId])
+  @@index([userId])
+  @@index([enabled])
+}
+
+// ============================================
+// SCREENPLAY PATTERN (Serenity BDD-inspired)
+// ============================================
+
+model ScreenplayAction {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String?
+  name           String
+  description    String?
+  actionType     String   @default("custom")
+  target         String?
+  value          String?
+  code           String
+  tags           Json?    @default("[]")
+  usageCount     Int?     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model ScreenplayQuestion {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String?
+  name           String
+  description    String?
+  questionType   String   @default("custom")
+  target         String?
+  expected       String?
+  code           String
+  tags           Json?    @default("[]")
+  usageCount     Int?     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model ScreenplayTask {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String?
+  name           String
+  description    String?
+  actorType      String   @default("User")
+  actions        Json?    @default("[]")
+  questions      Json?    @default("[]")
+  tags           Json?    @default("[]")
+  generatedCode  String?
+  usageCount     Int?     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+}
+
+// ============================================
+// DATA-DRIVEN TESTING
+// ============================================
+
+model DataDrivenRun {
+  id                 String        @id @default(cuid())
+  scriptId           String
+  testSuiteId        String?
+  userId             String
+  organizationId     String?
+  name               String?
+  status             String        @default("pending")
+  totalRows          Int           @default(0)
+  completedRows      Int           @default(0)
+  passedRows         Int           @default(0)
+  failedRows         Int           @default(0)
+  fieldBindings      Json          @default("{}")
+  dataRows           Json          @default("[]")
+  executionConfig    Json?
+  aggregateReportUrl String?
+  browser            String        @default("chromium")
+  executionMode      String        @default("sequential")
+  errorMsg           String?
+  duration           Int?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  script       Script        @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  testSuite    TestSuite?    @relation(fields: [testSuiteId], references: [id], onDelete: SetNull)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  testRuns     TestRun[]
+
+  @@index([scriptId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }

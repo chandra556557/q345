@@ -78,6 +78,7 @@ export interface CrxApplicationChannel extends CrxApplicationEventTarget, Channe
   list(params?: CrxApplicationListParams, metadata?: CallMetadata): Promise<CrxApplicationListResult>;
   load(params?: CrxApplicationLoadParams, metadata?: CallMetadata): Promise<CrxApplicationLoadResult>;
   run(params?: CrxApplicationRunParams, metadata?: CallMetadata): Promise<CrxApplicationRunResult>;
+  stop(params?: CrxApplicationStopParams, metadata?: CallMetadata): Promise<CrxApplicationStopResult>;
 }
 export type CrxApplicationHideEvent = {};
 export type CrxApplicationShowEvent = {};
@@ -228,6 +229,9 @@ export type CrxApplicationLoadResult = void;
 export type CrxApplicationRunParams = { page?: PageChannel, code: string };
 export type CrxApplicationRunOptions = { page?: PageChannel, code: string};
 export type CrxApplicationRunResult = void;
+export type CrxApplicationStopParams = {};
+export type CrxApplicationStopOptions = {};
+export type CrxApplicationStopResult = void;
 
 export interface CrxApplicationEvents {
   'hide': CrxApplicationHideEvent;

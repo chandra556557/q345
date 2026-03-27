@@ -407,3 +407,80 @@ export const getEnhancementStats = async (_req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * POST /api/ai-enhancement/upload-script-xpath-analysis
+ * Upload a script file and analyze all XPath expressions in it
+ */
+export const uploadScriptXPathAnalysis = async (req: Request, res: Response) => {
+  try {
+    let scriptCode = '';
+
+    // Handle multipart file upload
+    if (req.file) {
+      scriptCode = req.file.buffer.toString('utf-8');
+    } else if (req.body?.code) {
+      scriptCode = req.body.code;
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded or code provided'
+      });
+    }
+
+    // Extract XPath expressions from the script
+    const xpathMatches = scriptCode.match(/['"]xpath=([^'"]+)['"]/g) || [];
+    const absoluteXPaths = scriptCode.match(/locator\(['"](\/[^'"]+)['"]\)/g) || [];
+    const relativeXPaths = scriptCode.match(/locator\(['"](\/\/[^'"]+)['"]\)/g) || [];
+
+    const allXPaths = [
+      ...xpathMatches.map(m => m.replace(/['"]xpath=/g, '').replace(/['"]/g, '')),
+      ...absoluteXPaths.map(m => { const match = m.match(/locator\(['"]([^'"]+)['"]\)/); return match ? match[1] : ''; }),
+      ...relativeXPaths.map(m => { const match = m.match(/locator\(['"]([^'"]+)['"]\)/); return match ? match[1] : ''; })
+    ].filter(x => x && (x.startsWith('/') || x.startsWith('./')));
+
+    if (allXPaths.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          found: false,
+          message: 'No XPath expressions found in the uploaded script',
+          total_lines: scriptCode.split('\n').length
+        }
+      });
+    }
+
+    // Analyze each XPath
+    const analyses = allXPaths.map(xpath => ({
+      xpath,
+      analysis: xpathAnalysisService.analyzeXPath(xpath)
+    }));
+
+    const absoluteCount = analyses.filter(a => a.analysis.type === 'absolute').length;
+    const highIssueCount = analyses.filter(a =>
+      a.analysis.issues.some(i => i.severity === 'high')
+    ).length;
+
+    return res.json({
+      success: true,
+      data: {
+        found: true,
+        count: allXPaths.length,
+        analyses,
+        summary: {
+          total: analyses.length,
+          absoluteCount,
+          relativeCount: analyses.length - absoluteCount,
+          highIssueCount,
+          avgComplexity: Math.round(analyses.reduce((s, a) => s + a.analysis.complexity, 0) / analyses.length)
+        },
+        total_lines: scriptCode.split('\n').length
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: (error as Error).message
+    });
+  }
+};

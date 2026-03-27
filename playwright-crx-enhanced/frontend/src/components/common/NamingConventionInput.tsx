@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import './NamingConventionInput.css';
 
 interface NamingConventionSuggestion {
   name: string;

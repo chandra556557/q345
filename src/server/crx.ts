@@ -32,6 +32,8 @@ import { BrowserContext } from 'playwright-core/lib/server/browserContext';
 import type { IRecorder, IRecorderAppFactory } from 'playwright-core/lib/server/recorder/recorderFrontend';
 import type { Mode } from '@recorder/recorderTypes';
 import CrxPlayer from './recorder/crxPlayer';
+import { domSnapshotManager, type DOMSnapshot, type DOMSnapshotOptions } from './snapshot/domSnapshot';
+import { selfHealingEngine, type SelfHealingResult, type SelfHealingOptions } from './snapshot/selfHealing';
 import { createTab } from './utils';
 import { parse } from './recorder/parser';
 import { generateCode } from 'playwright-core/lib/server/codegen/language';
@@ -339,11 +341,110 @@ export class CrxApplication extends SdkObject {
     await this._crx.player.run(page ?? this._context, actions);
   }
 
+  async stop() {
+    await this._crx.player.stop();
+  }
+
   async parseForTest(originCode: string) {
     const [{ actions, options }] = parse(originCode);
     const jsLanguage = [...languageSet()].find(l => l.id === 'playwright-test');
     const code = generateCode(actions, jsLanguage!, { browserName: '', launchOptions: {}, contextOptions: {}, ...options } as LanguageGeneratorOptions).text;
     return { actions, options, code };
+  }
+
+  // DOM Snapshot Methods
+  async captureDOMSnapshot(selector?: string, options?: DOMSnapshotOptions): Promise<DOMSnapshot> {
+    const page = this._context.pages()[0];
+    if (!page) throw new Error('No page available');
+    return await domSnapshotManager.capture(page, selector, options);
+  }
+
+  async saveDOMSnapshot(name: string, selector?: string, options?: DOMSnapshotOptions): Promise<string> {
+    const snapshot = await this.captureDOMSnapshot(selector, options);
+    const path = `/tmp/snapshots/${name}.json`;
+    await domSnapshotManager.saveToFile(snapshot, path);
+    return path;
+  }
+
+  async loadDOMSnapshot(name: string): Promise<DOMSnapshot> {
+    const path = `/tmp/snapshots/${name}.json`;
+    return await domSnapshotManager.loadFromFile(path);
+  }
+
+  async compareDOMSnapshot(name: string, selector?: string): Promise<{ matches: boolean; diffs: any[] }> {
+    const [expected, actual] = await Promise.all([
+      this.loadDOMSnapshot(name).catch(() => null),
+      this.captureDOMSnapshot(selector),
+    ]);
+
+    if (!expected) {
+      // First run - save as baseline
+      await this.saveDOMSnapshot(name, selector);
+      return { matches: true, diffs: [] };
+    }
+
+    const diffs = domSnapshotManager.compare(expected, actual);
+    return { matches: diffs.length === 0, diffs };
+  }
+
+  // Self-Healing Methods
+  async enableSelfHealing(): Promise<void> {
+    const pages = this._context.pages();
+    for (const page of pages) {
+      // Capture references for all interactive elements
+      const frame = page.mainFrame();
+      const elements = await frame.evaluate(() => 
+        Array.from(document.querySelectorAll('[data-testid], [id], button, a, input'))
+          .map(el => ({
+            selector: el.tagName.toLowerCase() + 
+                     (el.id ? `#${el.id}` : '') +
+                     (el.getAttribute('data-testid') ? `[data-testid="${el.getAttribute('data-testid')}"]` : ''),
+          }))
+      );
+
+      for (const { selector } of elements) {
+        await selfHealingEngine.captureReference(page, `ref:${selector}`, selector);
+      }
+    }
+  }
+
+  async healSelector(originalSelector: string, options?: SelfHealingOptions): Promise<SelfHealingResult> {
+    const page = this._context.pages()[0];
+    if (!page) throw new Error('No page available');
+    return await selfHealingEngine.heal(page, originalSelector, `ref:${originalSelector}`, options);
+  }
+
+  getSelfHealingStats() {
+    return selfHealingEngine.getStats();
+  }
+
+  // Performance Optimization Methods
+  setParallelExecution(enabled: boolean): void {
+    this._crx.player.setParallelExecution(enabled);
+  }
+
+  getExecutionMetrics() {
+    return this._crx.player.getExecutionMetrics();
+  }
+
+  async runWithPerformanceTracking(code: string, page?: Page) {
+    const startTime = performance.now();
+    
+    // Ensure parallel execution is enabled
+    this.setParallelExecution(true);
+    
+    // Run the test
+    await this.run(code, page);
+    
+    // Get metrics
+    const metrics = this.getExecutionMetrics();
+    const actualDuration = performance.now() - startTime;
+    
+    return {
+      metrics,
+      actualDuration,
+      efficiency: metrics ? (metrics.estimatedSequentialDuration / actualDuration) : 1,
+    };
   }
 
   async _createRecorderApp(recorder: IRecorder) {

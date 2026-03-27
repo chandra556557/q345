@@ -114,4 +114,8 @@ export class CrxApplicationDispatcher extends Dispatcher<CrxApplication, channel
   async run(params: channels.CrxApplicationRunParams): Promise<void> {
     await this._object.run(params.code, (params.page as PageDispatcher)?._object);
   }
+
+  async stop(): Promise<void> {
+    await this._object.stop();
+  }
 }

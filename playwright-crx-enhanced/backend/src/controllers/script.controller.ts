@@ -1275,7 +1275,9 @@ export const executeScript = async (req: Request, res: Response) => {
     // Execute script using Playwright Test Runner
     setImmediate(async () => {
       try {
-        await testRunnerService.startTestRun(testRunId, id, userId);
+        // Pass browser type from request body, then from script, then default to firefox
+        const browserType = req.body.browser || script.browserType || 'firefox';
+        await testRunnerService.startTestRun(testRunId, id, userId, undefined, browserType);
       } catch (error) {
         console.error('Error executing script with Playwright:', error);
       }

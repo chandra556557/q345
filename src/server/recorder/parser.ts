@@ -44,7 +44,8 @@ type AssertFnAction =
   | 'toBeVisible'
   | 'toHaveValue'
   | 'toBeEmpty'
-  | 'toMatchAriaSnapshot';
+  | 'toMatchAriaSnapshot'
+  | 'toMatchDOMSnapshot';
 
 type ActionFnName =
   | 'check'
@@ -71,6 +72,7 @@ const expectFnActions: Record<AssertFnAction, (...args: Expression[]) => [action
   'toHaveValue': value => ['assertValue', { value }],
   'toBeEmpty': () => ['assertValue'],
   'toMatchAriaSnapshot': snapshot => ['assertSnapshot', { snapshot }],
+  'toMatchDOMSnapshot': (name, options) => ['assertDOMSnapshot', { name: name ?? 'default', options }],
 };
 
 const fnActions: Record<Exclude<ActionFnName, AssertFnAction>, (...args: any[]) => [action: Exclude<Action, AssertAction>['name'] | 'routeFromHAR', ...any]> = {

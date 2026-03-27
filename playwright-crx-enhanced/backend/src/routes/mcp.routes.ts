@@ -11,14 +11,15 @@
 
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  createMCPConnection, 
+import {
+  createMCPConnection,
   closeMCPConnection,
-  getActiveConnectionCount, 
+  getActiveConnectionCount,
   listActiveConnections,
   isMCPEnabled,
   getMCPConfigFromEnv
 } from '../mcp';
+import { mcpController } from '../controllers/mcp.controller';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -184,5 +185,22 @@ router.delete('/sse/:connectionId', async (req: Request, res: Response) => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// MCP Controller Routes (browser automation via REST, used by MCPTesting UI)
+// ---------------------------------------------------------------------------
+
+router.post('/initialize', (req, res) => mcpController.initializeBrowser(req, res));
+router.post('/create-page', (req, res) => mcpController.createPage(req, res));
+router.post('/navigate', (req, res) => mcpController.navigate(req, res));
+router.post('/click', (req, res) => mcpController.click(req, res));
+router.post('/fill', (req, res) => mcpController.fill(req, res));
+router.post('/evaluate', (req, res) => mcpController.evaluate(req, res));
+router.post('/screenshot', (req, res) => mcpController.screenshot(req, res));
+router.post('/page-content', (req, res) => mcpController.getPageContent(req, res));
+router.post('/active-pages', (req, res) => mcpController.getActivePages(req, res));
+router.post('/session-info', (req, res) => mcpController.getSessionInfo(req, res));
+router.post('/close-page', (req, res) => mcpController.closePage(req, res));
+router.post('/close-session', (req, res) => mcpController.closeBrowser(req, res));
 
 export default router;

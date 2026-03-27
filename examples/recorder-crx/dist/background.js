@@ -22795,6 +22795,8 @@ scheme.CrxApplicationRunParams = tObject({
   code: tString
 });
 scheme.CrxApplicationRunResult = tOptional(tObject({}));
+scheme.CrxApplicationStopParams = tOptional(tObject({}));
+scheme.CrxApplicationStopResult = tOptional(tObject({}));
 function commonjsRequire(path2) {
   throw new Error('Could not dynamically require "' + path2 + '". Please configure the dynamicRequireTargets or/and ignoreDynamicRequires option of @rollup/plugin-commonjs appropriately for this require call to work.');
 }
@@ -135418,6 +135420,9 @@ class CrxRecorder extends eventsExports.EventEmitter {
   async run(code, page) {
     await this._channel.run({ code, page: page == null ? void 0 : page._channel });
   }
+  async stop() {
+    await this._channel.stop({});
+  }
 }
 let CrxApplication$1 = class CrxApplication extends ChannelOwner {
   constructor(parent, type2, guid, initializer) {
@@ -135466,6 +135471,23 @@ let CrxApplication$1 = class CrxApplication extends ChannelOwner {
   }
   async close() {
     await this._channel.close();
+  }
+  // Performance Optimization Methods
+  setParallelExecution(enabled) {
+    this._channel.setMode({ mode: enabled ? "recording" : "none" });
+  }
+  async runWithPerformanceTracking(code, page) {
+    const startTime = Date.now();
+    this.setParallelExecution(true);
+    await this.recorder.run(code, page);
+    const actualDuration = Date.now() - startTime;
+    const metrics = await this._channel.list({ code });
+    return {
+      metrics,
+      actualDuration,
+      efficiency: 1
+      // Will be calculated from actual metrics
+    };
   }
 };
 let CrxPlaywright$1 = class CrxPlaywright extends Playwright2 {
@@ -141433,7 +141455,8 @@ const expectFnActions = {
   "toBeVisible": () => ["assertVisible"],
   "toHaveValue": (value) => ["assertValue", { value }],
   "toBeEmpty": () => ["assertValue"],
-  "toMatchAriaSnapshot": (snapshot) => ["assertSnapshot", { snapshot }]
+  "toMatchAriaSnapshot": (snapshot) => ["assertSnapshot", { snapshot }],
+  "toMatchDOMSnapshot": (name, options2) => ["assertDOMSnapshot", { name: name ?? "default", options: options2 }]
 };
 const fnActions = {
   "check": () => ["check"],
@@ -142377,8 +142400,520 @@ function traceParamsForAction(actionInContext) {
       };
       return { method: "expect", apiName: "expect.toMatchAriaSnapshot", params };
     }
+    case "assertDOMSnapshot": {
+      const params = {
+        selector,
+        expression: "to.match.dom",
+        expectedValue: action.name,
+        isNot: false,
+        timeout: kDefaultTimeout
+      };
+      return { method: "expect", apiName: "expect.toMatchDOMSnapshot", params };
+    }
   }
 }
+const DEFAULT_OPTIONS$1 = {
+  includeStyles: true,
+  includeHidden: false,
+  includeBoundingBoxes: true,
+  maxDepth: 100,
+  filter: () => true
+};
+const DEFAULT_COMPARE_OPTIONS = {
+  ignoreAttributes: ["data-reactroot", "data-reactid", "_ngcontent"],
+  ignoreStyles: ["animation", "transition"],
+  ignoreTextContent: false,
+  tolerance: 0
+};
+class DOMSnapshotManager {
+  async capture(page, selector, options2) {
+    const frame = page.mainFrame();
+    const opts = { ...DEFAULT_OPTIONS$1, ...options2 };
+    const [url2, title, viewport] = await Promise.all([
+      frame.evaluate(() => window.location.href),
+      frame.evaluate(() => document.title),
+      page.viewportSize()
+    ]);
+    const rootSnapshot = await this._captureElement(frame, selector || "html", opts);
+    const metadata = this._calculateMetadata(rootSnapshot);
+    return {
+      version: 1,
+      timestamp: Date.now(),
+      url: url2,
+      title,
+      viewport: viewport ?? { width: 1280, height: 720 },
+      root: rootSnapshot,
+      metadata
+    };
+  }
+  async captureElement(page, selector, options2) {
+    const frame = page.mainFrame();
+    return this._captureElement(frame, selector, { ...DEFAULT_OPTIONS$1, ...options2 });
+  }
+  async _captureElement(frame, selector, options2, depth = 0) {
+    if (depth > options2.maxDepth) {
+      return {
+        tag: "max-depth-reached",
+        attributes: {},
+        styles: {},
+        children: [],
+        isVisible: false
+      };
+    }
+    return await frame.evaluate(({ selector: selector2, options: options22, depth: depth2 }) => {
+      const element = document.querySelector(selector2);
+      if (!element) {
+        throw new Error(`Element not found: ${selector2}`);
+      }
+      function captureElement(el, currentDepth) {
+        var _a2, _b2, _c2, _d2;
+        const tag = el.tagName.toLowerCase();
+        const style = window.getComputedStyle(el);
+        const isVisible = style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+        if (!options22.includeHidden && !isVisible && currentDepth > 0) {
+          return null;
+        }
+        if (!options22.filter(el)) {
+          return null;
+        }
+        const attributes = {};
+        for (const attr of el.attributes) {
+          attributes[attr.name] = attr.value;
+        }
+        const styles2 = {};
+        if (options22.includeStyles) {
+          const computedStyle = window.getComputedStyle(el);
+          const relevantStyles = [
+            "color",
+            "background-color",
+            "font-size",
+            "font-weight",
+            "width",
+            "height",
+            "display",
+            "position",
+            "margin",
+            "padding",
+            "border",
+            "border-radius",
+            "box-shadow",
+            "opacity"
+          ];
+          for (const prop of relevantStyles) {
+            styles2[prop] = computedStyle.getPropertyValue(prop);
+          }
+        }
+        let boundingBox;
+        if (options22.includeBoundingBoxes) {
+          const rect = el.getBoundingClientRect();
+          boundingBox = {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height
+          };
+        }
+        const aria = {};
+        const ariaRole = el.getAttribute("role") || (el == null ? void 0 : el.role);
+        if (ariaRole) aria.role = ariaRole;
+        let ariaLabel = null;
+        try {
+          ariaLabel = el.getAttribute("aria-label") || el.getAttribute("aria-labelledby") || ((_a2 = el == null ? void 0 : el.innerText) == null ? void 0 : _a2.slice(0, 100)) || ((_b2 = el.textContent) == null ? void 0 : _b2.slice(0, 100)) || null;
+        } catch (e) {
+          ariaLabel = ((_c2 = el.textContent) == null ? void 0 : _c2.slice(0, 100)) || null;
+        }
+        if (ariaLabel) aria.label = ariaLabel;
+        const ariaLevel = el.getAttribute("aria-level");
+        if (ariaLevel) {
+          const parsed = parseInt(ariaLevel, 10);
+          if (!isNaN(parsed)) aria.level = parsed;
+        }
+        const children = [];
+        if (currentDepth < options22.maxDepth) {
+          for (const child of el.children) {
+            const childSnapshot = captureElement(child, currentDepth + 1);
+            if (childSnapshot) {
+              children.push(childSnapshot);
+            }
+          }
+        }
+        const testId = el.getAttribute("data-testid") || el.getAttribute("data-test-id") || el.id || void 0;
+        return {
+          tag,
+          attributes,
+          styles: styles2,
+          textContent: (_d2 = el.textContent) == null ? void 0 : _d2.slice(0, 500),
+          children,
+          boundingBox,
+          isVisible,
+          testId,
+          aria: Object.keys(aria).length > 0 ? aria : void 0
+        };
+      }
+      return captureElement(element, depth2);
+    }, { selector, options: options2, depth });
+  }
+  compare(expected, actual, options2) {
+    const opts = { ...DEFAULT_COMPARE_OPTIONS, ...options2 };
+    const diffs = [];
+    this._compareElements(
+      expected.root,
+      actual.root,
+      "",
+      opts,
+      diffs
+    );
+    return diffs;
+  }
+  _compareElements(expected, actual, path2, options2, diffs) {
+    const currentPath = path2 ? `${path2} > ${expected.tag}` : expected.tag;
+    if (expected.tag !== actual.tag) {
+      diffs.push({
+        type: "modified",
+        path: currentPath,
+        expected,
+        actual,
+        changes: [`Tag changed from "${expected.tag}" to "${actual.tag}"`]
+      });
+      return;
+    }
+    const changes = [];
+    for (const [key2, value] of Object.entries(expected.attributes)) {
+      if (options2.ignoreAttributes.some((attr) => key2.includes(attr))) {
+        continue;
+      }
+      if (actual.attributes[key2] !== value) {
+        changes.push(`Attribute "${key2}" changed from "${value}" to "${actual.attributes[key2]}"`);
+      }
+    }
+    for (const [key2, value] of Object.entries(expected.styles)) {
+      if (options2.ignoreStyles.some((style) => key2.includes(style))) {
+        continue;
+      }
+      if (actual.styles[key2] !== value) {
+        changes.push(`Style "${key2}" changed from "${value}" to "${actual.styles[key2]}"`);
+      }
+    }
+    if (!options2.ignoreTextContent && expected.textContent !== actual.textContent) {
+      changes.push(`Text content changed`);
+    }
+    if (expected.isVisible !== actual.isVisible) {
+      changes.push(`Visibility changed from ${expected.isVisible} to ${actual.isVisible}`);
+    }
+    if (changes.length > 0) {
+      diffs.push({
+        type: "modified",
+        path: currentPath,
+        expected,
+        actual,
+        changes
+      });
+    }
+    const maxChildren = Math.max(expected.children.length, actual.children.length);
+    for (let i = 0; i < maxChildren; i++) {
+      const expectedChild = expected.children[i];
+      const actualChild = actual.children[i];
+      if (!expectedChild && actualChild) {
+        diffs.push({
+          type: "added",
+          path: `${currentPath} > ${actualChild.tag}[${i}]`,
+          actual: actualChild
+        });
+      } else if (expectedChild && !actualChild) {
+        diffs.push({
+          type: "removed",
+          path: `${currentPath} > ${expectedChild.tag}[${i}]`,
+          expected: expectedChild
+        });
+      } else if (expectedChild && actualChild) {
+        this._compareElements(expectedChild, actualChild, currentPath, options2, diffs);
+      }
+    }
+  }
+  _calculateMetadata(root) {
+    let totalElements = 0;
+    let visibleElements = 0;
+    let interactiveElements = 0;
+    let maxDepth = 0;
+    const countElements = (el, depth) => {
+      totalElements++;
+      if (el.isVisible) visibleElements++;
+      const interactiveTags = ["button", "a", "input", "select", "textarea", "form"];
+      if (interactiveTags.includes(el.tag) || el.attributes.onclick) {
+        interactiveElements++;
+      }
+      maxDepth = Math.max(maxDepth, depth);
+      for (const child of el.children) {
+        countElements(child, depth + 1);
+      }
+    };
+    countElements(root, 1);
+    return {
+      totalElements,
+      visibleElements,
+      interactiveElements,
+      depth: maxDepth
+    };
+  }
+  serialize(snapshot) {
+    return JSON.stringify(snapshot, null, 2);
+  }
+  deserialize(json) {
+    return JSON.parse(json);
+  }
+  async saveToFile(snapshot, path2) {
+    const fs2 = await Promise.resolve().then(() => fs$1);
+    await fs2.writeFileSync(path2, this.serialize(snapshot));
+  }
+  async loadFromFile(path2) {
+    const fs2 = await Promise.resolve().then(() => fs$1);
+    const content = fs2.readFileSync(path2, "utf-8");
+    return this.deserialize(content);
+  }
+}
+const domSnapshotManager = new DOMSnapshotManager();
+const DEFAULT_OPTIONS = {
+  maxBatchSize: 5,
+  maxParallelDuration: 5e3,
+  // 5 seconds max for parallel batch
+  enableParallelAssertions: true,
+  enableParallelIndependentActions: true,
+  respectDataDependencies: true
+};
+class ActionDependencyAnalyzer {
+  constructor(actions) {
+    __publicField2(this, "_actionGraph", /* @__PURE__ */ new Map());
+    __publicField2(this, "_actions", []);
+    this._actions = actions;
+    this._buildDependencyGraph();
+  }
+  /**
+   * Builds a dependency graph where edges represent "must run after" relationships
+   */
+  _buildDependencyGraph() {
+    for (let i = 0; i < this._actions.length; i++) {
+      this._actionGraph.set(i, /* @__PURE__ */ new Set());
+    }
+    for (let i = 0; i < this._actions.length; i++) {
+      for (let j = i + 1; j < this._actions.length; j++) {
+        if (this._hasDependency(this._actions[i], this._actions[j], i, j)) {
+          this._actionGraph.get(j).add(i);
+        }
+      }
+    }
+  }
+  /**
+   * Determines if action2 depends on action1
+   */
+  _hasDependency(action1, action2, index1, index2) {
+    const { action: a1, frame: f1 } = action1;
+    const { action: a2, frame: f2 } = action2;
+    if (this._sameFrame(f1, f2)) {
+      if (this._getSelector(a1) && this._getSelector(a1) === this._getSelector(a2)) {
+        return true;
+      }
+      if (a1.name === "navigate" || a1.name === "openPage") {
+        return true;
+      }
+      if (a1.name === "click" && a1.signals.length > 0) {
+        return true;
+      }
+      if (a1.name === "fill" && this._isFormAction(a2)) {
+        return true;
+      }
+    }
+    if (a1.signals.length > 0) {
+      return true;
+    }
+    if (a1.name === "openPage" || a1.name === "closePage") {
+      return true;
+    }
+    if (f1.pageAlias === f2.pageAlias && index2 === index1 + 1) {
+      if (!(this._isAssertion(a1) && this._isAssertion(a2))) {
+        return true;
+      }
+    }
+    return false;
+  }
+  _sameFrame(f1, f2) {
+    return f1.pageAlias === f2.pageAlias && f1.framePath.length === f2.framePath.length && f1.framePath.every((p, i) => p === f2.framePath[i]);
+  }
+  _getSelector(action) {
+    return action.selector;
+  }
+  _isFormAction(action) {
+    return ["click", "press", "select", "check", "uncheck"].includes(action.name);
+  }
+  _isAssertion(action) {
+    return ["assertText", "assertValue", "assertChecked", "assertVisible", "assertSnapshot"].includes(action.name);
+  }
+  /**
+   * Returns actions that can run in parallel (have no unresolved dependencies)
+   */
+  getParallelizableActions(completedIndices) {
+    const parallelizable = [];
+    for (let i = 0; i < this._actions.length; i++) {
+      if (completedIndices.has(i)) continue;
+      const dependencies = this._actionGraph.get(i);
+      const unresolvedDeps = [...dependencies].filter((dep) => !completedIndices.has(dep));
+      if (unresolvedDeps.length === 0) {
+        parallelizable.push(i);
+      }
+    }
+    return parallelizable;
+  }
+  /**
+   * Get estimated duration for an action
+   */
+  getActionDuration(action) {
+    const baseDurations = {
+      "click": 300,
+      "fill": 200,
+      "press": 150,
+      "check": 200,
+      "uncheck": 200,
+      "select": 250,
+      "navigate": 2e3,
+      "openPage": 1500,
+      "closePage": 500,
+      "assertText": 100,
+      "assertValue": 100,
+      "assertChecked": 100,
+      "assertVisible": 100,
+      "assertSnapshot": 500,
+      "setInputFiles": 500
+    };
+    return baseDurations[action.action.name] ?? 300;
+  }
+}
+class ActionBatcher {
+  constructor(options2) {
+    __publicField2(this, "_options");
+    this._options = { ...DEFAULT_OPTIONS, ...options2 };
+  }
+  /**
+   * Creates optimized batches from a list of actions
+   */
+  createBatches(actions) {
+    if (!this._options.enableParallelIndependentActions) {
+      return [{
+        actions,
+        type: "sequential",
+        estimatedDuration: actions.reduce((sum, a) => sum + this._estimateDuration(a), 0)
+      }];
+    }
+    const analyzer = new ActionDependencyAnalyzer(actions);
+    const batches = [];
+    const completedIndices = /* @__PURE__ */ new Set();
+    const totalActions = actions.length;
+    while (completedIndices.size < totalActions) {
+      const parallelizable = analyzer.getParallelizableActions(completedIndices);
+      if (parallelizable.length === 0) {
+        break;
+      }
+      if (parallelizable.length === 1) {
+        const idx = parallelizable[0];
+        batches.push({
+          actions: [actions[idx]],
+          type: "sequential",
+          estimatedDuration: analyzer.getActionDuration(actions[idx])
+        });
+        completedIndices.add(idx);
+      } else {
+        const batchIndices = this._optimizeParallelBatch(
+          parallelizable,
+          actions,
+          analyzer
+        );
+        const batchActions = batchIndices.map((i) => actions[i]);
+        const maxDuration = Math.max(...batchActions.map((a) => analyzer.getActionDuration(a)));
+        batches.push({
+          actions: batchActions,
+          type: "parallel",
+          estimatedDuration: maxDuration
+        });
+        batchIndices.forEach((i) => completedIndices.add(i));
+      }
+    }
+    return batches;
+  }
+  /**
+   * Selects the optimal subset of parallelizable actions
+   */
+  _optimizeParallelBatch(parallelizable, actions, analyzer) {
+    const assertions = parallelizable.filter((i) => this._isAssertion(actions[i]));
+    const others = parallelizable.filter((i) => !this._isAssertion(actions[i]));
+    const selected = [];
+    let estimatedDuration = 0;
+    if (this._options.enableParallelAssertions) {
+      for (const idx of assertions) {
+        if (selected.length >= this._options.maxBatchSize) break;
+        const duration = analyzer.getActionDuration(actions[idx]);
+        if (estimatedDuration + duration <= this._options.maxParallelDuration) {
+          selected.push(idx);
+          estimatedDuration = Math.max(estimatedDuration, duration);
+        }
+      }
+    }
+    for (const idx of others) {
+      if (selected.length >= this._options.maxBatchSize) break;
+      const duration = analyzer.getActionDuration(actions[idx]);
+      if (estimatedDuration + duration <= this._options.maxParallelDuration) {
+        selected.push(idx);
+        estimatedDuration = Math.max(estimatedDuration, duration);
+      }
+    }
+    return selected;
+  }
+  _isAssertion(action) {
+    return ["assertText", "assertValue", "assertChecked", "assertVisible", "assertSnapshot", "assertDOMSnapshot"].includes(action.action.name);
+  }
+  _estimateDuration(action) {
+    const baseDurations = {
+      "click": 300,
+      "fill": 200,
+      "press": 150,
+      "check": 200,
+      "uncheck": 200,
+      "select": 250,
+      "navigate": 2e3,
+      "openPage": 1500,
+      "closePage": 500,
+      "assertText": 100,
+      "assertValue": 100,
+      "assertChecked": 100,
+      "assertVisible": 100,
+      "assertSnapshot": 500,
+      "assertDOMSnapshot": 800,
+      "setInputFiles": 500
+    };
+    return baseDurations[action.action.name] ?? 300;
+  }
+  /**
+   * Calculate performance metrics for batched execution
+   */
+  calculateMetrics(batches, totalActions) {
+    const sequentialDuration = batches.filter((b) => b.type === "sequential").reduce((sum, b) => sum + b.estimatedDuration, 0);
+    const parallelDuration = batches.filter((b) => b.type === "parallel").reduce((sum, b) => sum + b.estimatedDuration, 0);
+    const totalEstimatedDuration = sequentialDuration + parallelDuration;
+    const estimatedSequentialDuration = batches.reduce(
+      (sum, batch) => sum + batch.actions.reduce((a, action) => a + this._estimateDuration(action), 0),
+      0
+    );
+    return {
+      totalBatches: batches.length,
+      parallelBatches: batches.filter((b) => b.type === "parallel").length,
+      sequentialBatches: batches.filter((b) => b.type === "sequential").length,
+      totalActions,
+      parallelizedActions: batches.filter((b) => b.type === "parallel").reduce((sum, b) => sum + b.actions.length, 0),
+      estimatedDuration: totalEstimatedDuration,
+      estimatedSequentialDuration,
+      estimatedTimeSaved: estimatedSequentialDuration - totalEstimatedDuration,
+      speedupFactor: estimatedSequentialDuration / totalEstimatedDuration
+    };
+  }
+}
+const actionBatcher = new ActionBatcher();
 class Stopped extends Error {
 }
 class CrxPlayer extends EventEmitter$1 {
@@ -142389,6 +142924,8 @@ class CrxPlayer extends EventEmitter$1 {
     __publicField2(this, "_stopping");
     __publicField2(this, "_pageAliases", /* @__PURE__ */ new Map());
     __publicField2(this, "_pause");
+    __publicField2(this, "_parallelExecutionEnabled", true);
+    __publicField2(this, "_executionMetrics");
     this._crx = crx2;
   }
   async pause() {
@@ -142431,11 +142968,10 @@ class CrxPlayer extends EventEmitter$1 {
     this._pageAliases.set(page, "page");
     this.emit("start");
     try {
-      for (const action of actions) {
-        if (action.action.name === "openPage" && action.frame.pageAlias === "page")
-          continue;
-        this._currAction = action;
-        await this._performAction(context, action);
+      if (this._parallelExecutionEnabled) {
+        await this._runBatched(context, actions);
+      } else {
+        await this._runSequential(context, actions);
       }
     } catch (e) {
       if (e instanceof Stopped)
@@ -142446,6 +142982,84 @@ class CrxPlayer extends EventEmitter$1 {
       this.pause().catch(() => {
       });
     }
+  }
+  /**
+   * Run actions sequentially (original behavior)
+   */
+  async _runSequential(context, actions) {
+    for (const action of actions) {
+      if (action.action.name === "openPage" && action.frame.pageAlias === "page")
+        continue;
+      this._currAction = action;
+      await this._performAction(context, action);
+    }
+  }
+  /**
+   * Run actions with parallel batching for independent operations
+   */
+  async _runBatched(context, actions) {
+    const batches = actionBatcher.createBatches(actions);
+    this._executionMetrics = actionBatcher.calculateMetrics(batches, actions.length);
+    this.emit("metrics", this._executionMetrics);
+    for (const batch of batches) {
+      if (batch.type === "sequential" || batch.actions.length === 1) {
+        for (const action of batch.actions) {
+          if (action.action.name === "openPage" && action.frame.pageAlias === "page")
+            continue;
+          this._currAction = action;
+          await this._performAction(context, action);
+        }
+      } else {
+        await this._executeParallelBatch(context, batch);
+      }
+    }
+  }
+  /**
+   * Execute a batch of actions in parallel
+   */
+  async _executeParallelBatch(context, batch) {
+    const actionsToExecute = batch.actions.filter(
+      (a) => !(a.action.name === "openPage" && a.frame.pageAlias === "page")
+    );
+    if (actionsToExecute.length === 0) return;
+    if (actionsToExecute.length === 1) {
+      this._currAction = actionsToExecute[0];
+      await this._performAction(context, actionsToExecute[0]);
+      return;
+    }
+    const results = await Promise.allSettled(
+      actionsToExecute.map(async (action) => {
+        try {
+          await this._performAction(context, action);
+          return { action, success: true };
+        } catch (error2) {
+          return { action, success: false, error: error2 };
+        }
+      })
+    );
+    const failures = results.filter((r) => r.status === "fulfilled").map((r) => r.value).filter((r) => !r.success);
+    if (failures.length > 0) {
+      const errorMessages = failures.map(
+        (f) => {
+          var _a2;
+          return `  - ${f.action.action.name}: ${((_a2 = f.error) == null ? void 0 : _a2.message) || "Unknown error"}`;
+        }
+      ).join("\n");
+      throw new Error(`Parallel batch execution failed with ${failures.length} error(s):
+${errorMessages}`);
+    }
+  }
+  /**
+   * Enable/disable parallel execution
+   */
+  setParallelExecution(enabled) {
+    this._parallelExecutionEnabled = enabled;
+  }
+  /**
+   * Get execution metrics from last run
+   */
+  getExecutionMetrics() {
+    return this._executionMetrics;
   }
   isPlaying() {
     return !!this._currAction;
@@ -142498,7 +143112,7 @@ class CrxPlayer extends EventEmitter$1 {
           throw callMetadata.error.error;
       }
     };
-    const kActionTimeout = isUnderTest() ? 2e3 : 5e3;
+    const kActionTimeout = isUnderTest() ? 2e3 : 3e4;
     const { action } = actionInContext;
     const pageAliases = this._pageAliases;
     const context = browserContext;
@@ -142599,6 +143213,36 @@ class CrxPlayer extends EventEmitter$1 {
         timeout: kActionTimeout
       }));
     }
+    if (action.name === "assertDOMSnapshot") {
+      return await innerPerformAction(mainFrame, actionInContext, async (callMetadata) => {
+        const page2 = mainFrame._page;
+        const currentSnapshot = await domSnapshotManager.capture(page2, selector, {
+          includeStyles: true,
+          includeBoundingBoxes: true,
+          includeHidden: false
+        });
+        const snapshotPath = `/tmp/snapshots/${action.name}.json`;
+        let expectedSnapshot;
+        try {
+          expectedSnapshot = await domSnapshotManager.loadFromFile(snapshotPath);
+        } catch (e) {
+          await domSnapshotManager.saveToFile(currentSnapshot, snapshotPath);
+          return;
+        }
+        const diffs = domSnapshotManager.compare(expectedSnapshot, currentSnapshot, {
+          ignoreAttributes: ["data-reactroot", "data-reactid"],
+          ignoreStyles: ["animation", "transition"]
+        });
+        if (diffs.length > 0) {
+          const diffMessage = diffs.map((d) => {
+            var _a3;
+            return `${d.type}: ${d.path} - ${(_a3 = d.changes) == null ? void 0 : _a3.join(", ")}`;
+          }).join("\n");
+          throw new Error(`DOM Snapshot mismatch:
+${diffMessage}`);
+        }
+      });
+    }
     throw new Error("Internal error: unexpected action " + action.name);
   }
   _checkStopped() {
@@ -142608,6 +143252,265 @@ class CrxPlayer extends EventEmitter$1 {
     }
   }
 }
+const DEFAULT_SELF_HEALING_OPTIONS = {
+  minConfidence: 0.7,
+  maxAttempts: 3,
+  useVisualComparison: true,
+  useTextSimilarity: true,
+  useStructuralMatching: true,
+  useAriaAttributes: true,
+  fallbackStrategies: ["id", "testid", "aria", "text", "class", "structural"]
+};
+class SelfHealingEngine {
+  constructor() {
+    __publicField2(this, "_history", /* @__PURE__ */ new Map());
+    __publicField2(this, "_healingStats", {
+      totalAttempts: 0,
+      successfulHealings: 0,
+      failedHealings: 0,
+      averageConfidence: 0
+    });
+  }
+  async captureReference(page, actionId, selector) {
+    try {
+      const snapshot = await domSnapshotManager.capture(page, selector, {
+        includeStyles: true,
+        includeBoundingBoxes: true,
+        includeHidden: false
+      });
+      this._history.set(`${actionId}:${selector}`, snapshot);
+    } catch (e) {
+      console.warn(`Failed to capture reference for ${selector}: ${e}`);
+    }
+  }
+  async heal(page, originalSelector, actionId, options2) {
+    const opts = { ...DEFAULT_SELF_HEALING_OPTIONS, ...options2 };
+    this._healingStats.totalAttempts++;
+    const referenceKey = `${actionId}:${originalSelector}`;
+    const referenceSnapshot = this._history.get(referenceKey);
+    if (!referenceSnapshot) {
+      return {
+        success: false,
+        originalSelector,
+        confidence: 0,
+        matches: [],
+        strategy: "none",
+        timestamp: Date.now()
+      };
+    }
+    const currentSnapshot = await domSnapshotManager.capture(page, "body");
+    const matches = this._findMatches(
+      referenceSnapshot.root,
+      currentSnapshot.root,
+      originalSelector,
+      opts
+    );
+    matches.sort((a, b) => b.confidence - a.confidence);
+    const bestMatch = matches[0];
+    const success = bestMatch && bestMatch.confidence >= opts.minConfidence;
+    if (success) {
+      this._healingStats.successfulHealings++;
+      this._updateAverageConfidence(bestMatch.confidence);
+    } else {
+      this._healingStats.failedHealings++;
+    }
+    return {
+      success,
+      originalSelector,
+      healedSelector: bestMatch == null ? void 0 : bestMatch.selector,
+      confidence: (bestMatch == null ? void 0 : bestMatch.confidence) ?? 0,
+      matches: matches.slice(0, 5),
+      strategy: (bestMatch == null ? void 0 : bestMatch.reason) ?? "none",
+      timestamp: Date.now()
+    };
+  }
+  _findMatches(reference, current2, originalSelector, options2) {
+    const matches = [];
+    const candidates = this._collectCandidates(current2);
+    for (const candidate of candidates) {
+      const match = this._calculateMatch(reference, candidate, options2);
+      if (match.confidence > 0) {
+        matches.push(match);
+      }
+    }
+    return matches;
+  }
+  _collectCandidates(root) {
+    const candidates = [];
+    const collect = (el) => {
+      if (!el) return;
+      if (el.isVisible) {
+        candidates.push(el);
+      }
+      if (Array.isArray(el.children)) {
+        for (const child of el.children) {
+          collect(child);
+        }
+      }
+    };
+    if (root) {
+      collect(root);
+    }
+    return candidates;
+  }
+  _calculateMatch(reference, candidate, options2) {
+    var _a2, _b2, _c2, _d2;
+    if (!reference || !candidate) {
+      return {
+        selector: candidate ? this._buildSelector(candidate) : "unknown",
+        confidence: 0,
+        reason: "missing element data",
+        element: candidate || { tag: "unknown", attributes: {}, styles: {}, children: [], isVisible: false }
+      };
+    }
+    let totalScore = 0;
+    let totalWeight = 0;
+    const reasons = [];
+    if (reference.tag && reference.tag === candidate.tag) {
+      totalScore += 0.3 * 1;
+      reasons.push("same tag");
+    }
+    totalWeight += 0.3;
+    const refId = (_a2 = reference.attributes) == null ? void 0 : _a2.id;
+    const candId = (_b2 = candidate.attributes) == null ? void 0 : _b2.id;
+    if (refId && refId === candId) {
+      totalScore += 0.25 * 1;
+      reasons.push("same id");
+    }
+    totalWeight += 0.25;
+    if (reference.testId && reference.testId === candidate.testId) {
+      totalScore += 0.25 * 1;
+      reasons.push("same testid");
+    }
+    totalWeight += 0.25;
+    if (options2.useAriaAttributes && reference.aria && candidate.aria) {
+      let ariaScore = 0;
+      let ariaCount = 0;
+      if (reference.aria.role && candidate.aria.role) {
+        ariaScore += reference.aria.role === candidate.aria.role ? 1 : 0;
+        ariaCount++;
+      }
+      if (reference.aria.label && candidate.aria.label) {
+        ariaScore += this._textSimilarity(reference.aria.label, candidate.aria.label);
+        ariaCount++;
+      }
+      if (ariaCount > 0) {
+        totalScore += 0.15 * (ariaScore / ariaCount);
+        if (ariaScore > 0) reasons.push("aria match");
+      }
+    }
+    totalWeight += 0.15;
+    if (options2.useTextSimilarity && reference.textContent && candidate.textContent) {
+      try {
+        const similarity = this._textSimilarity(reference.textContent, candidate.textContent);
+        totalScore += 0.1 * similarity;
+        if (similarity > 0.8) reasons.push("text similarity");
+      } catch (e) {
+      }
+    }
+    totalWeight += 0.1;
+    const refClass = (_c2 = reference.attributes) == null ? void 0 : _c2.class;
+    const candClass = (_d2 = candidate.attributes) == null ? void 0 : _d2.class;
+    if (refClass && candClass && typeof refClass === "string" && typeof candClass === "string") {
+      const refClasses = new Set(refClass.split(" "));
+      const candClasses = new Set(candClass.split(" "));
+      const intersection = new Set([...refClasses].filter((x) => candClasses.has(x)));
+      const union = /* @__PURE__ */ new Set([...refClasses, ...candClasses]);
+      const classSimilarity = union.size > 0 ? intersection.size / union.size : 0;
+      totalScore += 0.05 * classSimilarity;
+      if (classSimilarity > 0.5) reasons.push("class similarity");
+    }
+    totalWeight += 0.05;
+    if (options2.useStructuralMatching) {
+      const structuralScore = this._structuralSimilarity(reference, candidate);
+      totalScore += 0.1 * structuralScore;
+      if (structuralScore > 0.5) reasons.push("structural similarity");
+    }
+    totalWeight += 0.1;
+    const confidence = totalWeight > 0 ? totalScore / totalWeight : 0;
+    return {
+      selector: this._buildSelector(candidate),
+      confidence: Math.min(confidence, 1),
+      reason: reasons.join(", "),
+      element: candidate
+    };
+  }
+  _textSimilarity(text1, text2) {
+    if (!text1 && !text2) return 1;
+    if (!text1 || !text2) return 0;
+    const normalized1 = text1.toLowerCase().trim();
+    const normalized2 = text2.toLowerCase().trim();
+    if (normalized1 === normalized2) return 1;
+    if (normalized1 === "" || normalized2 === "") return 0;
+    const words1 = new Set(normalized1.split(/\s+/).filter((w) => w.length > 0));
+    const words2 = new Set(normalized2.split(/\s+/).filter((w) => w.length > 0));
+    if (words1.size === 0 && words2.size === 0) return 1;
+    if (words1.size === 0 || words2.size === 0) return 0;
+    const intersection = new Set([...words1].filter((x) => words2.has(x)));
+    const union = /* @__PURE__ */ new Set([...words1, ...words2]);
+    return union.size > 0 ? intersection.size / union.size : 0;
+  }
+  _structuralSimilarity(reference, candidate) {
+    const refChildCount = reference.children.length;
+    const candChildCount = candidate.children.length;
+    if (refChildCount === 0 && candChildCount === 0) return 1;
+    if (refChildCount === 0 || candChildCount === 0) return 0;
+    const refTags = this._getTagDistribution(reference);
+    const candTags = this._getTagDistribution(candidate);
+    let matchingTags = 0;
+    const allTags = /* @__PURE__ */ new Set([...refTags.keys(), ...candTags.keys()]);
+    for (const tag of allTags) {
+      const refCount = refTags.get(tag) ?? 0;
+      const candCount = candTags.get(tag) ?? 0;
+      matchingTags += Math.min(refCount, candCount);
+    }
+    return matchingTags / Math.max(refChildCount, candChildCount);
+  }
+  _getTagDistribution(element) {
+    const distribution = /* @__PURE__ */ new Map();
+    for (const child of element.children) {
+      const count = distribution.get(child.tag) ?? 0;
+      distribution.set(child.tag, count + 1);
+    }
+    return distribution;
+  }
+  _buildSelector(element) {
+    var _a2, _b2;
+    if (!element) {
+      return "unknown";
+    }
+    const parts = [element.tag || "unknown"];
+    if ((_a2 = element.attributes) == null ? void 0 : _a2.id) {
+      parts.push(`#${element.attributes.id}`);
+      return parts.join("");
+    }
+    if (element.testId) {
+      parts.push(`[data-testid="${element.testId}"]`);
+      return parts.join("");
+    }
+    if (((_b2 = element.attributes) == null ? void 0 : _b2.class) && typeof element.attributes.class === "string") {
+      const classes = element.attributes.class.split(" ").slice(0, 2);
+      if (classes.length > 0 && classes[0]) {
+        parts.push(`.${classes.join(".")}`);
+      }
+    }
+    return parts.join("");
+  }
+  _updateAverageConfidence(newConfidence) {
+    const { successfulHealings, averageConfidence } = this._healingStats;
+    this._healingStats.averageConfidence = (averageConfidence * (successfulHealings - 1) + newConfidence) / successfulHealings;
+  }
+  getStats() {
+    return { ...this._healingStats };
+  }
+  clearHistory() {
+    this._history.clear();
+  }
+  exportHistory() {
+    return Object.fromEntries(this._history);
+  }
+}
+const selfHealingEngine = new SelfHealingEngine();
 const kTabIdSymbol = Symbol("kTabIdSymbol");
 class Crx2 extends SdkObject {
   constructor(playwright2) {
@@ -142864,11 +143767,84 @@ const _CrxApplication = class _CrxApplication2 extends SdkObject {
     const [{ actions }] = parse3(code);
     await this._crx.player.run(page ?? this._context, actions);
   }
+  async stop() {
+    await this._crx.player.stop();
+  }
   async parseForTest(originCode) {
     const [{ actions, options: options2 }] = parse3(originCode);
     const jsLanguage = [...languageSet()].find((l) => l.id === "playwright-test");
     const code = generateCode(actions, jsLanguage, { browserName: "", launchOptions: {}, contextOptions: {}, ...options2 }).text;
     return { actions, options: options2, code };
+  }
+  // DOM Snapshot Methods
+  async captureDOMSnapshot(selector, options2) {
+    const page = this._context.pages()[0];
+    if (!page) throw new Error("No page available");
+    return await domSnapshotManager.capture(page, selector, options2);
+  }
+  async saveDOMSnapshot(name, selector, options2) {
+    const snapshot = await this.captureDOMSnapshot(selector, options2);
+    const path2 = `/tmp/snapshots/${name}.json`;
+    await domSnapshotManager.saveToFile(snapshot, path2);
+    return path2;
+  }
+  async loadDOMSnapshot(name) {
+    const path2 = `/tmp/snapshots/${name}.json`;
+    return await domSnapshotManager.loadFromFile(path2);
+  }
+  async compareDOMSnapshot(name, selector) {
+    const [expected, actual] = await Promise.all([
+      this.loadDOMSnapshot(name).catch(() => null),
+      this.captureDOMSnapshot(selector)
+    ]);
+    if (!expected) {
+      await this.saveDOMSnapshot(name, selector);
+      return { matches: true, diffs: [] };
+    }
+    const diffs = domSnapshotManager.compare(expected, actual);
+    return { matches: diffs.length === 0, diffs };
+  }
+  // Self-Healing Methods
+  async enableSelfHealing() {
+    const pages = this._context.pages();
+    for (const page of pages) {
+      const frame = page.mainFrame();
+      const elements = await frame.evaluate(
+        () => Array.from(document.querySelectorAll("[data-testid], [id], button, a, input")).map((el) => ({
+          selector: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : "") + (el.getAttribute("data-testid") ? `[data-testid="${el.getAttribute("data-testid")}"]` : "")
+        }))
+      );
+      for (const { selector } of elements) {
+        await selfHealingEngine.captureReference(page, `ref:${selector}`, selector);
+      }
+    }
+  }
+  async healSelector(originalSelector, options2) {
+    const page = this._context.pages()[0];
+    if (!page) throw new Error("No page available");
+    return await selfHealingEngine.heal(page, originalSelector, `ref:${originalSelector}`, options2);
+  }
+  getSelfHealingStats() {
+    return selfHealingEngine.getStats();
+  }
+  // Performance Optimization Methods
+  setParallelExecution(enabled) {
+    this._crx.player.setParallelExecution(enabled);
+  }
+  getExecutionMetrics() {
+    return this._crx.player.getExecutionMetrics();
+  }
+  async runWithPerformanceTracking(code, page) {
+    const startTime = performance.now();
+    this.setParallelExecution(true);
+    await this.run(code, page);
+    const metrics = this.getExecutionMetrics();
+    const actualDuration = performance.now() - startTime;
+    return {
+      metrics,
+      actualDuration,
+      efficiency: metrics ? metrics.estimatedSequentialDuration / actualDuration : 1
+    };
   }
   async _createRecorderApp(recorder) {
     if (!this._recorderApp) {
@@ -142996,6 +143972,9 @@ class CrxApplicationDispatcher extends Dispatcher {
   async run(params) {
     var _a2;
     await this._object.run(params.code, (_a2 = params.page) == null ? void 0 : _a2._object);
+  }
+  async stop() {
+    await this._object.stop();
   }
 }
 class CrxPlaywrightDispatcher extends Dispatcher {
@@ -143999,6 +144978,43 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
   if (message.type === "stopApiRecording") {
     stopApiRecording();
     sendResponse({ success: true });
+    return true;
+  }
+  if (message.type === "replayScript") {
+    (async () => {
+      try {
+        const { code } = message;
+        if (!code) {
+          sendResponse({ error: "No code provided" });
+          return;
+        }
+        if (!crxAppPromise) {
+          sendResponse({ error: "Recorder is not active. Please start the recorder first." });
+          return;
+        }
+        const crxApp = await crxAppPromise;
+        await crxApp.recorder.run(code);
+        sendResponse({ status: "completed" });
+      } catch (error2) {
+        sendResponse({ error: (error2 == null ? void 0 : error2.message) || "Replay failed" });
+      }
+    })();
+    return true;
+  }
+  if (message.type === "stopReplay") {
+    (async () => {
+      try {
+        if (!crxAppPromise) {
+          sendResponse({ error: "Recorder is not active" });
+          return;
+        }
+        const crxApp = await crxAppPromise;
+        await crxApp.recorder.stop();
+        sendResponse({ status: "stopped" });
+      } catch (error2) {
+        sendResponse({ error: (error2 == null ? void 0 : error2.message) || "Failed to stop replay" });
+      }
+    })();
     return true;
   }
 });

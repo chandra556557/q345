@@ -142,17 +142,15 @@ export class TestCaseConverterService {
   }
 
   // ---------------------------------------------------------------------------
-  // CSV parser
+  // CSV parser (RFC 4180 compliant — handles quoted fields with embedded
+  // newlines and escaped double-quotes "")
   // ---------------------------------------------------------------------------
   private parseCSV(input: string): RawTestCase[] {
-    const lines = input.split('\n').filter(l => l.trim());
-    if (lines.length < 2) return this.parsePlainText(input);
+    const rows = this.parseCSVRows(input);
+    if (rows.length < 2) return this.parsePlainText(input);
 
-    const delimiter = lines[0].includes('\t') ? '\t' : lines[0].includes('|') ? '|' : ',';
-    const rows = lines.map(l => l.split(delimiter).map(c => c.replace(/^["'\s]+|["'\s]+$/g, '').trim()));
-
-    const header = rows[0].map(h => h.toLowerCase());
-    const dataRows = rows.slice(1).filter(r => r.some(c => c.length > 0));
+    const header = rows[0].map(h => h.toLowerCase().trim());
+    const dataRows = rows.slice(1).filter(r => r.some(c => c.trim().length > 0));
 
     // Map column indices
     const nameIdx = this.findColIdx(header, ['test case', 'test name', 'name', 'title', 'scenario', 'id']);
@@ -165,7 +163,7 @@ export class TestCaseConverterService {
 
     if (!hasHeader) {
       return dataRows.map(row => ({
-        name: row[0] || 'Test Case',
+        name: row[0]?.trim() || 'Test Case',
         preconditions: [],
         steps: row[1] ? this.splitSteps(row[1]) : [],
         expectedResults: row[2] ? this.splitSteps(row[2]) : [],
@@ -173,11 +171,80 @@ export class TestCaseConverterService {
     }
 
     return dataRows.map(row => ({
-      name: nameIdx !== -1 ? (row[nameIdx] || 'Test Case') : 'Test Case',
+      name: nameIdx !== -1 ? (row[nameIdx]?.trim() || 'Test Case') : 'Test Case',
       preconditions: preIdx !== -1 ? this.splitSteps(row[preIdx] || '') : [],
       steps: stepIdx !== -1 ? this.splitSteps(row[stepIdx] || '') : [],
       expectedResults: expIdx !== -1 ? this.splitSteps(row[expIdx] || '') : [],
     })).filter(tc => tc.name || tc.steps.length > 0);
+  }
+
+  /**
+   * Parse CSV text into rows of string arrays, correctly handling:
+   *  - Quoted fields with embedded newlines
+   *  - Escaped double-quotes ("" → ")
+   *  - Tab/pipe delimiters
+   */
+  private parseCSVRows(input: string): string[][] {
+    const firstLine = input.split('\n')[0] || '';
+    const delimiter = firstLine.includes('\t') ? '\t' : firstLine.includes('|') ? '|' : ',';
+
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < input.length) {
+      const ch = input[i];
+
+      if (inQuotes) {
+        if (ch === '"') {
+          // Check for escaped quote ""
+          if (i + 1 < input.length && input[i + 1] === '"') {
+            currentField += '"';
+            i += 2;
+            continue;
+          }
+          // End of quoted field
+          inQuotes = false;
+          i++;
+          continue;
+        }
+        currentField += ch;
+        i++;
+      } else {
+        if (ch === '"') {
+          inQuotes = true;
+          i++;
+        } else if (ch === delimiter) {
+          currentRow.push(currentField);
+          currentField = '';
+          i++;
+        } else if (ch === '\r') {
+          // Skip \r, handle \n next
+          i++;
+        } else if (ch === '\n') {
+          currentRow.push(currentField);
+          currentField = '';
+          if (currentRow.some(c => c.trim().length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          i++;
+        } else {
+          currentField += ch;
+          i++;
+        }
+      }
+    }
+
+    // Flush last field/row
+    currentRow.push(currentField);
+    if (currentRow.some(c => c.trim().length > 0)) {
+      rows.push(currentRow);
+    }
+
+    return rows;
   }
 
   private findColIdx(header: string[], candidates: string[]): number {
@@ -287,18 +354,25 @@ export class TestCaseConverterService {
   // ---------------------------------------------------------------------------
   private splitSteps(text: string): string[] {
     if (!text) return [];
-    // Split on newline, semicolon, numbered patterns, or comma (when multiple steps in one cell)
+    // Split on newline, semicolon, numbered patterns (with or without leading period/space)
+    // Handles: "1. step", "1) step", ".1. step", "sentence.2. next step"
     return text
-      .split(/[\n;]|\d+[\.\)]\s+|,\s+(?=[A-Z])/)
-      .map(s => s.trim())
+      .split(/[\n;]|(?:^|[.\s])\d+[\.\)]\s*(?=[A-Z])|,\s+(?=[A-Z])/)
+      .map(s => s.replace(/^\d+[\.\)]\s*/, '').trim())
       .filter(s => s.length > 0);
   }
 
   private cleanStep(step: string): string {
-    return step
+    let cleaned = step
       .replace(/^(given|when|then|and|but)\s+/i, '')
       .replace(/^[\d]+[\.\)]\s*|^[-*•]\s*/i, '')
       .trim();
+
+    // Wrap bare URLs in quotes so Cucumber treats them as {string} parameters
+    // (unquoted URLs contain / which Cucumber interprets as alternation syntax)
+    cleaned = cleaned.replace(/(?<!")https?:\/\/\S+/g, '"$&"');
+
+    return cleaned;
   }
 
   private classifyStep(step: string): 'Given' | 'When' | 'Then' | 'And' {

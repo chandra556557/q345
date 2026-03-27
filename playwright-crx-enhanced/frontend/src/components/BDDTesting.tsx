@@ -177,7 +177,7 @@ const BDDTesting: React.FC = () => {
   const [editingFeatureId, setEditingFeatureId] = useState<string | null>(null);
   const [customStepDefs, setCustomStepDefs] = useState('');
   const [showStepEditor, setShowStepEditor] = useState(false);
-  const [codeLanguage, setCodeLanguage] = useState<'typescript' | 'java'>('typescript');
+  const [codeLanguage, setCodeLanguage] = useState<'typescript' | 'java' | 'java-cucumber'>('typescript');
 
   // Convert tab state
   const [convertInput, setConvertInput] = useState('');
@@ -185,6 +185,11 @@ const BDDTesting: React.FC = () => {
   const [convertResult, setConvertResult] = useState('');
   const [convertWarnings, setConvertWarnings] = useState<string[]>([]);
   const [converting, setConverting] = useState(false);
+
+  // Convert tab: Step 3 — Parse Gherkin to code
+  const [convertParseLanguage, setConvertParseLanguage] = useState<'typescript' | 'java' | 'java-cucumber'>('java-cucumber');
+  const [convertParsedCode, setConvertParsedCode] = useState('');
+  const [convertParsing, setConvertParsing] = useState(false);
 
   // Run options
   const [runTags, setRunTags] = useState('');
@@ -320,10 +325,26 @@ const BDDTesting: React.FC = () => {
       }
       setConvertResult(res.data.data.gherkin);
       setConvertWarnings(res.data.data.warnings || []);
+      setConvertParsedCode(''); // Reset parsed code when new conversion happens
     } catch (err: any) {
       setError(err.response?.data?.error || 'Conversion failed');
     } finally {
       setConverting(false);
+    }
+  };
+
+  /** Step 3: Parse converted Gherkin to code (TypeScript / Java / Java Cucumber) */
+  const handleConvertParse = async () => {
+    if (!convertResult.trim()) return;
+    setConvertParsing(true);
+    setConvertParsedCode('');
+    try {
+      const res = await axios.post(`${API_URL}/bdd/parse`, { featureContent: convertResult, language: convertParseLanguage }, { headers });
+      setConvertParsedCode(res.data.data.playwrightCode);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to parse Gherkin');
+    } finally {
+      setConvertParsing(false);
     }
   };
 
@@ -759,11 +780,12 @@ const BDDTesting: React.FC = () => {
             <input type="text" placeholder="Feature name" value={featureName} onChange={e => setFeatureName(e.target.value)} />
             <select
               value={codeLanguage}
-              onChange={e => setCodeLanguage(e.target.value as 'typescript' | 'java')}
+              onChange={e => setCodeLanguage(e.target.value as 'typescript' | 'java' | 'java-cucumber')}
               style={{ padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '4px', fontSize: '13px' }}
             >
               <option value="typescript">TypeScript</option>
-              <option value="java">Java</option>
+              <option value="java">Java (Playwright)</option>
+              <option value="java-cucumber">Java (Cucumber BDD)</option>
             </select>
             <button className="bdd-btn bdd-btn-primary" onClick={handleParse} disabled={loading || !featureContent.trim()}>
               {loading ? 'Parsing...' : 'Parse & Preview'}
@@ -805,11 +827,11 @@ const BDDTesting: React.FC = () => {
             </div>
             <div className="bdd-editor-panel">
               <h3>
-                Generated Playwright Code
-                <span style={{ fontSize: '11px', color: '#999' }}>{codeLanguage === 'java' ? '.java' : '.spec.ts'}</span>
+                Generated {codeLanguage === 'java-cucumber' ? 'Java Cucumber Project' : 'Playwright Code'}
+                <span style={{ fontSize: '11px', color: '#999' }}>{codeLanguage === 'java-cucumber' ? '.java + pom.xml' : codeLanguage === 'java' ? '.java' : '.spec.ts'}</span>
               </h3>
               <pre className="bdd-code-preview">
-                {generatedCode || (codeLanguage === 'java' ? '// Click "Parse & Preview" to generate Java Playwright code' : '// Click "Parse & Preview" to generate Playwright code from your Gherkin feature')}
+                {generatedCode || (codeLanguage === 'java-cucumber' ? '// Click "Parse & Preview" to generate Java Cucumber BDD project\n// Generates: Step Definitions, Hooks, Runner, pom.xml' : codeLanguage === 'java' ? '// Click "Parse & Preview" to generate Java Playwright code' : '// Click "Parse & Preview" to generate Playwright code from your Gherkin feature')}
               </pre>
             </div>
           </div>
@@ -1517,108 +1539,193 @@ const BDDTesting: React.FC = () => {
           )}
         </div>
       )}
-      {/* ===== Convert to Gherkin Tab ===== */}
+      {/* ===== Convert to Gherkin Tab — 3-Step Flow ===== */}
       {activeTab === 'convert' && (
         <div>
-          <h3 style={{ marginBottom: '6px' }}>Convert Test Cases to Gherkin</h3>
-          <p style={{ color: '#666', fontSize: '13px', marginBottom: '16px' }}>
-            Paste plain test cases, numbered steps, or structured test documentation — or upload a <strong>.txt</strong>, <strong>.csv</strong>, or <strong>.tsv</strong> file.
-            The converter detects the format automatically and produces a Gherkin feature file.
-          </p>
+          {/* Step Progress Indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0', marginBottom: '24px', padding: '16px 0' }}>
+            {/* Step 1 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px',
+                background: '#1a73e8', color: '#fff',
+              }}>1</div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#1a73e8' }}>Upload Test Cases</span>
+            </div>
+            <div style={{ width: '40px', height: '2px', background: convertResult ? '#1a73e8' : '#d0d0d0', margin: '0 8px' }} />
+            {/* Step 2 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px',
+                background: convertResult ? '#1a73e8' : '#d0d0d0', color: '#fff',
+              }}>2</div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: convertResult ? '#1a73e8' : '#999' }}>Convert to Gherkin</span>
+            </div>
+            <div style={{ width: '40px', height: '2px', background: convertParsedCode ? '#1a73e8' : '#d0d0d0', margin: '0 8px' }} />
+            {/* Step 3 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px',
+                background: convertParsedCode ? '#1a73e8' : '#d0d0d0', color: '#fff',
+              }}>3</div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: convertParsedCode ? '#1a73e8' : '#999' }}>Parse to Code</span>
+            </div>
+          </div>
 
-          <div className="bdd-editor-section">
-            {/* Input panel */}
-            <div className="bdd-editor-panel">
-              <h3>Input <span style={{ fontSize: '11px', color: '#999' }}>paste or upload</span></h3>
+          {/* STEP 1: Upload / Paste Test Cases */}
+          <div style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px', marginBottom: '16px', background: '#fafbfc' }}>
+            <h3 style={{ marginBottom: '6px', fontSize: '15px' }}>Step 1: Upload Test Cases</h3>
+            <p style={{ color: '#666', fontSize: '12px', marginBottom: '12px' }}>
+              Paste plain test cases, numbered steps, or structured test documentation — or upload a <strong>.txt</strong>, <strong>.csv</strong>, or <strong>.tsv</strong> file.
+            </p>
 
-              <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <label
-                  htmlFor="tc-file-upload"
-                  style={{ cursor: 'pointer', padding: '6px 14px', border: '1px solid #1a73e8', color: '#1a73e8', borderRadius: '4px', fontSize: '13px', userSelect: 'none' }}
-                >
-                  {convertFile ? `📄 ${convertFile.name}` : 'Upload file (.txt / .csv / .tsv)'}
-                </label>
-                <input
-                  id="tc-file-upload"
-                  type="file"
-                  accept=".txt,.csv,.tsv"
-                  style={{ display: 'none' }}
-                  onChange={e => {
-                    const f = e.target.files?.[0] || null;
-                    setConvertFile(f);
-                    if (f) setConvertInput('');
-                  }}
-                />
-                {convertFile && (
-                  <button className="bdd-btn" style={{ fontSize: '12px', padding: '4px 10px' }} onClick={() => setConvertFile(null)}>
-                    Clear file
-                  </button>
-                )}
-              </div>
-
-              <textarea
-                className="bdd-textarea"
-                value={convertInput}
-                onChange={e => { setConvertInput(e.target.value); setConvertFile(null); }}
-                placeholder={`Paste your test cases here. Supported formats:\n\n• Plain numbered steps:\n  1. Navigate to login page\n  2. Enter username "admin"\n  3. Click Login button\n  4. Verify dashboard is shown\n\n• Structured:\n  Test Case: Login\n  Preconditions: User has an account\n  Steps: Open browser, Enter credentials\n  Expected Result: Dashboard is displayed\n\n• CSV (with header row):\n  Test Case,Steps,Expected Result`}
-                spellCheck={false}
-                disabled={!!convertFile}
+            <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <label
+                htmlFor="tc-file-upload"
+                style={{ cursor: 'pointer', padding: '6px 14px', border: '1px solid #1a73e8', color: '#1a73e8', borderRadius: '4px', fontSize: '13px', userSelect: 'none' }}
+              >
+                {convertFile ? `📄 ${convertFile.name}` : 'Upload file (.txt / .csv / .tsv)'}
+              </label>
+              <input
+                id="tc-file-upload"
+                type="file"
+                accept=".txt,.csv,.tsv"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files?.[0] || null;
+                  setConvertFile(f);
+                  if (f) setConvertInput('');
+                }}
               />
+              {convertFile && (
+                <button className="bdd-btn" style={{ fontSize: '12px', padding: '4px 10px' }} onClick={() => setConvertFile(null)}>
+                  Clear file
+                </button>
+              )}
+            </div>
 
-              <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
+            <textarea
+              className="bdd-textarea"
+              value={convertInput}
+              onChange={e => { setConvertInput(e.target.value); setConvertFile(null); }}
+              placeholder={`Paste your test cases here. Supported formats:\n\n• Plain numbered steps:\n  1. Navigate to login page\n  2. Enter username "admin"\n  3. Click Login button\n  4. Verify dashboard is shown\n\n• Structured:\n  Test Case: Login\n  Preconditions: User has an account\n  Steps: Open browser, Enter credentials\n  Expected Result: Dashboard is displayed\n\n• CSV (with header row):\n  Test Case,Steps,Expected Result`}
+              spellCheck={false}
+              disabled={!!convertFile}
+              style={{ minHeight: '180px' }}
+            />
+
+            <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
+              <button
+                className="bdd-btn bdd-btn-primary"
+                onClick={handleConvert}
+                disabled={converting || (!convertInput.trim() && !convertFile)}
+              >
+                {converting ? 'Converting...' : 'Convert to Gherkin →'}
+              </button>
+              <button
+                className="bdd-btn"
+                onClick={() => { setConvertInput(''); setConvertFile(null); setConvertResult(''); setConvertWarnings([]); setConvertParsedCode(''); }}
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* STEP 2: Gherkin Output */}
+          <div style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px', marginBottom: '16px', background: convertResult ? '#fafbfc' : '#f5f5f5', opacity: convertResult ? 1 : 0.6 }}>
+            <h3 style={{ marginBottom: '6px', fontSize: '15px' }}>Step 2: Generated Gherkin <span style={{ fontSize: '11px', color: '#999' }}>.feature</span></h3>
+
+            {convertWarnings.length > 0 && (
+              <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: '6px', padding: '8px 12px', marginBottom: '10px', fontSize: '12px', color: '#795548' }}>
+                <strong>Warnings:</strong>
+                <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                  {convertWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              </div>
+            )}
+
+            <pre className="bdd-code-preview" style={{ minHeight: '200px', maxHeight: '350px', overflow: 'auto' }}>
+              {convertResult || '# Converted Gherkin will appear here after Step 1'}
+            </pre>
+
+            {convertResult && (
+              <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <select
+                  value={convertParseLanguage}
+                  onChange={e => { setConvertParseLanguage(e.target.value as 'typescript' | 'java' | 'java-cucumber'); setConvertParsedCode(''); }}
+                  style={{ padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '4px', fontSize: '13px' }}
+                >
+                  <option value="java-cucumber">Java Cucumber (BDD)</option>
+                  <option value="java">Java (Playwright)</option>
+                  <option value="typescript">TypeScript</option>
+                </select>
                 <button
                   className="bdd-btn bdd-btn-primary"
-                  onClick={handleConvert}
-                  disabled={converting || (!convertInput.trim() && !convertFile)}
+                  onClick={handleConvertParse}
+                  disabled={convertParsing}
                 >
-                  {converting ? 'Converting...' : 'Convert to Gherkin'}
+                  {convertParsing ? 'Parsing...' : 'Parse to Code →'}
+                </button>
+                <button
+                  className="bdd-btn bdd-btn-success"
+                  onClick={() => {
+                    setFeatureContent(convertResult);
+                    setActiveTab('editor');
+                  }}
+                >
+                  Use in Editor
                 </button>
                 <button
                   className="bdd-btn"
-                  onClick={() => { setConvertInput(''); setConvertFile(null); setConvertResult(''); setConvertWarnings([]); }}
+                  onClick={() => navigator.clipboard.writeText(convertResult).catch(() => {})}
                 >
-                  Clear
+                  Copy Gherkin
                 </button>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Output panel */}
-            <div className="bdd-editor-panel">
-              <h3>Generated Gherkin <span style={{ fontSize: '11px', color: '#999' }}>.feature</span></h3>
+          {/* STEP 3: Parsed Code Output */}
+          <div style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '16px', background: convertParsedCode ? '#fafbfc' : '#f5f5f5', opacity: convertParsedCode ? 1 : 0.6 }}>
+            <h3 style={{ marginBottom: '6px', fontSize: '15px' }}>
+              Step 3: Generated {convertParseLanguage === 'java-cucumber' ? 'Java Cucumber Project' : convertParseLanguage === 'java' ? 'Java Playwright Code' : 'TypeScript Code'}
+              <span style={{ fontSize: '11px', color: '#999', marginLeft: '8px' }}>
+                {convertParseLanguage === 'java-cucumber' ? 'Steps + Hooks + Runner + pom.xml' : convertParseLanguage === 'java' ? '.java' : '.spec.ts'}
+              </span>
+            </h3>
 
-              {convertWarnings.length > 0 && (
-                <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: '6px', padding: '8px 12px', marginBottom: '10px', fontSize: '12px', color: '#795548' }}>
-                  <strong>Warnings:</strong>
-                  <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
-                    {convertWarnings.map((w, i) => <li key={i}>{w}</li>)}
-                  </ul>
-                </div>
-              )}
+            <pre className="bdd-code-preview" style={{ minHeight: '250px', maxHeight: '500px', overflow: 'auto' }}>
+              {convertParsedCode || (convertParseLanguage === 'java-cucumber'
+                ? '// Java Cucumber project code will appear here after Step 2\n// Generates:\n//   - Step Definitions (*Steps.java) with @Given/@When/@Then\n//   - Hooks.java (Playwright browser lifecycle)\n//   - Runner.java (JUnit 5 + Cucumber)\n//   - pom.xml (Maven dependencies)'
+                : '// Generated code will appear here after Step 2')}
+            </pre>
 
-              <pre className="bdd-code-preview" style={{ minHeight: '300px' }}>
-                {convertResult || '# Converted Gherkin will appear here\n# Feature: ...\n#   Scenario: ...\n#     Given ...\n#     When ...\n#     Then ...'}
-              </pre>
-
-              {convertResult && (
-                <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    className="bdd-btn bdd-btn-success"
-                    onClick={() => {
-                      setFeatureContent(convertResult);
-                      setActiveTab('editor');
-                    }}
-                  >
-                    Use in Editor
-                  </button>
-                  <button
-                    className="bdd-btn"
-                    onClick={() => navigator.clipboard.writeText(convertResult).catch(() => {})}
-                  >
-                    Copy to clipboard
-                  </button>
-                </div>
-              )}
-            </div>
+            {convertParsedCode && (
+              <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  className="bdd-btn"
+                  onClick={() => navigator.clipboard.writeText(convertParsedCode).catch(() => {})}
+                >
+                  Copy Code
+                </button>
+                <button
+                  className="bdd-btn bdd-btn-success"
+                  onClick={() => {
+                    // Download as file
+                    const ext = convertParseLanguage === 'java-cucumber' ? 'txt' : convertParseLanguage === 'java' ? 'java' : 'ts';
+                    const blob = new Blob([convertParsedCode], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `bdd-project.${ext}`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

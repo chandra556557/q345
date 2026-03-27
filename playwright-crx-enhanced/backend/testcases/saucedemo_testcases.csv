@@ -1,0 +1,70 @@
+Test Case,Preconditions,Steps,Expected Result
+Login with valid credentials,User is on https://saucedemo.com,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button",User is redirected to the inventory page and products are displayed
+Login with invalid password,User is on https://saucedemo.com,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""wrong_password"" in the Password field
+4. Click the ""Login"" button",Error message ""Epic sadface: Username and password do not match any user in this service"" is displayed
+Add product to cart,User is logged in with standard_user,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Click the ""Add to cart"" button on ""Sauce Labs Backpack""
+6. Verify the cart badge shows ""1""",Cart badge displays 1 and the button changes to Remove
+Remove product from cart,User is logged in and has item in cart,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Click the ""Add to cart"" button on ""Sauce Labs Backpack""
+6. Click the ""Remove"" button on ""Sauce Labs Backpack""",Cart badge disappears and the button changes back to Add to cart
+Complete checkout flow,User is logged in and has item in cart,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Click the ""Add to cart"" button on ""Sauce Labs Backpack""
+6. Click the cart icon
+7. Click the ""Checkout"" button
+8. Enter ""John"" in the First Name field
+9. Enter ""Doe"" in the Last Name field
+10. Enter ""12345"" in the Zip/Postal Code field
+11. Click the ""Continue"" button
+12. Click the ""Finish"" button",Order confirmation page displays ""Thank you for your order!""
+Sort products by price low to high,User is logged in,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Select ""Price (low to high)"" from the sort dropdown",Products are sorted by price in ascending order with cheapest item first
+Sort products by name Z to A,User is logged in,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Select ""Name (Z to A)"" from the sort dropdown",Products are sorted alphabetically in descending order
+Verify product detail page,User is logged in,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Click on ""Sauce Labs Backpack"" product title",Product detail page shows name ""Sauce Labs Backpack"" with description and price ""$29.99"" and Add to cart button
+Add multiple products and verify cart,User is logged in,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Click the ""Add to cart"" button on ""Sauce Labs Backpack""
+6. Click the ""Add to cart"" button on ""Sauce Labs Bike Light""
+7. Click the ""Add to cart"" button on ""Sauce Labs Bolt T-Shirt""
+8. Click the cart icon
+9. Verify ""3"" items are displayed in the cart",Cart page shows 3 items: Sauce Labs Backpack and Sauce Labs Bike Light and Sauce Labs Bolt T-Shirt
+Logout from application,User is logged in,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Click the hamburger menu icon
+6. Click the ""Logout"" link",User is redirected back to the login page at https://saucedemo.com
+Checkout with empty cart,User is logged in with empty cart,"1. Navigate to ""https://saucedemo.com""
+2. Enter ""standard_user"" in the Username field
+3. Enter ""secret_sauce"" in the Password field
+4. Click the ""Login"" button
+5. Click the cart icon
+6. Verify the cart is empty
+7. Verify the ""Checkout"" button is visible",Cart page shows no items and user can see Continue Shopping button

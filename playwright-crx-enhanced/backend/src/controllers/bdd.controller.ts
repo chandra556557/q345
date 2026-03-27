@@ -295,7 +295,7 @@ export const deleteFeature = asyncHandler(async (req: Request, res: Response) =>
  * Parse Gherkin feature content (preview)
  * POST /api/bdd/parse
  */
-const VALID_LANGUAGES = ['typescript', 'java'] as const;
+const VALID_LANGUAGES = ['typescript', 'java', 'java-cucumber'] as const;
 type Language = typeof VALID_LANGUAGES[number];
 
 export const parseFeature = asyncHandler(async (req: Request, res: Response) => {

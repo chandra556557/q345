@@ -288,23 +288,17 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
       }
 
       console.log('Found XPath expressions:', allXPaths);
-      console.log('🌐 Using external Genie API for XPath analysis');
+      console.log('🔍 Analyzing XPaths via backend AI enhancement service');
 
-      // Analyze each XPath using external Genie API
-      const EXTERNAL_API_URL = 'http://34.46.36.105:3000/genieapi/ai-analysis';
-      const EXTERNAL_API_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwZ2FkbWluQGdtYWlsLmNvbSIsInVzZXJJZCI6IjEiLCJleHAiOjE3NjcyNjY4MjF9.AwYPxH7xCpJ8o4XtyFbjL5Er3Rvg057Yx272g7a1pcI';
-      
+      // Analyze each XPath using backend ai-enhancement endpoint
       const analyses = await Promise.all(
         allXPaths.map(async (xpath) => {
           try {
-            const response = await axios.post(`${EXTERNAL_API_URL}/xpath-deep-analysis`, {
+            const response = await axios.post(`${API_URL}/ai-enhancement/xpath-analyze`, {
               xpath: xpath
             }, {
-              headers: {
-                'Authorization': `Bearer ${EXTERNAL_API_TOKEN}`,
-                'Content-Type': 'application/json'
-              },
-              timeout: 30000 // 30 second timeout
+              headers,
+              timeout: 30000
             });
             return {
               xpath,
@@ -312,15 +306,14 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
             };
           } catch (error: any) {
             console.error('XPath analysis error for:', xpath, error);
-            
-            // Provide detailed error info
+
             let errorMsg = 'Analysis failed';
             if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') {
-              errorMsg = 'Network error - API unreachable';
+              errorMsg = 'Network error - backend unreachable';
             } else if (error.response) {
               errorMsg = `API error (${error.response.status})`;
             }
-            
+
             return {
               xpath,
               error: errorMsg
@@ -417,17 +410,15 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log('🌐 Uploading script to external Genie API for XPath analysis');
-      const EXTERNAL_API_URL = 'http://34.46.36.105:3000/genieapi/ai-analysis';
-      const EXTERNAL_API_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwZ2FkbWluQGdtYWlsLmNvbSIsInVzZXJJZCI6IjEiLCJleHAiOjE3NjcyNjY4MjF9.AwYPxH7xCpJ8o4XtyFbjL5Er3Rvg057Yx272g7a1pcI';
-      
-      const response = await axios.post(`${EXTERNAL_API_URL}/upload-script-xpath-analysis`, formData, {
+      console.log('📤 Uploading script to backend for XPath analysis');
+
+      const response = await axios.post(`${API_URL}/ai-enhancement/upload-script-xpath-analysis`, formData, {
         headers: {
-          'Authorization': `Bearer ${EXTERNAL_API_TOKEN}`,
+          ...headers,
           'Content-Type': 'multipart/form-data'
         },
-        timeout: 30000, // 30 second timeout
-        validateStatus: (status) => status < 500 // Don't throw on 4xx errors
+        timeout: 30000,
+        validateStatus: (status) => status < 500
       });
 
       console.log('Upload analysis received:', response.data);
@@ -439,11 +430,9 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
       let errorMessage = 'Failed to analyze uploaded script';
       
       if (err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED') {
-        errorMessage = '⚠️ Cannot connect to external Genie API. Please check:\n' +
-                      '1. Network connection\n' +
-                      '2. VPN/Firewall settings\n' +
-                      '3. API server availability (http://34.46.36.105:3000)\n' +
-                      '4. CORS configuration on API server';
+        errorMessage = '⚠️ Cannot connect to backend API. Please check:\n' +
+                      '1. Backend server is running on port 3001\n' +
+                      '2. Network connection';
       } else if (err.response) {
         errorMessage = `API Error (${err.response.status}): ${err.response.data?.detail || err.response.statusText}`;
       } else if (err.request) {
@@ -494,16 +483,13 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
       console.log('📸 Comparing screenshots via Node.js backend API...');
       
       // Call Node.js backend API for visual regression analysis
-      const response = await axios.post('http://localhost:3001/api/visual-regression/compare', {
+      const response = await axios.post(`${API_URL}/ai-enhancement/layout-changes`, {
         before_screenshot: baselineBase64,
         after_screenshot: currentBase64,
         tolerance: 0.95
       }, {
         timeout: 30000,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers
       });
 
       console.log('✅ Screenshot comparison complete:', response.data);

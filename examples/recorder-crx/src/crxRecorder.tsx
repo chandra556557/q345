@@ -83,6 +83,10 @@ export const CrxRecorder: React.FC = ({
   // Enhanced features state
   const [showTestExecutor, setShowTestExecutor] = React.useState(false);
 
+  // Script replay state
+  const [replayStatus, setReplayStatus] = React.useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [replayError, setReplayError] = React.useState('');
+
   // Save to database state
   const [showSaveModal, setShowSaveModal] = React.useState(false);
   const [scriptName, setScriptName] = React.useState('');
@@ -340,6 +344,58 @@ export const CrxRecorder: React.FC = ({
 
   const toggleTestExecutor = React.useCallback(() => {
     setShowTestExecutor(prev => !prev);
+  }, []);
+
+  const replayScript = React.useCallback(async () => {
+    const code = source?.text;
+    if (!code) {
+      setReplayError('No script code to replay. Record some actions first.');
+      setReplayStatus('error');
+      return;
+    }
+
+    if (selectedFileId !== 'playwright-test') {
+      setReplayError('Replay is only available for Playwright Test format. Switch language to "playwright-test".');
+      setReplayStatus('error');
+      return;
+    }
+
+    if (['recording', 'assertingText', 'assertingVisibility', 'assertingValue', 'assertingSnapshot'].includes(mode)) {
+      setReplayError('Stop recording before replaying the script.');
+      setReplayStatus('error');
+      return;
+    }
+
+    setReplayStatus('running');
+    setReplayError('');
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'replayScript',
+        code,
+      });
+
+      if (response?.error) {
+        setReplayStatus('error');
+        setReplayError(response.error);
+      } else {
+        setReplayStatus('done');
+        setTimeout(() => setReplayStatus('idle'), 3000);
+      }
+    } catch (error: any) {
+      setReplayStatus('error');
+      setReplayError(error?.message || 'Replay failed unexpectedly');
+    }
+  }, [source, selectedFileId, mode]);
+
+  const stopReplay = React.useCallback(async () => {
+    try {
+      await chrome.runtime.sendMessage({ type: 'stopReplay' });
+      setReplayStatus('idle');
+      setReplayError('');
+    } catch (error: any) {
+      console.error('Failed to stop replay:', error);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -609,24 +665,58 @@ export const CrxRecorder: React.FC = ({
           </div>
         </div>
       )}
-      {settings.experimental && <>
-        <Toolbar>
-          <ToolbarButton icon='save' title='Save to File' disabled={false} onClick={saveCode}>Save File</ToolbarButton>
-          <ToolbarButton icon='cloud-upload' title='Save to Database' disabled={false} onClick={saveToDatabase}>Save DB</ToolbarButton>
-          <ToolbarSeparator />
-          <ToolbarButton icon='debug-console' title='Test Executor' disabled={false} onClick={toggleTestExecutor}>Execute</ToolbarButton>
-          <div style={{ flex: 'auto' }}></div>
+      <Recorder sources={sources} paused={paused} log={log} mode={mode} onEditedCode={dispatchEditedCode} onCursorActivity={dispatchCursorActivity} />
+      <div className='replay-toolbar'>
+        {replayStatus === 'running' ? (
+          <button className='replay-btn replay-btn-stop' title='Stop Replay' onClick={stopReplay}>
+            <span className='codicon codicon-debug-stop'></span> Stop
+          </button>
+        ) : (
+          <button className='replay-btn replay-btn-play' title='Replay script in browser' onClick={replayScript}>
+            <span className='codicon codicon-run'></span> {replayStatus === 'done' ? 'Done' : replayStatus === 'error' ? 'Retry' : 'Replay'}
+          </button>
+        )}
+        {settings.experimental && <>
+          <button className='replay-btn' title='Save to File' onClick={saveCode}>
+            <span className='codicon codicon-save'></span> Save File
+          </button>
+          <button className='replay-btn' title='Save to Database' onClick={saveToDatabase}>
+            <span className='codicon codicon-cloud-upload'></span> Save DB
+          </button>
+          <button className='replay-btn' title='Test Executor' onClick={toggleTestExecutor}>
+            <span className='codicon codicon-debug-console'></span> Execute
+          </button>
+        </>}
+        <div style={{ flex: 'auto' }}></div>
+        <button className='replay-btn' title='Preferences' onClick={showPreferences}>
+          <span className='codicon codicon-settings-gear'></span>
+        </button>
+        {settings.experimental && <>
           <div className='dropdown'>
-            <ToolbarButton icon='tools' title='Tools' disabled={false} onClick={() => {}}></ToolbarButton>
+            <button className='replay-btn' title='Tools' onClick={() => {}}>
+              <span className='codicon codicon-tools'></span>
+            </button>
             <div className='dropdown-content right-align'>
               <a href='#' onClick={requestStorageState}>Download storage state</a>
             </div>
           </div>
-          <ToolbarSeparator />
-          <ToolbarButton icon='settings-gear' title='Preferences' onClick={showPreferences}></ToolbarButton>
-        </Toolbar>
-      </>}
-      <Recorder sources={sources} paused={paused} log={log} mode={mode} onEditedCode={dispatchEditedCode} onCursorActivity={dispatchCursorActivity} />
+        </>}
+      </div>
+      {replayStatus === 'error' && replayError && (
+        <div className='replay-status replay-error'>
+          Replay error: {replayError}
+        </div>
+      )}
+      {replayStatus === 'running' && (
+        <div className='replay-status replay-running'>
+          Replaying script in browser...
+        </div>
+      )}
+      {replayStatus === 'done' && (
+        <div className='replay-status replay-done'>
+          Replay completed successfully
+        </div>
+      )}
 
       {/* Enhanced Features Panels */}
       {showTestExecutor && (

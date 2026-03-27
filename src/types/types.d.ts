@@ -523,4 +523,6 @@ export interface CrxRecorder {
   load(code: string): Promise<void>;
 
   run(code: string, page?: Page): Promise<void>;
+
+  stop(): Promise<void>;
 }

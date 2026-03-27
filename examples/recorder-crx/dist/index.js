@@ -137,58 +137,6 @@ function toggleTheme() {
 function currentTheme() {
   return document.body.classList.contains("dark-mode") ? "dark-mode" : "light-mode";
 }
-const Toolbar = ({
-  noShadow,
-  children,
-  noMinHeight,
-  className,
-  sidebarBackground,
-  onClick
-}) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: clsx("toolbar", noShadow && "no-shadow", noMinHeight && "no-min-height", className, sidebarBackground && "toolbar-sidebar-background"), onClick, children });
-};
-const ToolbarButton = reactExports.forwardRef(function ToolbarButton2({
-  children,
-  title = "",
-  icon,
-  disabled = false,
-  toggled = false,
-  onClick = () => {
-  },
-  style,
-  testId,
-  className,
-  ariaLabel
-}, ref) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    "button",
-    {
-      ref,
-      className: clsx(className, "toolbar-button", icon, toggled && "toggled"),
-      onMouseDown: preventDefault,
-      onClick,
-      onDoubleClick: preventDefault,
-      title,
-      disabled: !!disabled,
-      style,
-      "data-testid": testId,
-      "aria-label": ariaLabel || title,
-      children: [
-        icon && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `codicon codicon-${icon}`, style: children ? { marginRight: 5 } : {} }),
-        children
-      ]
-    }
-  );
-});
-const ToolbarSeparator = ({
-  style
-}) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "toolbar-separator", style });
-};
-const preventDefault = (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-};
 const Dialog = ({ isOpen, onClose, title, children }) => {
   if (!isOpen)
     return null;
@@ -671,6 +619,16 @@ const SplitView = ({
     )
   ] });
 };
+const Toolbar = ({
+  noShadow,
+  children,
+  noMinHeight,
+  className,
+  sidebarBackground,
+  onClick
+}) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: clsx("toolbar", noShadow && "no-shadow", noMinHeight && "no-min-height", className, sidebarBackground && "toolbar-sidebar-background"), onClick, children });
+};
 const TabbedPane = ({ tabs, selectedTab, setSelectedTab, leftToolbar, rightToolbar, dataTestId, mode }) => {
   const id = reactExports.useId();
   if (!selectedTab)
@@ -769,6 +727,48 @@ function emptySource() {
     highlight: []
   };
 }
+const ToolbarButton = reactExports.forwardRef(function ToolbarButton2({
+  children,
+  title = "",
+  icon,
+  disabled = false,
+  toggled = false,
+  onClick = () => {
+  },
+  style,
+  testId,
+  className,
+  ariaLabel
+}, ref) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "button",
+    {
+      ref,
+      className: clsx(className, "toolbar-button", icon, toggled && "toggled"),
+      onMouseDown: preventDefault,
+      onClick,
+      onDoubleClick: preventDefault,
+      title,
+      disabled: !!disabled,
+      style,
+      "data-testid": testId,
+      "aria-label": ariaLabel || title,
+      children: [
+        icon && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `codicon codicon-${icon}`, style: children ? { marginRight: 5 } : {} }),
+        children
+      ]
+    }
+  );
+});
+const ToolbarSeparator = ({
+  style
+}) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "toolbar-separator", style });
+};
+const preventDefault = (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+};
 const between = function(num, first, last) {
   return num >= first && num <= last;
 };
@@ -10958,6 +10958,8 @@ const CrxRecorder = ({}) => {
   const [mode, setMode] = reactExports.useState("none");
   const [selectedFileId, setSelectedFileId] = reactExports.useState(defaultSettings.targetLanguage);
   const [showTestExecutor, setShowTestExecutor] = reactExports.useState(false);
+  const [replayStatus, setReplayStatus] = reactExports.useState("idle");
+  const [replayError, setReplayError] = reactExports.useState("");
   const [showSaveModal, setShowSaveModal] = reactExports.useState(false);
   const [scriptName, setScriptName] = reactExports.useState("");
   const [scriptDescription, setScriptDescription] = reactExports.useState("");
@@ -11192,6 +11194,51 @@ const CrxRecorder = ({}) => {
   const toggleTestExecutor = reactExports.useCallback(() => {
     setShowTestExecutor((prev) => !prev);
   }, []);
+  const replayScript = reactExports.useCallback(async () => {
+    const code = source == null ? void 0 : source.text;
+    if (!code) {
+      setReplayError("No script code to replay. Record some actions first.");
+      setReplayStatus("error");
+      return;
+    }
+    if (selectedFileId !== "playwright-test") {
+      setReplayError('Replay is only available for Playwright Test format. Switch language to "playwright-test".');
+      setReplayStatus("error");
+      return;
+    }
+    if (["recording", "assertingText", "assertingVisibility", "assertingValue", "assertingSnapshot"].includes(mode)) {
+      setReplayError("Stop recording before replaying the script.");
+      setReplayStatus("error");
+      return;
+    }
+    setReplayStatus("running");
+    setReplayError("");
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "replayScript",
+        code
+      });
+      if (response == null ? void 0 : response.error) {
+        setReplayStatus("error");
+        setReplayError(response.error);
+      } else {
+        setReplayStatus("done");
+        setTimeout(() => setReplayStatus("idle"), 3e3);
+      }
+    } catch (error) {
+      setReplayStatus("error");
+      setReplayError((error == null ? void 0 : error.message) || "Replay failed unexpectedly");
+    }
+  }, [source, selectedFileId, mode]);
+  const stopReplay = reactExports.useCallback(async () => {
+    try {
+      await chrome.runtime.sendMessage({ type: "stopReplay" });
+      setReplayStatus("idle");
+      setReplayError("");
+    } catch (error) {
+      console.error("Failed to stop replay:", error);
+    }
+  }, []);
   reactExports.useEffect(() => {
     if (!settings2.experimental)
       return;
@@ -11423,21 +11470,44 @@ const CrxRecorder = ({}) => {
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "logout-btn", onClick: handleLogout, children: "Logout" })
       ] }) }),
-      settings2.experimental && /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Toolbar, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ToolbarButton, { icon: "save", title: "Save to File", disabled: false, onClick: saveCode, children: "Save File" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ToolbarButton, { icon: "cloud-upload", title: "Save to Database", disabled: false, onClick: saveToDatabase, children: "Save DB" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ToolbarSeparator, {}),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ToolbarButton, { icon: "debug-console", title: "Test Executor", disabled: false, onClick: toggleTestExecutor, children: "Execute" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: "auto" } }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "dropdown", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(ToolbarButton, { icon: "tools", title: "Tools", disabled: false, onClick: () => {
-          } }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "dropdown-content right-align", children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { href: "#", onClick: requestStorageState, children: "Download storage state" }) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ToolbarSeparator, {}),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ToolbarButton, { icon: "settings-gear", title: "Preferences", onClick: showPreferences })
-      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Recorder, { sources, paused, log, mode, onEditedCode: dispatchEditedCode, onCursorActivity: dispatchCursorActivity }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "replay-toolbar", children: [
+        replayStatus === "running" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: "replay-btn replay-btn-stop", title: "Stop Replay", onClick: stopReplay, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "codicon codicon-debug-stop" }),
+          " Stop"
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: "replay-btn replay-btn-play", title: "Replay script in browser", onClick: replayScript, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "codicon codicon-run" }),
+          " ",
+          replayStatus === "done" ? "Done" : replayStatus === "error" ? "Retry" : "Replay"
+        ] }),
+        settings2.experimental && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: "replay-btn", title: "Save to File", onClick: saveCode, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "codicon codicon-save" }),
+            " Save File"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: "replay-btn", title: "Save to Database", onClick: saveToDatabase, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "codicon codicon-cloud-upload" }),
+            " Save DB"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { className: "replay-btn", title: "Test Executor", onClick: toggleTestExecutor, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "codicon codicon-debug-console" }),
+            " Execute"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: "auto" } }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "replay-btn", title: "Preferences", onClick: showPreferences, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "codicon codicon-settings-gear" }) }),
+        settings2.experimental && /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "dropdown", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "replay-btn", title: "Tools", onClick: () => {
+          }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "codicon codicon-tools" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "dropdown-content right-align", children: /* @__PURE__ */ jsxRuntimeExports.jsx("a", { href: "#", onClick: requestStorageState, children: "Download storage state" }) })
+        ] }) })
+      ] }),
+      replayStatus === "error" && replayError && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "replay-status replay-error", children: [
+        "Replay error: ",
+        replayError
+      ] }),
+      replayStatus === "running" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "replay-status replay-running", children: "Replaying script in browser..." }),
+      replayStatus === "done" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "replay-status replay-done", children: "Replay completed successfully" }),
       showTestExecutor && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { position: "absolute", top: 0, right: 0, width: "450px", height: "100%", background: "var(--vscode-sideBar-background)", borderLeft: "1px solid var(--vscode-panel-border)", zIndex: 1e3, overflow: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(TestExecutorUI, { onClose: toggleTestExecutor, script: (source == null ? void 0 : source.text) || "", scriptName: selectedFileId }) })
     ] })
   ] });

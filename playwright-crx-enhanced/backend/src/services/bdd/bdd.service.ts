@@ -8,6 +8,7 @@ import { promisify } from 'util';
 import { EventEmitter } from 'events';
 import { generateSerenityReport, SerenityReportData, SerenityReportResult } from './serenityReport.service';
 import { screenplayService } from './screenplay.service';
+import { allureService } from '../allure.service';
 
 const execAsync = promisify(exec);
 
@@ -246,7 +247,8 @@ class BDDService {
    * Generate Playwright test code from a parsed feature
    * @param language - 'typescript' (default) or 'java'
    */
-  generatePlaywrightCode(feature: ParsedFeature, language: 'typescript' | 'java' = 'typescript'): string {
+  generatePlaywrightCode(feature: ParsedFeature, language: 'typescript' | 'java' | 'java-cucumber' = 'typescript'): string {
+    if (language === 'java-cucumber') return this.generateJavaCucumberProject(feature);
     if (language === 'java') return this.generateJavaPlaywrightCode(feature);
 
     const lines: string[] = [];
@@ -443,6 +445,705 @@ class BDDService {
   private toJavaMethodName(name: string): string {
     const words = name.replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/);
     return words[0].toLowerCase() + words.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+  }
+
+  // ============================================================
+  // Java Cucumber (BDD) Project Generator
+  // Generates: Step Definitions, Runner, Hooks, POM, feature copy
+  // ============================================================
+
+  /**
+   * Generate a complete Java Cucumber project structure from a parsed feature.
+   * Returns a single string with clearly delimited file sections.
+   */
+  private generateJavaCucumberProject(feature: ParsedFeature): string {
+    const sections: string[] = [];
+
+    // 1. Feature file (copy)
+    sections.push(this.fileSection(
+      `src/test/resources/features/${this.toSnakeCase(feature.name)}.feature`,
+      this.reconstructFeatureFile(feature)
+    ));
+
+    // 2. Step Definitions
+    sections.push(this.fileSection(
+      `src/test/java/stepdefinitions/${this.toJavaClassName(feature.name)}Steps.java`,
+      this.generateJavaCucumberStepDefs(feature)
+    ));
+
+    // 3. Hooks (Before/After with Playwright lifecycle)
+    sections.push(this.fileSection(
+      'src/test/java/stepdefinitions/Hooks.java',
+      this.generateJavaCucumberHooks()
+    ));
+
+    // 4. Runner class
+    sections.push(this.fileSection(
+      `src/test/java/runner/${this.toJavaClassName(feature.name)}Runner.java`,
+      this.generateJavaCucumberRunner(feature)
+    ));
+
+    // 5. POM.xml
+    sections.push(this.fileSection(
+      'pom.xml',
+      this.generateJavaCucumberPom(feature)
+    ));
+
+    return sections.join('\n');
+  }
+
+  private fileSection(path: string, content: string): string {
+    return `// ===== FILE: ${path} =====\n${content}\n// ===== END FILE: ${path} =====\n`;
+  }
+
+  /**
+   * Generate Java Cucumber step definitions with @Given/@When/@Then annotations.
+   * Maps Gherkin steps to Playwright for Java API calls.
+   */
+  private generateJavaCucumberStepDefs(feature: ParsedFeature): string {
+    const className = this.toJavaClassName(feature.name) + 'Steps';
+    const lines: string[] = [];
+
+    lines.push('package stepdefinitions;');
+    lines.push('');
+    lines.push('import io.cucumber.java.en.Given;');
+    lines.push('import io.cucumber.java.en.When;');
+    lines.push('import io.cucumber.java.en.Then;');
+    lines.push('import io.cucumber.java.en.And;');
+    lines.push('import io.cucumber.java.en.But;');
+    lines.push('import io.cucumber.java.DataTableType;');
+    lines.push('import io.cucumber.datatable.DataTable;');
+    lines.push('import com.microsoft.playwright.*;');
+    lines.push('import com.microsoft.playwright.options.AriaRole;');
+    lines.push('import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;');
+    lines.push('import static org.junit.jupiter.api.Assertions.*;');
+    lines.push('');
+    lines.push(`public class ${className} {`);
+    lines.push('');
+    lines.push('    // Playwright objects injected via Hooks (shared World)');
+    lines.push('    private final Hooks hooks;');
+    lines.push('');
+    lines.push(`    public ${className}(Hooks hooks) {`);
+    lines.push('        this.hooks = hooks;');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    private Page page() { return hooks.getPage(); }');
+    lines.push('');
+
+    // Collect unique steps across all scenarios to avoid duplicate annotations
+    const seenSteps = new Map<string, { keyword: string; text: string; hasDataTable: boolean; hasDocString: boolean }>();
+
+    for (const scenario of feature.scenarios) {
+      if (scenario.tags.includes('@background')) {
+        // Background steps also get step definitions
+      }
+      let lastKeyword = 'Given';
+      for (const step of scenario.steps) {
+        // Resolve And/But to the actual keyword
+        const resolvedKeyword = (step.keyword === 'And' || step.keyword === 'But') ? lastKeyword : step.keyword;
+        if (step.keyword !== 'And' && step.keyword !== 'But') lastKeyword = step.keyword;
+
+        // Build a unique key: keyword + parameterized text
+        const paramText = this.toCucumberExpression(step.text);
+        const key = `${resolvedKeyword}:${paramText}`;
+        if (!seenSteps.has(key)) {
+          seenSteps.set(key, {
+            keyword: resolvedKeyword,
+            text: step.text,
+            hasDataTable: !!(step.dataTable && step.dataTable.length > 0),
+            hasDocString: !!step.docString,
+          });
+        }
+      }
+    }
+
+    // Generate a Java method for each unique step
+    for (const [, step] of seenSteps) {
+      const annotation = this.cucumberAnnotation(step.keyword);
+      const cucumberExpr = this.toCucumberExpression(step.text);
+      const methodName = this.toJavaMethodName(step.text);
+      const params = this.extractCucumberParams(step.text);
+
+      // Build parameter list
+      const javaParams: string[] = params.map((p, i) => `${p.type} ${p.name || 'arg' + i}`);
+      if (step.hasDataTable) javaParams.push('DataTable dataTable');
+      if (step.hasDocString) javaParams.push('String docString');
+
+      lines.push(`    @${annotation}("${this.escapeJavaString(cucumberExpr)}")`);
+      lines.push(`    public void ${methodName}(${javaParams.join(', ')}) {`);
+
+      // Generate implementation body
+      const body = this.generateJavaCucumberStepBody(step.keyword, step.text, params, step.hasDataTable);
+      for (const bodyLine of body) {
+        lines.push(`        ${bodyLine}`);
+      }
+
+      lines.push('    }');
+      lines.push('');
+    }
+
+    lines.push('}');
+    return lines.join('\n');
+  }
+
+  /**
+   * Convert a Gherkin step text to a Cucumber expression with parameter placeholders.
+   * e.g. 'I navigate to "https://example.com"' => 'I navigate to {string}'
+   * e.g. 'I wait for 5 seconds' => 'I wait for {int} seconds'
+   * e.g. 'the price is 9.99' => 'the price is {double}'
+   * e.g. 'I fill "<username>"' => 'I fill {string}' (Scenario Outline placeholders)
+   */
+  private toCucumberExpression(text: string): string {
+    let expr = text;
+
+    // Replace Scenario Outline angle-bracket placeholders <param> with {string}
+    expr = expr.replace(/<([^>]+)>/g, '{string}');
+
+    // Replace quoted strings "..." or '...' with {string}
+    expr = expr.replace(/"[^"]*"/g, '{string}');
+    expr = expr.replace(/'[^']*'/g, '{string}');
+
+    // Replace decimal numbers (must come before int) with {double}
+    expr = expr.replace(/\b\d+\.\d+\b/g, '{double}');
+
+    // Replace integer numbers with {int}
+    expr = expr.replace(/\b\d+\b/g, '{int}');
+
+    return expr;
+  }
+
+  /**
+   * Extract parameter info from a step text for generating method signatures.
+   */
+  private extractCucumberParams(text: string): Array<{ type: string; name: string }> {
+    const params: Array<{ type: string; name: string }> = [];
+    let paramIndex = 0;
+
+    // Scenario Outline placeholders <param>
+    const outlineMatches = text.matchAll(/<([^>]+)>/g);
+    for (const m of outlineMatches) {
+      params.push({ type: 'String', name: this.toCamelCase(m[1]) });
+      paramIndex++;
+    }
+    if (params.length > 0) return params; // Outline params take precedence
+
+    // Quoted strings
+    const stringMatches = text.matchAll(/"([^"]*)"/g);
+    for (const m of stringMatches) {
+      const hint = this.guessParamName(m[1], paramIndex);
+      params.push({ type: 'String', name: hint });
+      paramIndex++;
+    }
+
+    // Decimal numbers
+    const decimalMatches = text.matchAll(/\b(\d+\.\d+)\b/g);
+    for (const _ of decimalMatches) {
+      params.push({ type: 'double', name: `value${paramIndex}`});
+      paramIndex++;
+    }
+
+    // Integer numbers (skip those already captured as decimals)
+    const intMatches = text.matchAll(/\b(\d+)\b/g);
+    for (const m of intMatches) {
+      if (!text.includes(m[1] + '.') && !text.includes('.' + m[1])) {
+        params.push({ type: 'int', name: `count${paramIndex}` });
+        paramIndex++;
+      }
+    }
+
+    return params;
+  }
+
+  private guessParamName(value: string, index: number): string {
+    const lower = value.toLowerCase();
+    if (lower.includes('http') || lower.includes('www') || lower.includes('.com')) return 'url';
+    if (lower.includes('@')) return 'email';
+    if (lower.includes('password') || lower === '****') return 'password';
+    if (index === 0) return 'target';
+    return `value${index}`;
+  }
+
+  private cucumberAnnotation(keyword: string): string {
+    switch (keyword) {
+      case 'Given': return 'Given';
+      case 'When': return 'When';
+      case 'Then': return 'Then';
+      case 'And': return 'And';
+      case 'But': return 'But';
+      default: return 'Given';
+    }
+  }
+
+  /**
+   * Generate the Java method body for a Cucumber step definition.
+   * Maps natural language to Playwright for Java API calls.
+   */
+  private generateJavaCucumberStepBody(
+    keyword: string,
+    text: string,
+    params: Array<{ type: string; name: string }>,
+    hasDataTable: boolean
+  ): string[] {
+    const lower = text.toLowerCase();
+    const body: string[] = [];
+    const firstParam = params.length > 0 ? params[0].name : null;
+    const secondParam = params.length > 1 ? params[1].name : null;
+
+    // Navigation
+    if (lower.includes('navigate') || lower.includes('go to') || lower.includes('open') || lower.includes('visit') || lower.includes('i am on')) {
+      if (firstParam) {
+        body.push(`page().navigate(${firstParam});`);
+      } else {
+        body.push('page().navigate(/* URL */);');
+      }
+      return body;
+    }
+
+    // Click
+    if (lower.includes('click')) {
+      if (firstParam) {
+        if (lower.includes('button')) {
+          body.push(`page().getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(${firstParam})).click();`);
+        } else if (lower.includes('link')) {
+          body.push(`page().getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName(${firstParam})).click();`);
+        } else {
+          body.push(`page().getByText(${firstParam}).click();`);
+        }
+      } else {
+        body.push('page().locator(/* selector */).click();');
+      }
+      return body;
+    }
+
+    // Fill / Type / Enter
+    if (lower.includes('fill') || lower.includes('type') || lower.includes('enter') || lower.includes('input')) {
+      if (firstParam && secondParam) {
+        body.push(`page().getByLabel(${firstParam}).fill(${secondParam});`);
+      } else if (firstParam) {
+        body.push(`page().locator(/* field selector */).fill(${firstParam});`);
+      } else {
+        body.push('page().locator(/* field selector */).fill(/* value */);');
+      }
+      return body;
+    }
+
+    // Login / credentials
+    if (lower.includes('log in') || lower.includes('login') || lower.includes('credentials')) {
+      if (firstParam && secondParam) {
+        body.push(`page().getByLabel("Username").fill(${firstParam});`);
+        body.push(`page().getByLabel("Password").fill(${secondParam});`);
+        body.push('page().getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Login")).click();');
+      } else {
+        body.push('page().getByLabel("Username").fill(/* username */);');
+        body.push('page().getByLabel("Password").fill(/* password */);');
+        body.push('page().getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Login")).click();');
+      }
+      return body;
+    }
+
+    // Visibility assertions
+    if (lower.includes('see') || lower.includes('visible') || lower.includes('displayed') || lower.includes('shown') || lower.includes('appears')) {
+      if (firstParam) {
+        body.push(`assertThat(page().getByText(${firstParam})).isVisible();`);
+      } else {
+        body.push('assertThat(page().locator(/* selector */)).isVisible();');
+      }
+      return body;
+    }
+
+    // Text content assertions
+    if (lower.includes('contain') || lower.includes('have text') || lower.includes('has text')) {
+      if (firstParam) {
+        body.push(`assertThat(page().locator("body")).containsText(${firstParam});`);
+      } else {
+        body.push('assertThat(page().locator(/* selector */)).containsText(/* text */);');
+      }
+      return body;
+    }
+
+    // URL assertions
+    if (lower.includes('url') && (lower.includes('should') || lower.includes('contain') || lower.includes('be '))) {
+      if (firstParam) {
+        body.push(`assertThat(page()).hasURL(java.util.regex.Pattern.compile(".*" + ${firstParam} + ".*"));`);
+      } else {
+        body.push('assertThat(page()).hasURL(/* expected URL pattern */);');
+      }
+      return body;
+    }
+
+    // Title assertions
+    if (lower.includes('title') && (lower.includes('should') || lower.includes('is') || lower.includes('be '))) {
+      if (firstParam) {
+        body.push(`assertThat(page()).hasTitle(java.util.regex.Pattern.compile(".*" + ${firstParam} + ".*"));`);
+      } else {
+        body.push('assertThat(page()).hasTitle(/* expected title */);');
+      }
+      return body;
+    }
+
+    // Wait
+    if (lower.includes('wait')) {
+      const timeMatch = text.match(/(\d+)\s*(seconds?|ms|milliseconds?)/);
+      if (timeMatch) {
+        const ms = timeMatch[2].startsWith('s') ? parseInt(timeMatch[1]) * 1000 : parseInt(timeMatch[1]);
+        body.push(`page().waitForTimeout(${ms});`);
+      } else {
+        body.push('page().waitForTimeout(1000);');
+      }
+      return body;
+    }
+
+    // Select / choose
+    if (lower.includes('select') || lower.includes('choose')) {
+      if (firstParam) {
+        body.push(`page().selectOption(/* selector */, ${firstParam});`);
+      } else {
+        body.push('page().selectOption(/* selector */, /* value */);');
+      }
+      return body;
+    }
+
+    // Check / uncheck
+    if (lower.includes('check') && !lower.includes('uncheck')) {
+      if (firstParam) {
+        body.push(`page().getByLabel(${firstParam}).check();`);
+      } else {
+        body.push('page().locator(/* selector */).check();');
+      }
+      return body;
+    }
+    if (lower.includes('uncheck')) {
+      if (firstParam) {
+        body.push(`page().getByLabel(${firstParam}).uncheck();`);
+      } else {
+        body.push('page().locator(/* selector */).uncheck();');
+      }
+      return body;
+    }
+
+    // Hover
+    if (lower.includes('hover')) {
+      if (firstParam) {
+        body.push(`page().getByText(${firstParam}).hover();`);
+      } else {
+        body.push('page().locator(/* selector */).hover();');
+      }
+      return body;
+    }
+
+    // Press key
+    if (lower.includes('press')) {
+      if (firstParam) {
+        body.push(`page().keyboard().press(${firstParam});`);
+      } else {
+        body.push('page().keyboard().press("Enter");');
+      }
+      return body;
+    }
+
+    // Screenshot
+    if (lower.includes('screenshot') || lower.includes('capture')) {
+      body.push('page().screenshot(new Page.ScreenshotOptions().setFullPage(true).setPath(java.nio.file.Paths.get("screenshot.png")));');
+      return body;
+    }
+
+    // Data table handling
+    if (hasDataTable) {
+      body.push('java.util.List<java.util.Map<String, String>> rows = dataTable.asMaps();');
+      body.push('for (java.util.Map<String, String> row : rows) {');
+      body.push('    // TODO: Process each row');
+      body.push('    System.out.println(row);');
+      body.push('}');
+      return body;
+    }
+
+    // Not matched assertion (Then keyword)
+    if (keyword === 'Then') {
+      if (firstParam) {
+        body.push(`assertThat(page().getByText(${firstParam})).isVisible();`);
+      } else {
+        body.push(`// TODO: Implement assertion - ${text}`);
+      }
+      return body;
+    }
+
+    // Fallback
+    body.push(`// TODO: Implement step - ${keyword} ${text}`);
+    return body;
+  }
+
+  /**
+   * Generate Hooks.java with Playwright lifecycle management for Cucumber.
+   * Uses PicoContainer for dependency injection (Cucumber default).
+   */
+  private generateJavaCucumberHooks(): string {
+    const lines: string[] = [];
+
+    lines.push('package stepdefinitions;');
+    lines.push('');
+    lines.push('import io.cucumber.java.Before;');
+    lines.push('import io.cucumber.java.After;');
+    lines.push('import io.cucumber.java.BeforeAll;');
+    lines.push('import io.cucumber.java.AfterAll;');
+    lines.push('import io.cucumber.java.Scenario;');
+    lines.push('import com.microsoft.playwright.*;');
+    lines.push('');
+    lines.push('/**');
+    lines.push(' * Cucumber Hooks - Manages Playwright browser lifecycle.');
+    lines.push(' * Shared across step definitions via PicoContainer dependency injection.');
+    lines.push(' */');
+    lines.push('public class Hooks {');
+    lines.push('');
+    lines.push('    private static Playwright playwright;');
+    lines.push('    private static Browser browser;');
+    lines.push('    private BrowserContext context;');
+    lines.push('    private Page page;');
+    lines.push('');
+    lines.push('    @BeforeAll');
+    lines.push('    public static void launchBrowser() {');
+    lines.push('        playwright = Playwright.create();');
+    lines.push('        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    @AfterAll');
+    lines.push('    public static void closeBrowser() {');
+    lines.push('        if (browser != null) browser.close();');
+    lines.push('        if (playwright != null) playwright.close();');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    @Before');
+    lines.push('    public void createContextAndPage(Scenario scenario) {');
+    lines.push('        context = browser.newContext(new Browser.NewContextOptions()');
+    lines.push('            .setViewportSize(1280, 720)');
+    lines.push('            .setIgnoreHTTPSErrors(true));');
+    lines.push('        page = context.newPage();');
+    lines.push('        page.setDefaultTimeout(60000);');
+    lines.push('        System.out.println("[BDD] Starting scenario: " + scenario.getName());');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    @After');
+    lines.push('    public void closeContext(Scenario scenario) {');
+    lines.push('        if (scenario.isFailed() && page != null) {');
+    lines.push('            byte[] screenshot = page.screenshot(new Page.ScreenshotOptions().setFullPage(true));');
+    lines.push('            scenario.attach(screenshot, "image/png", "failure-screenshot");');
+    lines.push('        }');
+    lines.push('        if (context != null) context.close();');
+    lines.push('        System.out.println("[BDD] Finished scenario: " + scenario.getName()');
+    lines.push('            + " - Status: " + scenario.getStatus());');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    public Page getPage() { return page; }');
+    lines.push('    public BrowserContext getContext() { return context; }');
+    lines.push('    public Browser getBrowser() { return browser; }');
+    lines.push('}');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Generate JUnit 5 Cucumber Runner class with @CucumberOptions.
+   */
+  private generateJavaCucumberRunner(feature: ParsedFeature): string {
+    const className = this.toJavaClassName(feature.name) + 'Runner';
+    const lines: string[] = [];
+
+    lines.push('package runner;');
+    lines.push('');
+    lines.push('import org.junit.platform.suite.api.ConfigurationParameter;');
+    lines.push('import org.junit.platform.suite.api.IncludeEngines;');
+    lines.push('import org.junit.platform.suite.api.SelectClasspathResource;');
+    lines.push('import org.junit.platform.suite.api.Suite;');
+    lines.push('');
+    lines.push('import static io.cucumber.junit.platform.engine.Constants.*;');
+    lines.push('');
+    lines.push('@Suite');
+    lines.push('@IncludeEngines("cucumber")');
+    lines.push(`@SelectClasspathResource("features/${this.toSnakeCase(feature.name)}.feature")`);
+    lines.push('@ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "stepdefinitions")');
+    lines.push('@ConfigurationParameter(key = PLUGIN_PROPERTY_NAME, value = "pretty, html:target/cucumber-reports/report.html, json:target/cucumber-reports/report.json")');
+    lines.push('@ConfigurationParameter(key = FILTER_TAGS_PROPERTY_NAME, value = "not @skip")');
+    lines.push(`public class ${className} {`);
+    lines.push('    // JUnit 5 Cucumber Runner');
+    lines.push('    // Run with: mvn test -Dtest=' + className);
+    lines.push('}');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Generate Maven POM.xml with Cucumber + Playwright for Java dependencies.
+   */
+  private generateJavaCucumberPom(feature: ParsedFeature): string {
+    const artifactId = this.toSnakeCase(feature.name).replace(/_/g, '-');
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.automation.bdd</groupId>
+    <artifactId>${artifactId}</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <cucumber.version>7.18.0</cucumber.version>
+        <playwright.version>1.44.0</playwright.version>
+        <junit.platform.version>1.10.3</junit.platform.version>
+    </properties>
+
+    <dependencies>
+        <!-- Cucumber -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-java</artifactId>
+            <version>\${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-junit-platform-engine</artifactId>
+            <version>\${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-picocontainer</artifactId>
+            <version>\${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JUnit 5 -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite</artifactId>
+            <version>\${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Playwright for Java -->
+        <dependency>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
+            <version>\${playwright.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <properties>
+                        <configurationParameters>
+                            cucumber.junit-platform.naming-strategy=long
+                        </configurationParameters>
+                    </properties>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>`;
+  }
+
+  /**
+   * Reconstruct a Gherkin feature file from parsed data.
+   */
+  private reconstructFeatureFile(feature: ParsedFeature): string {
+    const lines: string[] = [];
+
+    if (feature.tags.length > 0) {
+      lines.push(feature.tags.join(' '));
+    }
+    lines.push(`Feature: ${feature.name}`);
+    if (feature.description) {
+      for (const descLine of feature.description.split('\n')) {
+        lines.push(`  ${descLine}`);
+      }
+    }
+    lines.push('');
+
+    for (const scenario of feature.scenarios) {
+      if (scenario.tags.length > 0 && !scenario.tags.includes('@background')) {
+        lines.push(`  ${scenario.tags.join(' ')}`);
+      }
+
+      if (scenario.tags.includes('@background')) {
+        lines.push('  Background:');
+      } else {
+        lines.push(`  ${scenario.type}: ${scenario.name}`);
+      }
+
+      for (const step of scenario.steps) {
+        lines.push(`    ${step.keyword} ${step.text}`);
+        if (step.dataTable) {
+          for (const row of step.dataTable) {
+            lines.push(`      | ${row.join(' | ')} |`);
+          }
+        }
+        if (step.docString) {
+          lines.push('      """');
+          for (const docLine of step.docString.split('\n')) {
+            lines.push(`      ${docLine}`);
+          }
+          lines.push('      """');
+        }
+      }
+
+      if (scenario.type === 'Scenario Outline' && scenario.examples && scenario.examples.length > 0) {
+        lines.push('');
+        lines.push('    Examples:');
+        const headers = Object.keys(scenario.examples[0]);
+        lines.push(`      | ${headers.join(' | ')} |`);
+        for (const example of scenario.examples) {
+          const values = headers.map(h => example[h]);
+          lines.push(`      | ${values.join(' | ')} |`);
+        }
+      }
+
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  }
+
+  private toSnakeCase(name: string): string {
+    return name
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .trim()
+      .split(/\s+/)
+      .join('_')
+      .toLowerCase();
+  }
+
+  private toCamelCase(name: string): string {
+    const words = name.replace(/[^a-zA-Z0-9\s_-]/g, '').split(/[\s_-]+/);
+    return words[0].toLowerCase() + words.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+  }
+
+  private escapeJavaString(s: string): string {
+    return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
 
   private generateStepCode(keyword: string, text: string): string {
@@ -691,9 +1392,9 @@ class BDDService {
       // Only process step lines (Given/When/Then/And/But)
       if (/^(Given|When|Then|And|But)\s+/i.test(trimmed)) {
         // Find unquoted URLs (http:// or https:// not already inside quotes)
-        // Match URLs that are NOT preceded by a double quote
+        // Match URLs that are NOT preceded by a double or single quote
         return line.replace(
-          /(?<!")(https?:\/\/[^\s"]+)/g,
+          /(?<!["'])(https?:\/\/[^\s"']+)(?!["'])/g,
           '"$1"'
         );
       }
@@ -794,16 +1495,18 @@ class BDDService {
       pendingQueue.push({ runId, resolve, reject });
     });
 
-    activeRunCount++;
+    // Slot was transferred by releaseSlot — no need to increment here
     logger.info(`BDD: Slot acquired for ${runId} after waiting (${activeRunCount}/${MAX_CONCURRENT_RUNS} active)`);
   }
 
   private releaseSlot(): void {
-    activeRunCount = Math.max(0, activeRunCount - 1);
     const next = pendingQueue.shift();
     if (next) {
+      // Transfer the slot directly to the next queued run (don't decrement+increment)
       logger.info(`BDD: Dequeuing run ${next.runId} (${pendingQueue.length} still waiting)`);
       next.resolve();
+    } else {
+      activeRunCount = Math.max(0, activeRunCount - 1);
     }
   }
 
@@ -883,7 +1586,7 @@ class BDDService {
       const mergedDefs = { ...librarySteps, ...screenplayDefs, ...stepDefinitions };
 
       // Write step definitions (with screenshot support and World class)
-      const stepDefCode = this.buildStepDefinitions(mergedDefs, featureContent, screenshotDir, runId, options);
+      const stepDefCode = this.buildStepDefinitions(mergedDefs, processedContent, screenshotDir, runId, options);
       const stepsPath = path.join(stepDefsDir, 'steps.js');
       fs.writeFileSync(stepsPath, stepDefCode);
 
@@ -912,13 +1615,24 @@ module.exports = {
       const cucumberEntry = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
       const resultsPath = path.join(runDir, 'results.json');
 
+      const parallelWorkers = options.parallelWorkers || 1;
+      const isParallelRun = parallelWorkers > 1;
+
       const spawnArgs: string[] = [
         cucumberEntry,
         '--require', stepsPath,
-        '--format', `json:${resultsPath}`,
-        '--format', `@serenity-js/cucumber`,
-        featuresPath,
+        '--format', `json:"${resultsPath}"`,
       ];
+
+      // Serenity-JS formatter is incompatible with Cucumber --parallel mode
+      // (it can't coordinate across forked worker processes)
+      if (!isParallelRun) {
+        spawnArgs.push('--format', `@serenity-js/cucumber`);
+      } else {
+        logger.info(`BDD Run ${runId}: Serenity formatter disabled in parallel mode`);
+      }
+
+      spawnArgs.push(featuresPath);
 
       // Tag-based filtering (e.g., "@smoke", "@smoke and not @wip")
       if (options.tags) {
@@ -934,7 +1648,6 @@ module.exports = {
       }
 
       // Parallel scenario execution
-      const parallelWorkers = options.parallelWorkers || 1;
       if (parallelWorkers > 1) {
         spawnArgs.push('--parallel', String(parallelWorkers));
         logger.info(`BDD Run ${runId}: Running with ${parallelWorkers} parallel workers`);
@@ -1050,12 +1763,14 @@ module.exports = {
           const results = JSON.parse(resultsRaw);
 
           // Track scenario attempts for flaky detection
-          const scenarioAttempts = new Map<string, { attempts: number; finalStatus: string }>();
+          const scenarioAttempts = new Map<string, { attempts: number; finalStatus: string; tags: string[] }>();
 
           for (const feature of results) {
             for (const element of feature.elements || []) {
               const scenarioName = element.name || 'Unknown';
               const scenarioKey = `${feature.name || ''}::${scenarioName}`;
+              // Collect tags from Cucumber JSON (element.tags is [{name:'@foo'}, ...])
+              const elementTags: string[] = (element.tags || []).map((t: any) => t.name || t);
 
               // Track attempts per scenario (retried scenarios appear multiple times)
               const existing = scenarioAttempts.get(scenarioKey);
@@ -1066,8 +1781,11 @@ module.exports = {
                   retryInfo.retriedScenarios.push(scenarioName);
                 }
               } else {
-                scenarioAttempts.set(scenarioKey, { attempts: 1, finalStatus: 'passed' });
+                scenarioAttempts.set(scenarioKey, { attempts: 1, finalStatus: 'passed', tags: elementTags });
               }
+
+              // Track whether this attempt (element) has any failed steps
+              let attemptHasFailure = false;
 
               for (const step of element.steps || []) {
                 // Skip Cucumber's internal Before/After hooks (no keyword or name)
@@ -1089,10 +1807,15 @@ module.exports = {
                 if (stepResult.status === 'passed') passedSteps++;
                 else if (stepResult.status === 'failed') {
                   failedSteps++;
-                  const entry = scenarioAttempts.get(scenarioKey);
-                  if (entry) entry.finalStatus = 'failed';
+                  attemptHasFailure = true;
                 }
                 else { skippedSteps++; }
+              }
+
+              // Update finalStatus based on this attempt's outcome (last attempt wins)
+              const entry = scenarioAttempts.get(scenarioKey);
+              if (entry) {
+                entry.finalStatus = attemptHasFailure ? 'failed' : 'passed';
               }
             }
           }
@@ -1107,7 +1830,7 @@ module.exports = {
             if (data.finalStatus === 'failed') {
               // Check if scenario has @quarantine tag — don't fail the overall run
               const isQuarantined = options.quarantineFailures &&
-                stepResults.some(s => s.scenario === key.split('::')[1] && s.status === 'failed');
+                data.tags.includes('@quarantine');
               if (!isQuarantined) {
                 overallStatus = 'failed';
               }
@@ -1200,6 +1923,52 @@ module.exports = {
       };
       const reportResult: SerenityReportResult = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
 
+      // Write Allure results for this BDD run (bridges BDD into Allure reports)
+      try {
+        // Group stepResults by scenario
+        const scenarioMap = new Map<string, { steps: typeof stepResults; duration: number; status: string }>();
+        for (const sr of stepResults) {
+          const sName = sr.scenario || 'Unknown Scenario';
+          if (!scenarioMap.has(sName)) {
+            scenarioMap.set(sName, { steps: [], duration: 0, status: 'passed' });
+          }
+          const entry = scenarioMap.get(sName)!;
+          entry.steps.push(sr);
+          entry.duration += sr.duration || 0;
+          if (sr.status === 'failed') entry.status = 'failed';
+          else if (sr.status !== 'passed' && entry.status !== 'failed') entry.status = sr.status;
+        }
+
+        await allureService.writeBDDResults({
+          runId,
+          featureName: parsedForReport.name || 'BDD Feature',
+          scenarios: Array.from(scenarioMap.entries()).map(([name, data]) => ({
+            name,
+            status: data.status,
+            duration: data.duration,
+            tags: [],
+            steps: data.steps.map(s => ({
+              keyword: s.keyword,
+              name: s.name,
+              status: s.status,
+              duration: s.duration || undefined,
+              errorMessage: s.errorMessage || undefined,
+            })),
+          })),
+          environment: options.environment?.name,
+          browser: options.browser,
+        });
+
+        // Generate Allure report for this BDD run
+        await allureService.generateReport(runId);
+        const allureReportUrl = await allureService.getReportUrl(runId);
+        if (allureReportUrl) {
+          logger.info(`BDD Run ${runId}: Allure report generated at ${allureReportUrl}`);
+        }
+      } catch (allureErr: any) {
+        logger.warn(`BDD Run ${runId}: Allure integration failed (non-fatal): ${allureErr.message}`);
+      }
+
       // Update run in DB (store both reports)
       await pool.query(
         `UPDATE "BDDRun" SET
@@ -1279,12 +2048,16 @@ module.exports = {
       const params: any[] = [];
       const conditions: string[] = [];
 
+      // Load: (1) user's own steps, (2) org-shared steps (where userId differs but org matches)
+      // This prevents user A from seeing user B's personal steps in the same org
       if (userId) {
-        conditions.push(`"userId" = $${conditions.length + 1}`);
+        conditions.push(`"userId" = $${params.length + 1}`);
         params.push(userId);
       }
       if (organizationId) {
-        conditions.push(`"organizationId" = $${conditions.length + 1}`);
+        // Org-level steps: belong to the org AND are not another user's personal entry
+        // (i.e., entries explicitly created for the org, or entries created by this user within the org)
+        conditions.push(`("organizationId" = $${params.length + 1}${userId ? ` AND ("userId" = $1 OR "userId" IS NULL)` : ''})`);
         params.push(organizationId);
       }
 
@@ -1447,23 +2220,29 @@ module.exports = {
     lines.push(`// ========================================`);
     lines.push(`let browser;`);
     lines.push(`let scenarioCount = 0;`);
+    const isParallel = (options.parallelWorkers || 1) > 1;
+    lines.push(`const IS_PARALLEL = ${isParallel};`);
     lines.push('');
 
-    // BeforeAll: Launch browser once
-    lines.push('// Launch browser once for all scenarios');
-    lines.push(`BeforeAll(async function () {`);
-    if (browserType === 'firefox') {
-      lines.push(`  const launchOptions = { headless: ${headless} };`);
-      lines.push(`  browser = await firefox.launch(launchOptions);`);
-    } else if (browserType === 'webkit') {
-      lines.push(`  const launchOptions = { headless: ${headless} };`);
-      lines.push(`  browser = await webkit.launch(launchOptions);`);
-    } else {
-      lines.push(`  const launchOptions = { headless: ${headless}, channel: 'chrome' };`);
-      lines.push(`  browser = await chromium.launch(launchOptions);`);
+    // BeforeAll: Launch browser once (sequential mode only)
+    // In parallel mode, each worker is a separate process — BeforeAll runs in the coordinator,
+    // not in workers. So browser must be launched per-scenario in Before hook instead.
+    if (!isParallel) {
+      lines.push('// Launch browser once for all scenarios (sequential mode)');
+      lines.push(`BeforeAll(async function () {`);
+      if (browserType === 'firefox') {
+        lines.push(`  const launchOptions = { headless: ${headless} };`);
+        lines.push(`  browser = await firefox.launch(launchOptions);`);
+      } else if (browserType === 'webkit') {
+        lines.push(`  const launchOptions = { headless: ${headless} };`);
+        lines.push(`  browser = await webkit.launch(launchOptions);`);
+      } else {
+        lines.push(`  const launchOptions = { headless: ${headless}, channel: 'chrome' };`);
+        lines.push(`  browser = await chromium.launch(launchOptions);`);
+      }
+      lines.push('});');
+      lines.push('');
     }
-    lines.push('});');
-    lines.push('');
 
     // Before: Create context and page, attach to World
     lines.push(`Before(async function (scenario) {`);
@@ -1473,6 +2252,18 @@ module.exports = {
     lines.push(`  this.startTime = Date.now();`);
     lines.push(`  this.stepIndex = 0;`);
     lines.push('');
+    // In parallel mode, launch a browser per scenario (each worker is a separate process)
+    if (isParallel) {
+      lines.push(`  // Parallel mode: launch browser per scenario (each worker is a separate process)`);
+      if (browserType === 'firefox') {
+        lines.push(`  browser = await firefox.launch({ headless: ${headless} });`);
+      } else if (browserType === 'webkit') {
+        lines.push(`  browser = await webkit.launch({ headless: ${headless} });`);
+      } else {
+        lines.push(`  browser = await chromium.launch({ headless: ${headless}, channel: 'chrome' });`);
+      }
+      lines.push('');
+    }
     lines.push(`  // Create isolated browser context per scenario`);
     lines.push(`  const contextOptions = {`);
     lines.push(`    viewport: { width: 1280, height: 720 },`);
@@ -1558,6 +2349,12 @@ module.exports = {
     lines.push(`    this.page = null;`);
     lines.push(`  }`);
     lines.push('');
+    // In parallel mode, close browser per scenario (each worker owns its browser)
+    if (isParallel) {
+      lines.push(`  // Parallel mode: close browser per scenario`);
+      lines.push(`  if (browser) { await browser.close(); browser = null; }`);
+    }
+    lines.push('');
     lines.push(`  // Reset shared state for next scenario`);
     lines.push(`  this.state = {};`);
     lines.push(`  this.testData = {};`);
@@ -1566,10 +2363,12 @@ module.exports = {
     lines.push('});');
     lines.push('');
 
-    // AfterAll: Close browser
-    lines.push(`AfterAll(async function () {`);
-    lines.push(`  if (browser) await browser.close();`);
-    lines.push('});');
+    // AfterAll: Close browser (sequential mode only — in parallel, browser is closed per-scenario)
+    if (!isParallel) {
+      lines.push(`AfterAll(async function () {`);
+      lines.push(`  if (browser) await browser.close();`);
+      lines.push('});');
+    }
     lines.push('');
 
     // Convenience aliases so step definitions can use `page` directly
@@ -1604,7 +2403,9 @@ module.exports = {
       }
     }
 
-    if (!hasCustom) {
+    // Always emit built-in step definitions — custom defs supplement, not replace.
+    // Cucumber's "last registered wins" lets custom defs override specific built-in steps.
+    {
       // Auto-generated step definitions (using this.page from World)
       lines.push(`// ========================================`);
       lines.push(`// Auto-generated Step Definitions`);
@@ -1648,6 +2449,12 @@ module.exports = {
       lines.push('}');
       lines.push('');
       lines.push(`async function findElement(page, target) {`);
+      lines.push(`  // If target looks like a CSS selector (starts with . # [ or contains > ~ +), use locator directly`);
+      lines.push(`  if (/^[.#\\[]|[>~+]/.test(target)) {`);
+      lines.push(`    const loc = page.locator(target).first();`);
+      lines.push(`    await loc.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});`);
+      lines.push(`    return loc;`);
+      lines.push(`  }`);
       lines.push(`  const btn = page.getByRole('button', { name: target });`);
       lines.push(`  if (await btn.count() > 0) return btn.first();`);
       lines.push(`  const link = page.getByRole('link', { name: target });`);
@@ -1671,6 +2478,9 @@ module.exports = {
       lines.push(`Given('I open the url {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
       lines.push(`Given('I go to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
       lines.push(`Given('I visit {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('User is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('user is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('the user is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
       lines.push(`Given('I am on the {string} page', async function (pageName) {`);
       lines.push(`  await this.page.waitForLoadState('domcontentloaded');`);
       lines.push(`  console.log('On page:', pageName, 'URL:', this.page.url());`);
@@ -2308,6 +3118,7 @@ module.exports = {
       const builtInPatterns = [
         // Navigation
         /^I navigate to ".*"$/, /^I am on ".*"$/, /^I open the url ".*"$/, /^I go to ".*"$/, /^I visit ".*"$/,
+        /^[Uu]ser is on ".*"$/, /^the user is on ".*"$/,
         /^I am on the ".*" page$/, /^I go back$/, /^I go forward$/, /^I refresh the page$/, /^I reload the page$/,
         // Environment profile
         /^I am on the base URL$/, /^I am on the base URL path ".*"$/,
@@ -2405,13 +3216,23 @@ module.exports = {
           const matchesBuiltin = builtInPatterns.some(p => p.test(step.text));
           if (matchesBuiltin) continue;
 
-          const normalizedText = step.text.replace(/"[^"]*"/g, '{string}').replace(/\d+/g, '{int}');
+          // Normalize step text: replace quoted strings and bare URLs with {string}, numbers with {int}
+          let normalizedText = step.text
+            .replace(/"[^"]*"/g, '{string}')                    // "quoted strings" → {string}
+            .replace(/'[^']*'/g, '{string}')                    // 'single-quoted' → {string}
+            .replace(/https?:\/\/\S+/g, '{string}')             // bare URLs → {string}
+            .replace(/\b\d+\.\d+\b/g, '{float}')                // decimal numbers → {float}
+            .replace(/\b\d+\b/g, '{int}');                       // integers → {int}
+
+          // Escape any remaining forward slashes — Cucumber treats / as alternation
+          normalizedText = normalizedText.replace(/\//g, '\\/');
+
           if (seenSteps.has(normalizedText)) continue;
           seenSteps.add(normalizedText);
 
           const cucumberKeyword = step.keyword === 'And' || step.keyword === 'But' ? 'Given' : step.keyword;
 
-          // Count {string} and {int} placeholders to generate matching function parameters
+          // Count {string}, {int}, {float} placeholders to generate matching function parameters
           const paramMatches = normalizedText.match(/\{(string|int|float)\}/g) || [];
           const paramNames = paramMatches.map((p: string, i: number) => {
             const type = p.replace(/[{}]/g, '');
@@ -2720,10 +3541,15 @@ module.exports = {
     const nextRun = schedule.nextRunAt ? new Date(schedule.nextRunAt).getTime() : now;
     const initialDelay = Math.max(nextRun - now, 1000);
 
-    const timerId = setTimeout(async () => {
-      await this.executeScheduledRun(schedule);
+    // Use a single setInterval offset by initialDelay to avoid timer ID tracking issues.
+    // The initial setTimeout and recurring setInterval are tracked together.
+    const timerId = setTimeout(() => {
+      // Check if this schedule was stopped while waiting for initial delay
+      if (!scheduledJobs.has(schedule.id)) return;
 
-      // Set up recurring interval
+      this.executeScheduledRun(schedule);
+
+      // Set up recurring interval and replace the timeout ID
       const recurringId = setInterval(async () => {
         await this.executeScheduledRun(schedule);
       }, intervalMs);
@@ -2737,6 +3563,7 @@ module.exports = {
   private stopScheduleTimer(scheduleId: string): void {
     const timer = scheduledJobs.get(scheduleId);
     if (timer) {
+      // Clear both timeout and interval — safe to call both on any timer ID in Node
       clearTimeout(timer);
       clearInterval(timer);
       scheduledJobs.delete(scheduleId);

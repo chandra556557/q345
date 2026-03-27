@@ -78,7 +78,48 @@ const TestDataManager = () => {
     }
   };
 
-  const saveData = async (_suites: TestSuite[], _data: TestDataItem[]) => {};
+  const saveData = async (suites: TestSuite[], data: TestDataItem[]) => {
+    try {
+      // Sync suites: create any that don't already exist on the backend
+      for (const suite of suites) {
+        const exists = testSuites.find(s => s.id === suite.id);
+        if (!exists) {
+          await axios.post(`${API_URL}/testdata/suites`, {
+            name: suite.name,
+            description: suite.description || ''
+          }, { headers });
+        }
+      }
+
+      // Sync data items: create any that don't already exist on the backend
+      for (const item of data) {
+        const exists = testData.find(d => d.id === item.id);
+        if (!exists) {
+          // Resolve suiteId — match by name if the imported ID doesn't exist
+          let suiteId = item.suiteId;
+          const suiteMatch = suites.find(s => s.id === item.suiteId);
+          if (suiteMatch) {
+            const backendSuite = testSuites.find(s => s.name === suiteMatch.name) || suites.find(s => s.name === suiteMatch.name);
+            if (backendSuite) suiteId = backendSuite.id;
+          }
+
+          await axios.post(`${API_URL}/testdata/data`, {
+            suiteId,
+            name: item.name,
+            environment: item.environment || 'dev',
+            type: item.type || 'custom',
+            data: item.data
+          }, { headers });
+        }
+      }
+
+      // Reload from backend to get canonical IDs
+      await loadData();
+    } catch (error: any) {
+      console.error('Failed to save imported data:', error?.message || error);
+      throw error;
+    }
+  };
 
   const openModal = (mode: string, item: TestDataItem | null = null) => {
     setModalMode(mode);

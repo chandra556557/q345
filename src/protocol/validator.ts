@@ -169,3 +169,5 @@ scheme.CrxApplicationRunParams = tObject({
   code: tString,
 });
 scheme.CrxApplicationRunResult = tOptional(tObject({}));
+scheme.CrxApplicationStopParams = tOptional(tObject({}));
+scheme.CrxApplicationStopResult = tOptional(tObject({}));

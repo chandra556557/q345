@@ -216,6 +216,48 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
     sendResponse({ success: true });
     return true;
   }
+
+  // Handle script replay messages
+  if (message.type === 'replayScript') {
+    (async () => {
+      try {
+        const { code } = message;
+        if (!code) {
+          sendResponse({ error: 'No code provided' });
+          return;
+        }
+
+        if (!crxAppPromise) {
+          sendResponse({ error: 'Recorder is not active. Please start the recorder first.' });
+          return;
+        }
+
+        const crxApp = await crxAppPromise;
+        await crxApp.recorder.run(code);
+        sendResponse({ status: 'completed' });
+      } catch (error: any) {
+        sendResponse({ error: error?.message || 'Replay failed' });
+      }
+    })();
+    return true; // Keep channel open for async response
+  }
+
+  if (message.type === 'stopReplay') {
+    (async () => {
+      try {
+        if (!crxAppPromise) {
+          sendResponse({ error: 'Recorder is not active' });
+          return;
+        }
+        const crxApp = await crxAppPromise;
+        await crxApp.recorder.stop();
+        sendResponse({ status: 'stopped' });
+      } catch (error: any) {
+        sendResponse({ error: error?.message || 'Failed to stop replay' });
+      }
+    })();
+    return true;
+  }
 });
 
 chrome.runtime.onInstalled.addListener(details => {

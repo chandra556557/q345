@@ -806,133 +806,6 @@ body.dark-mode ::-webkit-scrollbar-track:hover {
 .codicon-sort-percentage:before { content: '\ec33'; }
 .codicon-attach:before { content: '\ec34'; }
 .codicon-git-fetch:before { content: '\f101'; }
-/*
-  Copyright (c) Microsoft Corporation.
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-*/
-
-.toolbar {
-  position: relative;
-  display: flex;
-  color: var(--vscode-sideBarTitle-foreground);
-  min-height: 35px;
-  align-items: center;
-  flex: none;
-  padding-right: 4px;
-}
-
-.toolbar.toolbar-sidebar-background {
-  background-color: var(--vscode-sideBar-background);
-}
-
-.toolbar:after {
-  content: '';
-  display: block;
-  position: absolute;
-  pointer-events: none;
-  top: 0;
-  bottom: 0;
-  left: -2px;
-  right: -2px;
-  box-shadow: var(--vscode-scrollbar-shadow) 0 6px 6px -6px;
-  z-index: 100;
-}
-
-.toolbar.no-shadow:after {
-  box-shadow: none;
-}
-
-.toolbar.no-min-height {
-  min-height: 0;
-}
-
-.toolbar input {
-  padding: 0 5px;
-  line-height: 24px;
-  outline: none;
-  margin: 0 4px;
-}
-
-.toolbar select {
-  background: none;
-  outline: none;
-  padding: 3px;
-  margin: 2px;
-}
-
-.toolbar option {
-  background-color: var(--vscode-tab-activeBackground)
-}
-
-.toolbar input, .toolbar select {
-  border: none;
-  color: var(--vscode-input-foreground);
-  background-color: var(--vscode-input-background);
-}
-/*
-  Copyright (c) Microsoft Corporation.
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-*/
-
-.toolbar-button {
-  flex: none;
-  border: none;
-  outline: none;
-  color: var(--vscode-sideBarTitle-foreground);
-  background: transparent;
-  padding: 4px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-}
-
-.toolbar-button:disabled {
-  color: var(--vscode-disabledForeground) !important;
-  cursor: default;
-}
-
-.toolbar-button:not(:disabled):hover {
-  background-color: var(--vscode-toolbar-hoverBackground);
-}
-
-.toolbar-button:not(:disabled):active {
-  background-color: var(--vscode-toolbar-activeBackground);
-}
-
-.toolbar-button.toggled {
-  color: var(--vscode-notificationLink-foreground);
-}
-
-.toolbar-separator {
-  flex: none;
-  background-color: var(--vscode-menu-separatorBackground);
-  width: 1px;
-  padding: 0;
-  margin: 5px 4px;
-  height: 16px;
-}
 .dialog-overlay {
   position: fixed;
   top: 0;
@@ -2419,6 +2292,133 @@ body.dark-mode .CodeMirror span.cm-type {
   limitations under the License.
 */
 
+.toolbar {
+  position: relative;
+  display: flex;
+  color: var(--vscode-sideBarTitle-foreground);
+  min-height: 35px;
+  align-items: center;
+  flex: none;
+  padding-right: 4px;
+}
+
+.toolbar.toolbar-sidebar-background {
+  background-color: var(--vscode-sideBar-background);
+}
+
+.toolbar:after {
+  content: '';
+  display: block;
+  position: absolute;
+  pointer-events: none;
+  top: 0;
+  bottom: 0;
+  left: -2px;
+  right: -2px;
+  box-shadow: var(--vscode-scrollbar-shadow) 0 6px 6px -6px;
+  z-index: 100;
+}
+
+.toolbar.no-shadow:after {
+  box-shadow: none;
+}
+
+.toolbar.no-min-height {
+  min-height: 0;
+}
+
+.toolbar input {
+  padding: 0 5px;
+  line-height: 24px;
+  outline: none;
+  margin: 0 4px;
+}
+
+.toolbar select {
+  background: none;
+  outline: none;
+  padding: 3px;
+  margin: 2px;
+}
+
+.toolbar option {
+  background-color: var(--vscode-tab-activeBackground)
+}
+
+.toolbar input, .toolbar select {
+  border: none;
+  color: var(--vscode-input-foreground);
+  background-color: var(--vscode-input-background);
+}
+/*
+  Copyright (c) Microsoft Corporation.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+.toolbar-button {
+  flex: none;
+  border: none;
+  outline: none;
+  color: var(--vscode-sideBarTitle-foreground);
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.toolbar-button:disabled {
+  color: var(--vscode-disabledForeground) !important;
+  cursor: default;
+}
+
+.toolbar-button:not(:disabled):hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.toolbar-button:not(:disabled):active {
+  background-color: var(--vscode-toolbar-activeBackground);
+}
+
+.toolbar-button.toggled {
+  color: var(--vscode-notificationLink-foreground);
+}
+
+.toolbar-separator {
+  flex: none;
+  background-color: var(--vscode-menu-separatorBackground);
+  width: 1px;
+  padding: 0;
+  margin: 5px 4px;
+  height: 16px;
+}
+/*
+  Copyright (c) Microsoft Corporation.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
 .call-log {
   display: flex;
   flex-direction: column;
@@ -3285,4 +3285,63 @@ body.dark-mode .recorder .toolbar-button.toggled.circle-large-filled {
   padding: 8px 12px;
   border-radius: 4px;
   display: inline-block;
+}
+
+/* Script Replay Toolbar */
+.replay-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-top: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editor-background);
+}
+
+.replay-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.replay-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.replay-btn-play {
+  color: var(--vscode-testing-iconPassed, #388a34);
+}
+
+.replay-btn-stop {
+  color: var(--vscode-testing-iconFailed, #f14c4c);
+}
+
+/* Script Replay Status Styles */
+.replay-status {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.replay-error {
+  color: var(--vscode-errorForeground);
+  background: var(--vscode-inputValidation-errorBackground);
+  border-top-color: var(--vscode-inputValidation-errorBorder);
+}
+
+.replay-running {
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+.replay-done {
+  color: var(--vscode-testing-iconPassed);
+  background: var(--vscode-editor-background);
 }

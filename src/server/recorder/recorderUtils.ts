@@ -144,5 +144,15 @@ export function traceParamsForAction(actionInContext: recorderActions.ActionInCo
       };
       return { method: 'expect', apiName: 'expect.toMatchAriaSnapshot', params };
     }
+    case 'assertDOMSnapshot': {
+      const params: channels.FrameExpectParams = {
+        selector,
+        expression: 'to.match.dom',
+        expectedValue: action.name,
+        isNot: false,
+        timeout: kDefaultTimeout,
+      };
+      return { method: 'expect', apiName: 'expect.toMatchDOMSnapshot', params };
+    }
   }
 }

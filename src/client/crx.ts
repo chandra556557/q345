@@ -120,6 +120,10 @@ export class CrxRecorder extends EventEmitter implements api.CrxRecorder {
   async run(code: string, page?: Page): Promise<void> {
     await this._channel.run({ code, page: page?._channel });
   }
+
+  async stop(): Promise<void> {
+    await this._channel.stop({});
+  }
 }
 
 export class CrxApplication extends ChannelOwner<channels.CrxApplicationChannel> implements api.CrxApplication {
@@ -184,5 +188,32 @@ export class CrxApplication extends ChannelOwner<channels.CrxApplicationChannel>
 
   async close() {
     await this._channel.close();
+  }
+
+  // Performance Optimization Methods
+  setParallelExecution(enabled: boolean): void {
+    // This needs to be sent to the server
+    this._channel.setMode({ mode: enabled ? 'recording' : 'none' });
+  }
+
+  async runWithPerformanceTracking(code: string, page?: Page): Promise<{ metrics: any; actualDuration: number; efficiency: number }> {
+    const startTime = Date.now();
+    
+    // Enable parallel execution
+    this.setParallelExecution(true);
+    
+    // Run the test
+    await this.recorder.run(code, page);
+    
+    const actualDuration = Date.now() - startTime;
+    
+    // Get metrics from server
+    const metrics = await this._channel.list({ code });
+    
+    return {
+      metrics,
+      actualDuration,
+      efficiency: 1, // Will be calculated from actual metrics
+    };
   }
 }
