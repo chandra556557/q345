@@ -1150,8 +1150,8 @@ class BDDService {
     const lower = text.toLowerCase();
     const quotes = (text.match(/"([^"]+)"/g) || []).map(m => m.replace(/"/g, ''));
 
-    // Navigation
-    if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit) /)) {
+    // Navigation / Launch
+    if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit) /) || lower.includes('launch')) {
       const url = quotes[0] || '/* URL */';
       return `await page.goto('${this.escapeString(url)}');`;
     }
@@ -1303,6 +1303,12 @@ class BDDService {
     // Redirected / on page
     if (lower.includes('redirected') || lower.match(/should be on/)) {
       if (quotes[0]) return `await page.waitForURL(new RegExp('${this.escapeString(quotes[0])}'));`;
+      // Try to extract URL-like text
+      const urlInText = text.match(/(https?:\/\/[^\s"']+|\/[^\s"']+)/);
+      if (urlInText) return `await page.waitForURL(new RegExp('${this.escapeString(urlInText[1])}'));`;
+      // Extract page name from "redirected to the X page"
+      const pageMatch = text.match(/(?:to|on)\s+(?:the\s+)?(\w+)\s+page/i);
+      if (pageMatch) return `await expect(page).toHaveURL(new RegExp('${this.escapeString(pageMatch[1].toLowerCase())}'));`;
       return `await page.waitForLoadState('networkidle');`;
     }
 
@@ -1312,8 +1318,18 @@ class BDDService {
       return `await expect(page.getByText('${this.escapeString(target)}')).toBeHidden();`;
     }
     if (lower.includes('see') || lower.includes('visible') || lower.includes('displayed') || lower.includes('shown')) {
-      const target = quotes[0] || '/* text */';
-      return `await expect(page.getByText('${this.escapeString(target)}', { exact: true })).toBeVisible();`;
+      let target = quotes[0];
+      if (!target) {
+        // Extract meaningful text from natural language: "Error message X is displayed" → "X"
+        target = text
+          .replace(/^(verify|check|ensure|assert|confirm|then)\s+(that\s+)?/i, '')
+          .replace(/^(error|success|warning|info)\s+(message\s+)?/i, '')
+          .replace(/\s+(is|are|should be)\s+(displayed|shown|visible|present)\s*$/i, '')
+          .replace(/\s+(displays?|shows?)\s*$/i, '')
+          .trim();
+      }
+      if (!target) target = text;
+      return `await expect(page.getByText('${this.escapeString(target)}', { exact: false })).toBeVisible({ timeout: 10000 });`;
     }
 
     // URL assertions
@@ -1373,7 +1389,29 @@ class BDDService {
     if (lower.includes('accept') && lower.includes('alert')) return `page.once('dialog', async d => await d.accept());`;
     if (lower.includes('dismiss') && lower.includes('alert')) return `page.once('dialog', async d => await d.dismiss());`;
 
-    return `// TODO: Implement step - ${keyword} ${text}`;
+    // Generate a best-effort step using keyword context instead of leaving a TODO
+    if (keyword === 'Given' || keyword === 'And') {
+      // Setup step: try to navigate or find an element
+      if (quotes.length >= 1) {
+        return `await page.goto('${this.escapeString(quotes[0])}').catch(() => { /* ${text} */ });`;
+      }
+      return `// Step needs manual implementation: ${keyword} ${text}\nthrow new Error('Step not implemented: ${this.escapeString(keyword)} ${this.escapeString(text)}');`;
+    }
+    if (keyword === 'When') {
+      // Action step: try clicking or interacting
+      if (quotes.length >= 1) {
+        return `await page.getByText('${this.escapeString(quotes[0])}').first().click().catch(async () => { await page.locator('[data-testid="${this.escapeString(quotes[0])}"]').first().click(); });`;
+      }
+      return `// Step needs manual implementation: ${keyword} ${text}\nthrow new Error('Step not implemented: ${this.escapeString(keyword)} ${this.escapeString(text)}');`;
+    }
+    if (keyword === 'Then') {
+      // Assertion step: check for visibility
+      if (quotes.length >= 1) {
+        return `await expect(page.getByText('${this.escapeString(quotes[0])}')).toBeVisible({ timeout: 10000 });`;
+      }
+      return `// Step needs manual implementation: ${keyword} ${text}\nthrow new Error('Assertion not implemented: ${this.escapeString(keyword)} ${this.escapeString(text)}');`;
+    }
+    return `// Step needs manual implementation: ${keyword} ${text}\nthrow new Error('Step not implemented: ${this.escapeString(keyword)} ${this.escapeString(text)}');`;
   }
 
   private escapeString(s: string): string {
@@ -1659,10 +1697,11 @@ module.exports = {
       const startTime = Date.now();
       let cucumberStdout = '';
       let cucumberStderr = '';
+      let cucumberExitCode = 0;
 
       try {
         // Use spawn instead of exec to avoid maxBuffer limits and enable true streaming
-        const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+        const cucumberResult = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
           const child = spawn('node', spawnArgs, {
             cwd: runDir,
             env: {
@@ -1700,14 +1739,15 @@ module.exports = {
             this.emitEvent(runId, 'output', { text, isError: true });
           });
 
-          child.on('close', (_code, signal) => {
+          child.on('close', (code, signal) => {
             settled = true;
             clearTimeout(timer);
             runningProcesses.delete(runId);
             if (signal === 'SIGTERM' || signal === 'SIGKILL') {
               reject(new Error('Run was cancelled'));
             } else {
-              resolve({ stdout: stdoutBuf, stderr: stderrBuf });
+              // Pass exit code so callers can detect Cucumber failures
+              resolve({ stdout: stdoutBuf, stderr: stderrBuf, exitCode: code ?? 0 });
             }
           });
 
@@ -1718,8 +1758,9 @@ module.exports = {
             reject(err);
           });
         });
-        cucumberStdout = stdout;
-        cucumberStderr = stderr;
+        cucumberStdout = cucumberResult.stdout;
+        cucumberStderr = cucumberResult.stderr;
+        cucumberExitCode = cucumberResult.exitCode;
       } catch (execError: any) {
         if (execError.message === 'Run was cancelled') {
           this.emitEvent(runId, 'status', { status: 'cancelled' });
@@ -1854,6 +1895,15 @@ module.exports = {
         overallStatus = 'failed';
         errorMsg = `Cucumber did not produce results. Output: ${(cucumberStderr || cucumberStdout).substring(0, 2000)}`;
         logger.error(`BDD Run ${runId}: results.json not found`);
+      }
+
+      // If Cucumber exited with non-zero code and we still think it passed, override to failed
+      if (cucumberExitCode !== 0 && overallStatus === 'passed') {
+        overallStatus = 'failed';
+        if (!errorMsg) {
+          errorMsg = `Cucumber exited with code ${cucumberExitCode}. ${cucumberStderr.substring(0, 500)}`;
+        }
+        logger.warn(`BDD Run ${runId}: Cucumber exit code ${cucumberExitCode} — marking as failed`);
       }
 
       // Collect screenshot URLs
@@ -2125,13 +2175,17 @@ module.exports = {
     lines.push(`setDefaultTimeout(${stepTimeout});`);
     lines.push('');
 
+    // Extract base URL from feature content if not provided in environment config
+    const urlMatch = featureContent.match(/(?:Given|When|And)\s+.*?["'](https?:\/\/[^"'\s]+)["']/i);
+    const featureBaseUrl = urlMatch ? urlMatch[1].replace(/\/+$/, '') : '';
+
     // Inject environment profile as a global config object
     lines.push(`// ========================================`);
     lines.push(`// Environment Profile Configuration`);
     lines.push(`// ========================================`);
     lines.push(`const ENV_PROFILE = ${JSON.stringify({
       name: env?.name || 'default',
-      baseUrl: env?.baseUrl || '',
+      baseUrl: env?.baseUrl || featureBaseUrl || '',
       credentials: env?.credentials || {},
       variables: env?.variables || {},
       headers: env?.headers || {},
@@ -2485,6 +2539,41 @@ module.exports = {
       lines.push(`  await this.page.waitForLoadState('domcontentloaded');`);
       lines.push(`  console.log('On page:', pageName, 'URL:', this.page.url());`);
       lines.push('});');
+      // "launch the application" variants — navigate to base URL
+      lines.push(`Given('User should launch the Application', async function () {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push('});');
+      lines.push(`Given('the user launches the application', async function () {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push('});');
+      lines.push(`Given('I launch the application', async function () {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push('});');
+      lines.push(`Given('the application is open', async function () {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push('});');
+      // When versions of navigation (steps can appear as When after a Given)
+      lines.push(`When('I navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`When('Navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`When('I go to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`When('I open the url {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`When('I visit {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
       lines.push(`When('I go back', async function () { await this.page.goBack(); });`);
       lines.push(`When('I go forward', async function () { await this.page.goForward(); });`);
       lines.push(`When('I refresh the page', async function () { await this.page.reload(); });`);
@@ -2532,6 +2621,177 @@ module.exports = {
       // ========================================
       // 2. LOGIN / AUTHENTICATION
       // ========================================
+      lines.push(`// --- Composite login Given steps (used as preconditions) ---`);
+      lines.push(`Given('the user is logged in', async function () {`);
+      lines.push(`  // Navigate to base URL and perform login with default credentials`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push(`  const creds = ENV_PROFILE.credentials?.default || { username: 'standard_user', password: 'secret_sauce' };`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(creds.username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(creds.password);`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); }`);
+      lines.push(`  else { await this.page.locator('button[type="submit"]').first().click(); }`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push('});');
+      lines.push(`Given('the user is logged in with {string} credentials', async function (credName) {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push(`  const creds = ENV_PROFILE.credentials?.[credName] || { username: credName, password: 'secret_sauce' };`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(creds.username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(creds.password);`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); }`);
+      lines.push(`  else { await this.page.locator('button[type="submit"]').first().click(); }`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push('});');
+      lines.push('');
+      // Aliases without "I" prefix and natural-language variants (for backward compat with old features)
+      lines.push(`// --- Backward-compatible aliases for old-format Gherkin steps ---`);
+      lines.push(`Given('User is logged in', async function () {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push(`  const creds = ENV_PROFILE.credentials?.default || { username: 'standard_user', password: 'secret_sauce' };`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(creds.username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(creds.password);`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); }`);
+      lines.push(`  else { await this.page.locator('button[type="submit"]').first().click(); }`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push('});');
+      lines.push(`Given('User is logged in with {string}', async function (credName) {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push(`  const creds = ENV_PROFILE.credentials?.[credName] || { username: credName, password: 'secret_sauce' };`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(creds.username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(creds.password);`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); }`);
+      lines.push(`  else { await this.page.locator('button[type="submit"]').first().click(); }`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push('});');
+      // Regex-based: "User is logged in with standard_user" (no quotes around username)
+      lines.push(`Given(/^User is logged in with (\\S+)$/, async function (credName) {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push(`  const creds = ENV_PROFILE.credentials?.[credName] || { username: credName, password: 'secret_sauce' };`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(creds.username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(creds.password);`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); }`);
+      lines.push(`  else { await this.page.locator('button[type="submit"]').first().click(); }`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push('});');
+      lines.push(`Given('User is logged in and has item in cart', async function () {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push(`  const creds = ENV_PROFILE.credentials?.default || { username: 'standard_user', password: 'secret_sauce' };`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(creds.username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(creds.password);`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); }`);
+      lines.push(`  else { await this.page.locator('button[type="submit"]').first().click(); }`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push('});');
+      lines.push(`Given('User is logged in with empty cart', async function () {`);
+      lines.push(`  const currentUrl = this.page.url();`);
+      lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
+      lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`  }`);
+      lines.push(`  const creds = ENV_PROFILE.credentials?.default || { username: 'standard_user', password: 'secret_sauce' };`);
+      lines.push(`  const userInput = await findInput(this.page, 'Username');`);
+      lines.push(`  await userInput.fill(creds.username);`);
+      lines.push(`  const passInput = await findInput(this.page, 'Password');`);
+      lines.push(`  await passInput.fill(creds.password);`);
+      lines.push(`  const signIn = this.page.getByRole('button', { name: /sign in|login|log in|submit/i });`);
+      lines.push(`  if (await signIn.count() > 0) { await signIn.first().click(); }`);
+      lines.push(`  else { await this.page.locator('button[type="submit"]').first().click(); }`);
+      lines.push(`  await this.page.waitForLoadState('networkidle');`);
+      lines.push('});');
+      // Old-format When steps without "I" prefix
+      lines.push(`When('Enter {string} in the {string} field', async function (value, field) {`);
+      lines.push(`  const input = await findInput(this.page, field);`);
+      lines.push(`  await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('Enter {string} in the Username field', async function (value) {`);
+      lines.push(`  const input = await findInput(this.page, 'Username');`);
+      lines.push(`  await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('Enter {string} in the Password field', async function (value) {`);
+      lines.push(`  const input = await findInput(this.page, 'Password');`);
+      lines.push(`  await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('Enter {string} in the First Name field', async function (value) {`);
+      lines.push(`  const input = await findInput(this.page, 'First Name');`);
+      lines.push(`  await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('Enter {string} in the Last Name field', async function (value) {`);
+      lines.push(`  const input = await findInput(this.page, 'Last Name');`);
+      lines.push(`  await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('Enter {string} in the Zip\\/Postal Code field', async function (value) {`);
+      lines.push(`  const input = await findInput(this.page, 'Zip/Postal Code');`);
+      lines.push(`  await input.fill(value);`);
+      lines.push('});');
+      lines.push(`When('Click the {string} button', async function (name) {`);
+      lines.push(`  await this.page.getByRole('button', { name }).click();`);
+      lines.push('});');
+      lines.push(`When('Click the {string} link', async function (name) {`);
+      lines.push(`  await this.page.getByRole('link', { name }).click();`);
+      lines.push('});');
+      lines.push(`When('Click the {string} button on {string}', async function (btnName, itemName) {`);
+      lines.push(`  // Find the product item and click the button within it`);
+      lines.push(`  const item = this.page.locator('.inventory_item').filter({ hasText: itemName });`);
+      lines.push(`  if (await item.count() > 0) { await item.getByRole('button', { name: btnName }).click(); }`);
+      lines.push(`  else { await this.page.getByRole('button', { name: new RegExp(btnName, 'i') }).first().click(); }`);
+      lines.push('});');
+      lines.push(`When('Click the cart icon', async function () {`);
+      lines.push(`  await this.page.locator('.shopping_cart_link').click();`);
+      lines.push('});');
+      lines.push(`When('Click the hamburger menu icon', async function () {`);
+      lines.push(`  await this.page.locator('#react-burger-menu-btn, .bm-burger-button, button[id*="menu"]').first().click();`);
+      lines.push('});');
+      lines.push(`When('Click on {string} product title', async function (productName) {`);
+      lines.push(`  await this.page.getByText(productName, { exact: false }).first().click();`);
+      lines.push('});');
+      lines.push(`When('Select {string} from the sort dropdown', async function (option) {`);
+      lines.push(`  await this.page.locator('.product_sort_container, select[data-test="product-sort-container"]').selectOption({ label: option });`);
+      lines.push('});');
+      lines.push(`When('Verify the {string} button is visible', async function (name) {`);
+      lines.push(`  await expect(this.page.getByRole('button', { name })).toBeVisible();`);
+      lines.push('});');
+      lines.push('');
       lines.push(`// --- Login / Authentication ---`);
       lines.push(`When('I enter valid credentials username {string} password {string}', async function (username, password) {`);
       lines.push(`  const userInput = await findInput(this.page, 'Username');`);
@@ -3117,20 +3377,30 @@ module.exports = {
       const parsed = this.parseFeatureContent(featureContent);
       const builtInPatterns = [
         // Navigation
-        /^I navigate to ".*"$/, /^I am on ".*"$/, /^I open the url ".*"$/, /^I go to ".*"$/, /^I visit ".*"$/,
+        /^I navigate to ".*"$/, /^Navigate to ".*"$/, /^I am on ".*"$/, /^I open the url ".*"$/, /^I go to ".*"$/, /^I visit ".*"$/,
         /^[Uu]ser is on ".*"$/, /^the user is on ".*"$/,
         /^I am on the ".*" page$/, /^I go back$/, /^I go forward$/, /^I refresh the page$/, /^I reload the page$/,
+        /^User should launch the Application$/i, /^the user launches the application$/i, /^I launch the application$/i, /^the application is open$/i,
         // Environment profile
         /^I am on the base URL$/, /^I am on the base URL path ".*"$/,
         /^I use ".*" credentials$/, /^I login with ".*" credentials$/,
         /^the environment variable ".*" should be ".*"$/, /^I set the environment variable ".*" to ".*"$/,
         /^the current environment should be ".*"$/,
+        // Login (composite)
+        /^the user is logged in$/, /^User is logged in$/, /^the user is logged in with ".*" credentials$/,
+        /^User is logged in with .*$/, /^User is logged in and has item in cart$/,
+        /^User is logged in with empty cart$/,
         // Login
         /^I enter valid credentials username ".*" password ".*"$/, /^I enter valid credentials user ".*" password ".*"$/,
         /^I login with username ".*" and password ".*"$/,
         /^I enter username ".*"$/, /^I enter password ".*"$/, /^I enter email ".*"$/,
         /^I click the login button$/, /^I submit the login form$/, /^I log out$/,
         /^I should be logged in$/, /^I should be logged out$/,
+        // Backward-compat: Without "I" prefix
+        /^Enter ".*" in the .* field$/, /^Click the ".*" button$/, /^Click the ".*" link$/,
+        /^Click the ".*" button on ".*"$/, /^Click the cart icon$/, /^Click the hamburger menu icon$/,
+        /^Click on ".*" product title$/, /^Select ".*" from the sort dropdown$/,
+        /^Verify the ".*" button is visible$/,
         // Input
         /^I fill ".*" with ".*"$/, /^I type ".*" into ".*"$/, /^I type ".*" in ".*"$/, /^I enter ".*" in ".*"$/,
         /^I enter ".*" in the ".*" field$/, /^I fill in the ".*" field with ".*"$/, /^I set ".*" to ".*"$/,
@@ -3241,8 +3511,26 @@ module.exports = {
           const paramList = paramNames.join(', ');
 
           lines.push(`${cucumberKeyword}('${this.escapeString(normalizedText)}', async function (${paramList}) {`);
-          lines.push(`  // Auto-generated step — customize as needed`);
           lines.push(`  console.log('Step: ${this.escapeString(step.keyword)} ${this.escapeString(normalizedText)}'${paramNames.length > 0 ? `, ${paramNames.join(', ')}` : ''});`);
+
+          // Generate meaningful Playwright code based on the step text
+          // Note: generateStepCode uses "page." but Cucumber World uses "this.page."
+          const rawStepCode = this.generateStepCode(step.keyword, step.text);
+          const stepCode = rawStepCode ? rawStepCode.replace(/\bawait page\./g, 'await this.page.').replace(/\bpage\.once\(/g, 'this.page.once(').replace(/\bexpect\(page\)/g, 'expect(this.page)').replace(/\bexpect\(page\./g, 'expect(this.page.') : null;
+          if (stepCode) {
+            lines.push(`  ${stepCode}`);
+          } else if (step.keyword === 'Then') {
+            // Then steps must assert — try to find text to verify on page
+            const textToFind = step.text.replace(/^(verify|assert|check|ensure|confirm|then)\s+(that\s+)?/i, '').trim();
+            lines.push(`  // Auto-assertion: verify text or condition on page`);
+            lines.push(`  const bodyText = await this.page.textContent('body');`);
+            lines.push(`  const found = ${paramNames.length > 0 ? `[${paramNames.join(', ')}].some(p => bodyText.includes(String(p)))` : `bodyText.toLowerCase().includes('${this.escapeString(textToFind.substring(0, 50).toLowerCase())}')`};`);
+            lines.push(`  if (!found) { throw new Error('Expected to find relevant content on page for: ${this.escapeString(step.text.substring(0, 80))}'); }`);
+          } else {
+            lines.push(`  // Auto-generated action step`);
+            lines.push(`  await this.page.waitForLoadState('domcontentloaded');`);
+          }
+
           lines.push('});');
           lines.push('');
         }

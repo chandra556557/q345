@@ -1,0 +1,490 @@
+/* ============================================================
+   Epic Pipeline - Jira to Playwright Workflow
+   ============================================================ */
+
+.epic-pipeline {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.epic-pipeline h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.epic-pipeline .subtitle {
+  color: #666;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+/* ── Workflow Steps Indicator ────────────────────────────── */
+.pipeline-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 32px;
+  padding: 20px 0;
+}
+
+.pipeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  flex: 1;
+  max-width: 180px;
+}
+
+.pipeline-step .step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  transition: all 0.3s;
+  z-index: 1;
+}
+
+.pipeline-step.active .step-circle {
+  background: #4361ee;
+  color: white;
+  box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.2);
+}
+
+.pipeline-step.completed .step-circle {
+  background: #06d6a0;
+  color: white;
+}
+
+.pipeline-step .step-label {
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+  font-weight: 500;
+}
+
+.pipeline-step.active .step-label {
+  color: #4361ee;
+  font-weight: 600;
+}
+
+.pipeline-step.completed .step-label {
+  color: #06d6a0;
+}
+
+.step-connector {
+  width: 60px;
+  height: 2px;
+  background: #e0e0e0;
+  margin-top: -20px;
+}
+
+.step-connector.completed {
+  background: #06d6a0;
+}
+
+/* ── Tab Navigation ──────────────────────────────────────── */
+.pipeline-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #eee;
+  margin-bottom: 24px;
+}
+
+.pipeline-tab {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.pipeline-tab:hover {
+  color: #4361ee;
+}
+
+.pipeline-tab.active {
+  color: #4361ee;
+  border-bottom-color: #4361ee;
+  font-weight: 600;
+}
+
+.pipeline-tab .tab-badge {
+  background: #4361ee;
+  color: white;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+/* ── Config Panel ────────────────────────────────────────── */
+.config-panel {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.config-panel h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #1a1a2e;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #4361ee;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #4361ee;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #3a56d4;
+}
+
+.btn-success {
+  background: #06d6a0;
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #05c090;
+}
+
+.btn-secondary {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.btn-danger {
+  background: #ef476f;
+  color: white;
+}
+
+/* ── Cards ───────────────────────────────────────────────── */
+.story-card {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: box-shadow 0.2s;
+}
+
+.story-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.story-card .story-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.story-card .story-key {
+  font-weight: 600;
+  color: #4361ee;
+  font-size: 14px;
+}
+
+.story-card .story-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #e8f0fe;
+  color: #4361ee;
+}
+
+.story-card .story-summary {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.story-card .ac-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.story-card .ac-list li {
+  font-size: 13px;
+  color: #666;
+  padding: 4px 0 4px 16px;
+  position: relative;
+}
+
+.story-card .ac-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #06d6a0;
+  font-weight: bold;
+}
+
+/* ── Category Badges ─────────────────────────────────────── */
+.category-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.category-badge {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.category-badge.positive { background: #d4edda; color: #155724; }
+.category-badge.negative { background: #f8d7da; color: #721c24; }
+.category-badge.edge { background: #fff3cd; color: #856404; }
+.category-badge.boundary { background: #d1ecf1; color: #0c5460; }
+.category-badge.security { background: #e2d5f1; color: #4a1d8e; }
+
+/* ── Test Case Table ─────────────────────────────────────── */
+.testcase-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 13px;
+}
+
+.testcase-table th {
+  background: #f8f9fa;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 2px solid #eee;
+}
+
+.testcase-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.testcase-table tr:hover td {
+  background: #f8f9ff;
+}
+
+.priority-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.priority-badge.critical { background: #f8d7da; color: #721c24; }
+.priority-badge.high { background: #fff3cd; color: #856404; }
+.priority-badge.medium { background: #d1ecf1; color: #0c5460; }
+.priority-badge.low { background: #d4edda; color: #155724; }
+
+/* ── Gherkin Preview ─────────────────────────────────────── */
+.gherkin-preview {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  padding: 20px;
+  border-radius: 10px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.gherkin-preview .keyword {
+  color: #4361ee;
+  font-weight: bold;
+}
+
+.gherkin-preview .tag {
+  color: #06d6a0;
+}
+
+.gherkin-preview .comment {
+  color: #666;
+  font-style: italic;
+}
+
+/* ── Progress Bar ────────────────────────────────────────── */
+.progress-container {
+  margin: 24px 0;
+}
+
+.progress-bar-wrapper {
+  background: #eee;
+  border-radius: 10px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4361ee, #06d6a0);
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* ── Run History ─────────────────────────────────────────── */
+.run-card {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.run-card .run-info {
+  flex: 1;
+}
+
+.run-card .run-status {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.run-status.completed { background: #d4edda; color: #155724; }
+.run-status.running, .run-status.fetching_jira, .run-status.generating_testcases, .run-status.converting_gherkin, .run-status.generating_playwright, .run-status.executing, .run-status.analyzing {
+  background: #fff3cd; color: #856404;
+}
+.run-status.failed { background: #f8d7da; color: #721c24; }
+.run-status.pending { background: #e0e0e0; color: #666; }
+
+/* ── Stats Cards ─────────────────────────────────────────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-card .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.stat-card .stat-label {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .pipeline-steps { flex-wrap: wrap; }
+  .config-grid { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+}

@@ -34,6 +34,8 @@ import bddRoutes from './routes/bdd.routes';
 import screenplayRoutes from './routes/screenplay.routes';
 import mcpRoutes from './routes/mcp.routes';
 import pythonApiRoutes from './routes/python-api.routes';
+import epicPipelineRoutes from './routes/epicPipeline.routes';
+import dataDrivenPipelineRoutes from './routes/dataDrivenPipeline.routes';
 import pool from './db';
 
 // Services
@@ -169,6 +171,7 @@ app.get('/api', (_req, res) => {
       '/api/screenplay/*',
       '/api/mcp/*',
       '/api/python-api/*',
+      '/api/data-driven-pipeline/*',
       '/api-docs',
       '/api-docs.json'
     ]
@@ -206,6 +209,8 @@ app.use('/api/bdd', bddRoutes);
 app.use('/api/screenplay', screenplayRoutes);
 app.use('/api/mcp', mcpRoutes);
 app.use('/api/python-api', pythonApiRoutes);
+app.use('/api/epic-pipeline', epicPipelineRoutes);
+app.use('/api/data-driven-pipeline', dataDrivenPipelineRoutes);
 
 app.use((_req, res) => { res.status(404).json({ error: 'Route not found' }); });
 app.use(errorHandler);

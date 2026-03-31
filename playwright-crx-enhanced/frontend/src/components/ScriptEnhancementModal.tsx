@@ -89,7 +89,16 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
   const [selectedTestDataScript, setSelectedTestDataScript] = useState<string>(''); // Selected script for test data
   const [testDataType, setTestDataType] = useState<'positive' | 'negative' | 'boundary' | 'equivalence' | 'security' | 'all'>('all'); // Type of test data to generate
   const [testDataCount, setTestDataCount] = useState<number>(10); // Number of records to generate
-  
+
+  // Field Binding states (post-enhancement test data binding)
+  const [bindingPlaceholders, setBindingPlaceholders] = useState<Array<{ name: string; line: number; context: string }>>([]);
+  const [fieldBindings, setFieldBindings] = useState<Record<string, string>>({});
+  const [extractingPlaceholders, setExtractingPlaceholders] = useState(false);
+  const [savingBindings, setSavingBindings] = useState(false);
+  const [bindingSaved, setBindingSaved] = useState(false);
+  const [manualPlaceholderName, setManualPlaceholderName] = useState('');
+  const [manualPlaceholderField, setManualPlaceholderField] = useState('');
+
   // Phase I: Category toggles for selective enhancement
   const [enableSelectors, setEnableSelectors] = useState(true);
   const [enableWaits, setEnableWaits] = useState(true);
@@ -655,6 +664,122 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
       setError(err.response?.data?.detail || err.response?.data?.error || 'Failed to generate test data');
     } finally {
       setGeneratingTestData(false);
+    }
+  };
+
+  // ── Field Binding Logic ────────────────────────────────────────────
+
+  /** Extract {{placeholder}} patterns from enhanced (or original) script code */
+  const extractPlaceholders = async () => {
+    if (!enhancement) return;
+    setExtractingPlaceholders(true);
+    try {
+      // Try backend extraction first
+      const res = await axios.post(
+        `${API_URL}/data-driven-runs/extract-placeholders`,
+        { scriptId: selectedScriptId },
+        { headers }
+      );
+      const phs = res.data?.placeholders || [];
+      setBindingPlaceholders(phs);
+      autoBindFields(phs);
+    } catch {
+      // Fallback: client-side regex extraction from enhanced code
+      const code = enhancement.enhancedCode || enhancement.originalCode || '';
+      const phs: Array<{ name: string; line: number; context: string }> = [];
+      const seen = new Set<string>();
+      code.split('\n').forEach((line, i) => {
+        const phRegex = /\{\{(\w+)\}\}/g;
+        let match: RegExpExecArray | null;
+        while ((match = phRegex.exec(line)) !== null) {
+          if (!seen.has(match[1])) {
+            seen.add(match[1]);
+            phs.push({ name: match[1], line: i + 1, context: line.trim().substring(0, 80) });
+          }
+        }
+      });
+      // Also extract from fill/getByLabel/getByPlaceholder patterns for smart detection
+      const selectorPatterns = [
+        /\.fill\(['"]#?([^'"]+)['"],\s*['"]([^'"]*)['"]\)/g,
+        /\.fill\(['"]\.([^'"]+)['"],\s*['"]([^'"]*)['"]\)/g,
+        /getByPlaceholder\(['"]([^'"]+)['"]\)/g,
+        /getByLabel\(['"]([^'"]+)['"]\)/g,
+      ];
+      code.split('\n').forEach((line, i) => {
+        for (const pattern of selectorPatterns) {
+          let sMatch: RegExpExecArray | null;
+          while ((sMatch = pattern.exec(line)) !== null) {
+            const fieldName = sMatch[1].replace(/[^a-zA-Z0-9_]/g, '_');
+            if (fieldName && !seen.has(fieldName)) {
+              seen.add(fieldName);
+              phs.push({ name: fieldName, line: i + 1, context: line.trim().substring(0, 80) });
+            }
+          }
+        }
+      });
+      setBindingPlaceholders(phs);
+      autoBindFields(phs);
+    } finally {
+      setExtractingPlaceholders(false);
+    }
+  };
+
+  /** Get available data field names from generated test data */
+  const getAvailableDataFields = (): string[] => {
+    if (!generatedTestData) return [];
+    const dataArray = Array.isArray(generatedTestData.data)
+      ? generatedTestData.data
+      : generatedTestData.data?.data || [];
+    if (dataArray.length === 0) return [];
+    return Object.keys(dataArray[0]).filter((k: string) => !k.startsWith('_'));
+  };
+
+  /** Auto-bind placeholders to data fields by exact or fuzzy match */
+  const autoBindFields = (phs: Array<{ name: string; line: number; context: string }>) => {
+    const dataFields = getAvailableDataFields();
+    if (dataFields.length === 0) return;
+    const bindings: Record<string, string> = {};
+    for (const ph of phs) {
+      const exact = dataFields.find(f => f.toLowerCase() === ph.name.toLowerCase());
+      if (exact) { bindings[ph.name] = exact; continue; }
+      const fuzzy = dataFields.find(
+        f => f.toLowerCase().includes(ph.name.toLowerCase()) || ph.name.toLowerCase().includes(f.toLowerCase())
+      );
+      if (fuzzy) bindings[ph.name] = fuzzy;
+    }
+    setFieldBindings(bindings);
+  };
+
+  /** Save field bindings and create a data-driven run */
+  const saveFieldBindings = async () => {
+    if (!selectedScriptId || !generatedTestData || Object.keys(fieldBindings).length === 0) {
+      alert('Please complete field binding before saving.');
+      return;
+    }
+    setSavingBindings(true);
+    setBindingSaved(false);
+    try {
+      const dataArray = Array.isArray(generatedTestData.data)
+        ? generatedTestData.data
+        : generatedTestData.data?.data || [];
+
+      const res = await axios.post(`${API_URL}/data-driven-runs`, {
+        scriptId: selectedScriptId,
+        dataRows: dataArray,
+        fieldBindings,
+        browser: 'chromium',
+        executionMode: 'sequential',
+        executionConfig: { stopOnFirstFailure: false, delayBetweenRows: 500, maxParallel: 1 },
+        name: `${selectedScriptName || 'Script'} - Post Enhancement DDR`
+      }, { headers });
+
+      console.log('Data-driven run created:', res.data);
+      setBindingSaved(true);
+    } catch (err: any) {
+      console.error('Failed to save field bindings:', err);
+      alert(err.response?.data?.error || 'Failed to save field bindings. Please try again.');
+    } finally {
+      setSavingBindings(false);
     }
   };
 
@@ -1605,6 +1730,99 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
                   )}
                 </div>
               )}
+
+              {/* Inline Field Binding (after test data, before suggestions review) */}
+              {generatedTestData && (() => {
+                const dataArr = Array.isArray(generatedTestData.data)
+                  ? generatedTestData.data
+                  : generatedTestData.data?.data || [];
+                if (dataArr.length === 0) return null;
+                return (
+                  <div data-testid="inline-field-binding" style={{
+                    marginBottom: '24px',
+                    padding: '20px',
+                    background: '#f0f4ff',
+                    borderRadius: '12px',
+                    border: '2px solid #818cf8'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#4338ca', margin: 0 }}>
+                        🔗 Bind Test Data Fields to Script
+                      </h4>
+                      <button
+                        data-testid="inline-auto-detect-btn"
+                        onClick={extractPlaceholders}
+                        disabled={extractingPlaceholders}
+                        style={{
+                          padding: '6px 14px',
+                          background: extractingPlaceholders ? '#9ca3af' : '#6366f1',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: extractingPlaceholders ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {extractingPlaceholders ? '⏳ Detecting...' : '🔍 Auto-Detect'}
+                      </button>
+                    </div>
+                    {bindingPlaceholders.length > 0 ? (
+                      <div data-testid="inline-binding-list" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {bindingPlaceholders.map((ph) => (
+                          <div key={ph.name} data-testid={`inline-binding-row-${ph.name}`} style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '8px 10px', background: 'white', borderRadius: '6px',
+                            border: fieldBindings[ph.name] ? '1px solid #10b981' : '1px solid #e2e8f0'
+                          }}>
+                            <code data-testid={`inline-placeholder-${ph.name}`} style={{ padding: '2px 6px', background: '#eef2ff', borderRadius: '4px', fontSize: '11px', fontWeight: 600, color: '#4338ca' }}>
+                              {`{{${ph.name}}}`}
+                            </code>
+                            <span style={{ color: '#6366f1', fontWeight: 700 }}>&rarr;</span>
+                            <select
+                              data-testid={`inline-binding-select-${ph.name}`}
+                              value={fieldBindings[ph.name] || ''}
+                              onChange={(e) => setFieldBindings(prev => ({ ...prev, [ph.name]: e.target.value }))}
+                              style={{
+                                flex: 1, padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '11px'
+                              }}
+                            >
+                              <option value="">-- Select field --</option>
+                              {getAvailableDataFields().map(f => (
+                                <option key={f} value={f}>{f}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p data-testid="inline-empty-state" style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', margin: '12px 0' }}>
+                        Click "Auto-Detect" to find {'{{placeholder}}'} patterns and selector fields in your script.
+                      </p>
+                    )}
+                    {Object.keys(fieldBindings).filter(k => fieldBindings[k]).length > 0 && (
+                      <div data-testid="inline-binding-summary" style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span data-testid="inline-binding-count" style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
+                          {Object.keys(fieldBindings).filter(k => fieldBindings[k]).length}/{bindingPlaceholders.length} bound &middot; {dataArr.length} rows
+                        </span>
+                        <button
+                          data-testid="inline-save-ddr-btn"
+                          onClick={saveFieldBindings}
+                          disabled={savingBindings || bindingSaved}
+                          style={{
+                            padding: '8px 16px',
+                            background: bindingSaved ? '#10b981' : savingBindings ? '#9ca3af' : '#6366f1',
+                            color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600,
+                            cursor: savingBindings || bindingSaved ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {bindingSaved ? '✅ DDR Created!' : savingBindings ? '⏳ Saving...' : '💾 Create Data-Driven Run'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>🔍 Review & Accept Suggestions</h3>
               
@@ -2953,6 +3171,262 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
               </div>
             )}
 
+            {/* ── Field Binding Section ─────────────────────────────── */}
+            {generatedTestData && (() => {
+              const dataArray = Array.isArray(generatedTestData.data)
+                ? generatedTestData.data
+                : generatedTestData.data?.data || [];
+              if (dataArray.length === 0) return null;
+
+              return (
+                <div data-testid="modal-field-binding" style={{
+                  marginTop: '24px',
+                  marginBottom: '24px',
+                  padding: '20px',
+                  background: '#f0f4ff',
+                  borderRadius: '12px',
+                  border: '2px solid #818cf8'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '16px'
+                  }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#4338ca', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🔗 Field Binding
+                    </h4>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        data-testid="modal-auto-detect-btn"
+                        onClick={extractPlaceholders}
+                        disabled={extractingPlaceholders}
+                        style={{
+                          padding: '6px 14px',
+                          background: extractingPlaceholders ? '#9ca3af' : '#6366f1',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: extractingPlaceholders ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {extractingPlaceholders ? '⏳ Detecting...' : '🔍 Auto-Detect Fields'}
+                      </button>
+                      <button
+                        data-testid="modal-clear-bindings-btn"
+                        onClick={() => { setBindingPlaceholders([]); setFieldBindings({}); setBindingSaved(false); }}
+                        style={{
+                          padding: '6px 14px',
+                          background: '#e2e8f0',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '12px', color: '#6366f1', marginBottom: '16px', lineHeight: '1.5' }}>
+                    Map {'{{placeholder}}'} patterns in your script to generated test data fields. Click "Auto-Detect" to scan the enhanced script, or add bindings manually below.
+                  </p>
+
+                  {/* Detected Placeholders & Binding Table */}
+                  {bindingPlaceholders.length > 0 ? (
+                    <div data-testid="modal-binding-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                      {bindingPlaceholders.map((ph) => (
+                        <div key={ph.name} data-testid={`modal-binding-row-${ph.name}`} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px 12px',
+                          background: 'white',
+                          borderRadius: '8px',
+                          border: fieldBindings[ph.name] ? '1px solid #10b981' : '1px solid #e2e8f0'
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <code data-testid={`modal-placeholder-${ph.name}`} style={{
+                                padding: '2px 8px',
+                                background: '#eef2ff',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#4338ca'
+                              }}>
+                                {`{{${ph.name}}}`}
+                              </code>
+                              {ph.line > 0 && (
+                                <span style={{ fontSize: '10px', color: '#94a3b8' }}>Line {ph.line}</span>
+                              )}
+                            </div>
+                            {ph.context && (
+                              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {ph.context}
+                              </div>
+                            )}
+                          </div>
+                          <span style={{ color: '#6366f1', fontWeight: 700, fontSize: '14px' }}>&rarr;</span>
+                          <select
+                            data-testid={`modal-binding-select-${ph.name}`}
+                            value={fieldBindings[ph.name] || ''}
+                            onChange={(e) => setFieldBindings(prev => ({ ...prev, [ph.name]: e.target.value }))}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              width: '180px',
+                              padding: '8px',
+                              border: fieldBindings[ph.name] ? '2px solid #10b981' : '2px solid #e2e8f0',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              background: fieldBindings[ph.name] ? '#f0fdf4' : 'white'
+                            }}
+                          >
+                            <option value="">-- Select field --</option>
+                            {getAvailableDataFields().map(f => (
+                              <option key={f} value={f}>{f}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div data-testid="modal-empty-state" style={{
+                      padding: '16px',
+                      background: 'white',
+                      borderRadius: '8px',
+                      border: '1px dashed #c7d2fe',
+                      textAlign: 'center',
+                      marginBottom: '16px'
+                    }}>
+                      <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>
+                        No placeholders detected yet. Click "Auto-Detect Fields" or add manually below.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Manual Placeholder Addition */}
+                  <div data-testid="modal-manual-binding" style={{
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                    padding: '12px',
+                    background: 'white',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '16px'
+                  }}>
+                    <input
+                      data-testid="modal-manual-placeholder-input"
+                      type="text"
+                      placeholder="Placeholder name"
+                      value={manualPlaceholderName}
+                      onChange={(e) => setManualPlaceholderName(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <select
+                      data-testid="modal-manual-field-select"
+                      value={manualPlaceholderField}
+                      onChange={(e) => setManualPlaceholderField(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        width: '150px',
+                        padding: '8px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '12px'
+                      }}
+                    >
+                      <option value="">-- Field --</option>
+                      {getAvailableDataFields().map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                    <button
+                      data-testid="modal-manual-add-btn"
+                      onClick={() => {
+                        if (manualPlaceholderName && manualPlaceholderField) {
+                          setBindingPlaceholders(prev => [...prev, { name: manualPlaceholderName, line: 0, context: '' }]);
+                          setFieldBindings(prev => ({ ...prev, [manualPlaceholderName]: manualPlaceholderField }));
+                          setManualPlaceholderName('');
+                          setManualPlaceholderField('');
+                        }
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        background: '#6366f1',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + Add
+                    </button>
+                  </div>
+
+                  {/* Binding Summary & Save */}
+                  {Object.keys(fieldBindings).length > 0 && (
+                    <div data-testid="modal-binding-summary" style={{
+                      padding: '12px',
+                      background: '#ecfdf5',
+                      borderRadius: '8px',
+                      border: '1px solid #6ee7b7',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <div data-testid="modal-binding-count" style={{ fontSize: '13px', fontWeight: 600, color: '#059669' }}>
+                          {Object.keys(fieldBindings).filter(k => fieldBindings[k]).length} of {bindingPlaceholders.length} fields bound
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                          {dataArray.length} data rows &middot; Ready to create data-driven run
+                        </div>
+                      </div>
+                      <button
+                        data-testid="modal-save-ddr-btn"
+                        onClick={saveFieldBindings}
+                        disabled={savingBindings || bindingSaved}
+                        style={{
+                          padding: '10px 20px',
+                          background: bindingSaved
+                            ? '#10b981'
+                            : savingBindings
+                              ? '#9ca3af'
+                              : 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          cursor: savingBindings || bindingSaved ? 'not-allowed' : 'pointer',
+                          boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
+                        }}
+                      >
+                        {bindingSaved ? '✅ Data-Driven Run Created!' : savingBindings ? '⏳ Saving...' : '💾 Save & Create Data-Driven Run'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Action Buttons */}
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
@@ -2964,6 +3438,10 @@ export const ScriptEnhancementModal: React.FC<ScriptEnhancementModalProps> = ({
                   // Clear results when closing
                   setTestDataRecommendation(null);
                   setGeneratedTestData(null);
+                  // Clear binding state
+                  setBindingPlaceholders([]);
+                  setFieldBindings({});
+                  setBindingSaved(false);
                 }}
                 style={{
                   padding: '10px 20px',

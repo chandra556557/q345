@@ -656,3 +656,48 @@ model DataDrivenRun {
   @@index([status])
   @@index([createdAt])
 }
+
+// ============================================
+// JIRA INTEGRATION
+// ============================================
+
+model JiraConfig {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String?
+  config         Json     // { baseUrl, email, apiToken, apiVersion }
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+// ============================================
+// WORKFLOW ORCHESTRATOR (Epic-to-Playwright Pipeline)
+// ============================================
+
+model WorkflowRun {
+  id              String    @id @default(cuid())
+  userId          String
+  organizationId  String?
+  status          String    @default("pending")
+  config          Json      // WorkflowConfig (sanitized, no secrets)
+  totalStories    Int       @default(0)
+  totalTestCases  Int       @default(0)
+  categoryCounts  Json      @default("{}")
+  progress        Int       @default(0)
+  currentStep     String    @default("Initializing...")
+  results         Json?     // Aggregated results
+  startedAt       DateTime?
+  completedAt     DateTime?
+  error           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([createdAt])
+}
