@@ -4,7 +4,7 @@ const swaggerDefinition = {
   openapi: '3.0.3',
   info: {
     title: 'Playwright CRX Enhanced Backend API',
-    version: '1.0.0',
+    version: '1.1.0',
     description: 'API documentation for Playwright CRX Enhanced backend',
   },
   servers: [
