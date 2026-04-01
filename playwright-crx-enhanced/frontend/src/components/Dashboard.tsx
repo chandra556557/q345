@@ -21,7 +21,8 @@ import ImportScriptModal from './ImportScriptModal';
 import ScriptValidationModal from './ScriptValidationModal';
 import ScriptCueCards from './ScriptCueCards';
 import TestDataManager from './TestDataManager';
-import DataDrivenTesting from './DataDrivenTesting';
+// DISABLED: DataDrivenTesting is now integrated into TestDataManager
+// import DataDrivenTesting from './DataDrivenTesting';
 import BDDTesting from './BDDTesting';
 // import ErrorAnalysis from './ErrorAnalysis';
 import './Dashboard.css';
@@ -65,7 +66,6 @@ type ActiveView =
   | 'scripts'
   | 'runs'
   | 'testdata'
-  | 'datadriventesting'
   | 'apitesting'
   | 'databasetesting'
   | 'bdd'
@@ -358,7 +358,6 @@ Navigating to Test Runs...`);
     { id: 'scripts', icon: '📝', label: 'Scripts', category: 'Test Management' },
     { id: 'runs', icon: '▶️', label: 'Test Runs', category: 'Test Management' },
     { id: 'testdata', icon: '🗄️', label: 'Test Data', category: 'Data Management' },
-    { id: 'datadriventesting', icon: '🔄', label: 'Data-Driven Testing', category: 'Data Management' },
     { id: 'apitesting', icon: '🔌', label: 'API Testing', category: 'Testing Tools' },
     { id: 'databasetesting', icon: '🗃️', label: 'Database Testing', category: 'Testing Tools' },
     { id: 'bdd', icon: '🥒', label: 'BDD Testing', category: 'Testing Tools' },
@@ -937,9 +936,6 @@ Navigating to Test Runs...`);
 
           {/* Test Data Management */}
           {activeView === 'testdata' && <TestDataManager />}
-
-          {/* Data-Driven Testing with AI */}
-          {activeView === 'datadriventesting' && <DataDrivenTesting />}
 
           {/* API Testing */}
           {activeView === 'apitesting' && <ApiTesting />}

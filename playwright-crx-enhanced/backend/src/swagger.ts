@@ -168,7 +168,7 @@ const swaggerDefinition = {
     { name: 'BDD Step Library', description: 'Reusable BDD step definitions' },
     { name: 'BDD Schedules', description: 'Scheduled BDD test runs' },
     { name: 'Epic Pipeline', description: 'Jira Epic to Playwright test pipeline' },
-    { name: 'Data-Driven Pipeline', description: 'Data-driven test generation and execution' }
+    { name: 'Field Bindings', description: 'Field binding analysis and test data generation with placeholder substitution' }
   ],
   paths: {
     '/auth/login': {
@@ -1506,11 +1506,11 @@ const swaggerDefinition = {
       }
     },
 
-    // ─── Data-Driven Pipeline ────────────────────────────────────────
-    '/data-driven-pipeline/analyze': {
+    // ─── Field Bindings (Test Data Generation) ─────────────────────────
+    '/testdata/field-bindings/extract-placeholders': {
       post: {
-        tags: ['Data-Driven Pipeline'],
-        summary: 'Analyze script to detect fields (dry-run)',
+        tags: ['Test Data Management'],
+        summary: 'Extract {{placeholder}} patterns from a script',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1520,23 +1520,21 @@ const swaggerDefinition = {
                 type: 'object',
                 properties: {
                   scriptId: { type: 'string', description: 'Script ID (provide scriptId or scriptCode)' },
-                  scriptCode: { type: 'string', description: 'Raw script code' },
-                  fieldHints: { type: 'object', description: 'Hints to guide field detection' }
+                  scriptCode: { type: 'string', description: 'Raw script code' }
                 }
               }
             }
           }
         },
         responses: {
-          '200': { description: 'Field analysis results', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, fields: { type: 'array', items: { type: 'object' } }, fieldCount: { type: 'integer' }, suggestedPlaceholders: { type: 'object' } } } } } },
-          '400': { description: 'Must provide scriptId or scriptCode' }
+          '200': { description: 'Extracted placeholders', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, placeholders: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, line: { type: 'integer' }, context: { type: 'string' } } } } } } } } }
         }
       }
     },
-    '/data-driven-pipeline/preview': {
+    '/testdata/field-bindings/analyze': {
       post: {
-        tags: ['Data-Driven Pipeline'],
-        summary: 'Preview pipeline (analyze + generate + parameterize, no execution)',
+        tags: ['Test Data Management'],
+        summary: 'Analyze script and auto-generate field bindings',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1546,25 +1544,21 @@ const swaggerDefinition = {
                 type: 'object',
                 properties: {
                   scriptId: { type: 'string' },
-                  strategies: { type: 'array', items: { type: 'string', enum: ['positive', 'negative', 'boundary', 'equivalence', 'security'] } },
-                  countPerStrategy: { type: 'integer', default: 5 },
-                  autoParameterize: { type: 'boolean', default: true },
-                  fieldHints: { type: 'object' }
-                },
-                required: ['scriptId', 'strategies']
+                  scriptCode: { type: 'string' }
+                }
               }
             }
           }
         },
         responses: {
-          '200': { description: 'Pipeline preview', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, scriptName: { type: 'string' }, fields: { type: 'array', items: { type: 'object' } }, parameterizedCode: { type: 'string' }, fieldBindings: { type: 'object' }, datasets: { type: 'object' }, summary: { type: 'object' } } } } } }
+          '200': { description: 'Field binding analysis', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, scriptName: { type: 'string' }, placeholders: { type: 'array', items: { type: 'object' } }, detectedFields: { type: 'array', items: { type: 'object' } }, fieldBindings: { type: 'object' }, suggestions: { type: 'array', items: { type: 'object', properties: { placeholder: { type: 'string' }, suggestedField: { type: 'string' }, confidence: { type: 'string', enum: ['exact', 'fuzzy', 'none'] }, fieldType: { type: 'string' } } } } } } } } }
         }
       }
     },
-    '/data-driven-pipeline/run': {
+    '/testdata/field-bindings/preview': {
       post: {
-        tags: ['Data-Driven Pipeline'],
-        summary: 'Full pipeline: analyze → generate → parameterize → execute → report',
+        tags: ['Test Data Management'],
+        summary: 'Preview field binding substitution on script code',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1574,55 +1568,45 @@ const swaggerDefinition = {
                 type: 'object',
                 properties: {
                   scriptId: { type: 'string' },
-                  strategies: { type: 'array', items: { type: 'string', enum: ['positive', 'negative', 'boundary', 'equivalence', 'security'] } },
-                  countPerStrategy: { type: 'integer', default: 5 },
-                  executionMode: { type: 'string', enum: ['sequential', 'parallel'], default: 'sequential' },
-                  maxParallel: { type: 'integer', default: 3 },
-                  autoParameterize: { type: 'boolean', default: true },
-                  stopOnFirstFailure: { type: 'boolean', default: false },
-                  fieldHints: { type: 'object' },
-                  browser: { type: 'string', default: 'chromium' }
+                  scriptCode: { type: 'string' },
+                  fieldBindings: { type: 'object', description: 'Map of placeholder name to data field name' },
+                  dataRow: { type: 'object', description: 'Sample data row for substitution preview' }
                 },
-                required: ['scriptId', 'strategies']
+                required: ['fieldBindings', 'dataRow']
               }
             }
           }
         },
         responses: {
-          '202': { description: 'Pipeline started', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' }, data: { type: 'object', properties: { scriptId: { type: 'string' }, scriptName: { type: 'string' }, strategies: { type: 'array', items: { type: 'string' } }, countPerStrategy: { type: 'integer' }, executionMode: { type: 'string' }, browser: { type: 'string' }, autoParameterize: { type: 'boolean' } } } } } } } }
+          '200': { description: 'Substitution preview', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, originalCode: { type: 'string' }, substitutedCode: { type: 'string' }, substitutions: { type: 'array', items: { type: 'object', properties: { placeholder: { type: 'string' }, dataField: { type: 'string' }, value: { type: 'string' } } } } } } } } }
         }
       }
     },
-    '/data-driven-pipeline/status/{id}': {
-      get: {
-        tags: ['Data-Driven Pipeline'],
-        summary: 'Poll execution status',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Script ID' }],
-        responses: {
-          '200': { description: 'Execution status', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: { type: 'object', properties: { id: { type: 'string' }, scriptId: { type: 'string' }, scriptName: { type: 'string' }, status: { type: 'string' }, totalRows: { type: 'integer' }, completedRows: { type: 'integer' }, passedRows: { type: 'integer' }, failedRows: { type: 'integer' }, duration: { type: 'number' }, executionMode: { type: 'string' }, browser: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' }, completedAt: { type: 'string', format: 'date-time' }, strategySummary: { type: 'object' }, progress: { type: 'number' } } } } } } } }
-        }
-      }
-    },
-    '/data-driven-pipeline/results/{id}': {
-      get: {
-        tags: ['Data-Driven Pipeline'],
-        summary: 'Get full results with per-strategy breakdown',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Script ID' }],
-        responses: {
-          '200': { description: 'Full pipeline results' }
-        }
-      }
-    },
-    '/data-driven-pipeline/cancel/{id}': {
+    '/testdata/field-bindings/generate': {
       post: {
-        tags: ['Data-Driven Pipeline'],
-        summary: 'Cancel a running pipeline',
+        tags: ['Test Data Management'],
+        summary: 'Generate test data with auto field bindings from a script',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Script ID' }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  scriptId: { type: 'string' },
+                  strategies: { type: 'array', items: { type: 'string', enum: ['positive', 'negative', 'boundary', 'equivalence', 'security'] }, default: ['positive'] },
+                  countPerStrategy: { type: 'integer', default: 5 },
+                  suiteId: { type: 'string', description: 'Test suite ID to save generated data' },
+                  save: { type: 'boolean', default: false }
+                },
+                required: ['scriptId']
+              }
+            }
+          }
+        },
         responses: {
-          '200': { description: 'Pipeline cancelled' }
+          '200': { description: 'Generated data with field bindings', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, scriptName: { type: 'string' }, placeholders: { type: 'array', items: { type: 'object' } }, detectedFields: { type: 'array', items: { type: 'object' } }, fieldBindings: { type: 'object' }, strategies: { type: 'array', items: { type: 'string' } }, dataRows: { type: 'array', items: { type: 'object', properties: { strategy: { type: 'string' }, row: { type: 'object' } } } }, totalRows: { type: 'integer' } } } } } }
         }
       }
     }

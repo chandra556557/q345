@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Copy, Play, Download, Upload, Search, Filter, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit2, Trash2, Copy, Play, Download, Upload, Search, Filter, Eye, EyeOff, Link2, Zap, FileCode } from 'lucide-react';
 import './Dashboard.css';
 import './ImportScriptModal.css';
 
@@ -40,9 +40,21 @@ const TestDataManager = () => {
     environment: 'dev',
     sample_data: { username: 'testuser@example.com', password: 'Test@123', role: 'admin' } as Record<string, any>,
   });
+  // Field Binding state
+  const [activeTab, setActiveTab] = useState<'data' | 'fieldBindings'>('data');
+  const [fbScriptId, setFbScriptId] = useState('');
+  const [fbScripts, setFbScripts] = useState<Array<{ id: string; name: string }>>([]);
+  const [fbAnalysis, setFbAnalysis] = useState<any>(null);
+  const [fbAnalyzing, setFbAnalyzing] = useState(false);
+  const [fbBindings, setFbBindings] = useState<Record<string, string>>({});
+  const [fbStrategies, setFbStrategies] = useState<string[]>(['positive']);
+  const [fbCountPerStrategy, setFbCountPerStrategy] = useState(5);
+  const [fbGeneratedData, setFbGeneratedData] = useState<any>(null);
+  const [fbGenerating, setFbGenerating] = useState(false);
+
   const token = localStorage.getItem('accessToken');
   const headers = { Authorization: `Bearer ${token}` };
-  
+
   const [formData, setFormData] = useState<TestDataItem>({
     id: '',
     suiteId: '',
@@ -54,6 +66,7 @@ const TestDataManager = () => {
 
   useEffect(() => {
     loadData();
+    loadScripts();
   }, []);
 
   const loadData = async () => {
@@ -291,10 +304,300 @@ test('${item.name}', async ({ page }) => {
     setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Field Binding functions
+  const loadScripts = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/scripts`, { headers });
+      const scripts = (res.data?.data || res.data || []).map((s: any) => ({ id: s.id, name: s.name }));
+      setFbScripts(scripts);
+    } catch {
+      // Scripts may not be accessible yet
+    }
+  };
+
+  const analyzeFieldBindings = async () => {
+    if (!fbScriptId) { alert('Please select a script'); return; }
+    setFbAnalyzing(true);
+    setFbAnalysis(null);
+    setFbGeneratedData(null);
+    try {
+      const res = await axios.post(`${API_URL}/testdata/field-bindings/analyze`, { scriptId: fbScriptId }, { headers });
+      setFbAnalysis(res.data);
+      setFbBindings(res.data.fieldBindings || {});
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to analyze field bindings');
+    } finally {
+      setFbAnalyzing(false);
+    }
+  };
+
+  const generateWithBindings = async () => {
+    if (!fbScriptId) { alert('Please select a script'); return; }
+    setFbGenerating(true);
+    try {
+      const res = await axios.post(`${API_URL}/testdata/field-bindings/generate`, {
+        scriptId: fbScriptId,
+        strategies: fbStrategies,
+        countPerStrategy: fbCountPerStrategy,
+        suiteId: selectedSuite?.id,
+        save: !!selectedSuite
+      }, { headers });
+      setFbGeneratedData(res.data);
+      if (selectedSuite) {
+        await loadData();
+        alert(`Generated ${res.data.totalRows} data rows and saved to suite`);
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to generate data');
+    } finally {
+      setFbGenerating(false);
+    }
+  };
+
+  const strategyOptions = ['positive', 'negative', 'boundary', 'equivalence', 'security'];
+
+  const toggleStrategy = (s: string) => {
+    setFbStrategies(prev =>
+      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+    );
+  };
+
   return (
     <div className="view-container">
       <h1 className="view-title">Test Data Management</h1>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '2px solid #e2e8f0' }}>
+        <button
+          onClick={() => setActiveTab('data')}
+          style={{
+            padding: '10px 24px', border: 'none', cursor: 'pointer',
+            borderBottom: activeTab === 'data' ? '2px solid #4f46e5' : '2px solid transparent',
+            color: activeTab === 'data' ? '#4f46e5' : '#64748b',
+            fontWeight: activeTab === 'data' ? 600 : 400,
+            background: 'none', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6
+          }}
+        >
+          <Search size={16} /> Test Data
+        </button>
+        <button
+          onClick={() => setActiveTab('fieldBindings')}
+          style={{
+            padding: '10px 24px', border: 'none', cursor: 'pointer',
+            borderBottom: activeTab === 'fieldBindings' ? '2px solid #4f46e5' : '2px solid transparent',
+            color: activeTab === 'fieldBindings' ? '#4f46e5' : '#64748b',
+            fontWeight: activeTab === 'fieldBindings' ? 600 : 400,
+            background: 'none', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6
+          }}
+        >
+          <Link2 size={16} /> Field Bindings
+        </button>
+      </div>
+
+      {/* ========== FIELD BINDINGS TAB ========== */}
+      {activeTab === 'fieldBindings' && (
+        <div>
+          <div className="content-card" style={{ marginBottom: 24 }}>
+            <h2 style={{ margin: '0 0 8px' }}>Field Binding Analysis</h2>
+            <p style={{ color: '#64748b', margin: '0 0 16px', fontSize: 14 }}>
+              Analyze your Playwright script to detect {'{{placeholder}}'} patterns, auto-map them to form fields,
+              and generate strategy-based test data.
+            </p>
+
+            {/* Script Selection */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 250 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Select Script</label>
+                <select
+                  value={fbScriptId}
+                  onChange={e => { setFbScriptId(e.target.value); setFbAnalysis(null); setFbGeneratedData(null); }}
+                  className="modal-input"
+                  style={{ width: '100%' }}
+                >
+                  <option value="">-- Choose a script --</option>
+                  {fbScripts.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={analyzeFieldBindings}
+                disabled={!fbScriptId || fbAnalyzing}
+                className="btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, height: 38 }}
+              >
+                <Zap size={16} />
+                {fbAnalyzing ? 'Analyzing...' : 'Analyze Script'}
+              </button>
+            </div>
+          </div>
+
+          {/* Analysis Results */}
+          {fbAnalysis && (
+            <div className="content-card" style={{ marginBottom: 24 }}>
+              <h3 style={{ margin: '0 0 12px' }}>
+                <FileCode size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                Analysis: {fbAnalysis.scriptName}
+              </h3>
+
+              {/* Placeholders */}
+              {fbAnalysis.placeholders?.length > 0 ? (
+                <div style={{ marginBottom: 16 }}>
+                  <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>Detected Placeholders ({fbAnalysis.placeholders.length})</h4>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    {fbAnalysis.placeholders.map((ph: any, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 12px', background: '#f1f5f9', borderRadius: 6, fontSize: 13 }}>
+                        <code style={{ fontWeight: 600, color: '#4f46e5' }}>{`{{${ph.name}}}`}</code>
+                        <span style={{ color: '#94a3b8' }}>Line {ph.line}</span>
+                        <span style={{ color: '#64748b', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ph.context}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p style={{ color: '#f59e0b', fontSize: 14 }}>No {'{{placeholder}}'} patterns found. Add {'{{fieldName}}'} patterns to your script first.</p>
+              )}
+
+              {/* Field Binding Mapping */}
+              {fbAnalysis.suggestions?.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>Field Binding Mapping</h4>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ textAlign: 'left', padding: '6px 12px' }}>Placeholder</th>
+                        <th style={{ textAlign: 'left', padding: '6px 12px' }}>Mapped Field</th>
+                        <th style={{ textAlign: 'left', padding: '6px 12px' }}>Confidence</th>
+                        <th style={{ textAlign: 'left', padding: '6px 12px' }}>Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fbAnalysis.suggestions.map((s: any, idx: number) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '6px 12px' }}>
+                            <code style={{ color: '#4f46e5' }}>{`{{${s.placeholder}}}`}</code>
+                          </td>
+                          <td style={{ padding: '6px 12px' }}>
+                            <input
+                              value={fbBindings[s.placeholder] || ''}
+                              onChange={e => setFbBindings(prev => ({ ...prev, [s.placeholder]: e.target.value }))}
+                              className="modal-input"
+                              style={{ width: '100%', padding: '4px 8px', fontSize: 13 }}
+                            />
+                          </td>
+                          <td style={{ padding: '6px 12px' }}>
+                            <span style={{
+                              padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                              background: s.confidence === 'exact' ? '#dcfce7' : s.confidence === 'fuzzy' ? '#fef9c3' : '#fee2e2',
+                              color: s.confidence === 'exact' ? '#166534' : s.confidence === 'fuzzy' ? '#854d0e' : '#991b1b'
+                            }}>
+                              {s.confidence}
+                            </span>
+                          </td>
+                          <td style={{ padding: '6px 12px', color: '#64748b' }}>{s.fieldType}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Generation Controls */}
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16, marginTop: 8 }}>
+                <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>Generate Test Data with Bindings</h4>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  {strategyOptions.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => toggleStrategy(s)}
+                      className={fbStrategies.includes(s) ? 'btn-primary' : 'btn-secondary'}
+                      style={{ fontSize: 12, padding: '4px 12px', textTransform: 'capitalize' }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Count per strategy</label>
+                    <input
+                      type="number" min={1} max={50} value={fbCountPerStrategy}
+                      onChange={e => setFbCountPerStrategy(Number(e.target.value))}
+                      className="modal-input" style={{ width: 80, padding: '4px 8px' }}
+                    />
+                  </div>
+                  <button
+                    onClick={generateWithBindings}
+                    disabled={fbGenerating || fbStrategies.length === 0}
+                    className="btn-primary"
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34 }}
+                  >
+                    <Play size={14} />
+                    {fbGenerating ? 'Generating...' : `Generate (${fbStrategies.length * fbCountPerStrategy} rows)`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Generated Data Preview */}
+          {fbGeneratedData && (
+            <div className="content-card">
+              <h3 style={{ margin: '0 0 12px' }}>
+                Generated Data ({fbGeneratedData.totalRows} rows)
+                {selectedSuite && <span style={{ fontSize: 12, color: '#22c55e', marginLeft: 8 }}>Saved to {selectedSuite.name}</span>}
+              </h3>
+              <div style={{ maxHeight: 400, overflow: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 8px' }}>#</th>
+                      <th style={{ textAlign: 'left', padding: '6px 8px' }}>Strategy</th>
+                      {fbGeneratedData.placeholders?.map((ph: any) => (
+                        <th key={ph.name} style={{ textAlign: 'left', padding: '6px 8px' }}>{ph.name}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fbGeneratedData.dataRows?.map((dr: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '4px 8px', color: '#94a3b8' }}>{idx + 1}</td>
+                        <td style={{ padding: '4px 8px' }}>
+                          <span style={{
+                            padding: '1px 6px', borderRadius: 3, fontSize: 11,
+                            background: dr.strategy === 'positive' ? '#dcfce7' :
+                              dr.strategy === 'negative' ? '#fee2e2' :
+                              dr.strategy === 'boundary' ? '#fef9c3' :
+                              dr.strategy === 'security' ? '#fce7f3' : '#e0e7ff',
+                            color: dr.strategy === 'positive' ? '#166534' :
+                              dr.strategy === 'negative' ? '#991b1b' :
+                              dr.strategy === 'boundary' ? '#854d0e' :
+                              dr.strategy === 'security' ? '#9d174d' : '#3730a3'
+                          }}>
+                            {dr.strategy}
+                          </span>
+                        </td>
+                        {fbGeneratedData.placeholders?.map((ph: any) => {
+                          const bindingKey = fbGeneratedData.fieldBindings?.[ph.name] || ph.name;
+                          const val = dr.row[bindingKey];
+                          return (
+                            <td key={ph.name} style={{ padding: '4px 8px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {val === null || val === undefined ? <span style={{ color: '#cbd5e1' }}>null</span> : String(val)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========== TEST DATA TAB ========== */}
+      {activeTab === 'data' && <>
       {/* Header and Import/Export */}
       <div className="content-card" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
@@ -730,6 +1033,7 @@ test('${item.name}', async ({ page }) => {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 };

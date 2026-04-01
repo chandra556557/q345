@@ -19,7 +19,11 @@ import {
   generateEquivalenceTestData,
   generatePositiveTestData,
   generateNegativeTestData,
-  generateFromScriptTestData
+  generateFromScriptTestData,
+  extractPlaceholders,
+  analyzeFieldBindings,
+  previewFieldBindingSubstitution,
+  generateWithFieldBindings
 } from '../controllers/testData.controller';
 import { analyzeXPath } from '../controllers/ai-analysis.controller';
 
@@ -297,5 +301,13 @@ router.post('/generate/negative', generateNegativeTestData);
 
 // XPath Analysis endpoint (NO AUTH REQUIRED)
 router.post('/xpath-analysis', analyzeXPath);
+
+// ============================================
+// Field Binding endpoints (requires auth)
+// ============================================
+router.post('/field-bindings/extract-placeholders', extractPlaceholders);
+router.post('/field-bindings/analyze', analyzeFieldBindings);
+router.post('/field-bindings/preview', previewFieldBindingSubstitution);
+router.post('/field-bindings/generate', generateWithFieldBindings);
 
 export default router;

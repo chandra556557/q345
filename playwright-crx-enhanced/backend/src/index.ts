@@ -29,13 +29,15 @@ import visualRegressionRoutes from './routes/visual-regression.routes';
 import databaseTestingRoutes from './routes/database-testing.routes';
 import organizationRoutes from './routes/organization.routes';
 import queueRoutes from './routes/queue.routes';
-import dataDrivenRoutes from './routes/dataDriven.routes';
+// DISABLED: Data-driven testing is now integrated into test data management
+// import dataDrivenRoutes from './routes/dataDriven.routes';
 import bddRoutes from './routes/bdd.routes';
 import screenplayRoutes from './routes/screenplay.routes';
 import mcpRoutes from './routes/mcp.routes';
 import pythonApiRoutes from './routes/python-api.routes';
 import epicPipelineRoutes from './routes/epicPipeline.routes';
-import dataDrivenPipelineRoutes from './routes/dataDrivenPipeline.routes';
+// DISABLED: Data-driven pipeline is now integrated into test data management
+// import dataDrivenPipelineRoutes from './routes/dataDrivenPipeline.routes';
 import pool from './db';
 
 // Services
@@ -204,13 +206,13 @@ app.use('/api/visual-regression', visualRegressionRoutes);
 app.use('/api/database-testing', databaseTestingRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/queue', queueRoutes);
-app.use('/api/data-driven-runs', dataDrivenRoutes);
+// DISABLED: app.use('/api/data-driven-runs', dataDrivenRoutes);
 app.use('/api/bdd', bddRoutes);
 app.use('/api/screenplay', screenplayRoutes);
 app.use('/api/mcp', mcpRoutes);
 app.use('/api/python-api', pythonApiRoutes);
 app.use('/api/epic-pipeline', epicPipelineRoutes);
-app.use('/api/data-driven-pipeline', dataDrivenPipelineRoutes);
+// DISABLED: app.use('/api/data-driven-pipeline', dataDrivenPipelineRoutes);
 
 app.use((_req, res) => { res.status(404).json({ error: 'Route not found' }); });
 app.use(errorHandler);

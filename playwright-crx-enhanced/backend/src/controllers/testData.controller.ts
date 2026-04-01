@@ -811,3 +811,377 @@ export const generateFromScriptTestData = async (req: Request, res: Response) =>
     return res.status(500).json({ success: false, error: error?.message || 'Failed to generate test data from script' });
   }
 };
+
+// ============================================
+// FIELD BINDING (integrated from data-driven module)
+// ============================================
+
+/**
+ * Extract {{placeholder}} patterns from a script
+ * POST /api/testdata/field-bindings/extract-placeholders
+ */
+export const extractPlaceholders = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { scriptId, scriptCode } = req.body;
+
+    let code: string;
+
+    if (scriptId) {
+      const { rows } = await pool.query(
+        `SELECT code FROM "Script" WHERE id = $1 AND "userId" = $2`,
+        [scriptId, userId]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Script not found' });
+      }
+      code = rows[0].code;
+    } else if (scriptCode) {
+      code = scriptCode;
+    } else {
+      return res.status(400).json({ success: false, error: 'Either scriptId or scriptCode is required' });
+    }
+
+    const placeholders = extractPlaceholdersFromCode(code);
+
+    return res.json({ success: true, placeholders });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to extract placeholders' });
+  }
+};
+
+/**
+ * Analyze script and auto-generate field bindings
+ * POST /api/testdata/field-bindings/analyze
+ */
+export const analyzeFieldBindings = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { scriptId, scriptCode } = req.body;
+
+    let code: string;
+    let scriptName = 'unknown';
+
+    if (scriptId) {
+      const { rows } = await pool.query(
+        `SELECT code, name FROM "Script" WHERE id = $1 AND "userId" = $2`,
+        [scriptId, userId]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Script not found' });
+      }
+      code = rows[0].code;
+      scriptName = rows[0].name;
+    } else if (scriptCode) {
+      code = scriptCode;
+    } else {
+      return res.status(400).json({ success: false, error: 'Either scriptId or scriptCode is required' });
+    }
+
+    // Extract {{placeholder}} patterns
+    const placeholders = extractPlaceholdersFromCode(code);
+
+    // Extract fields from Playwright locators
+    const detectedFields = extractFieldsFromScript(code);
+
+    // Auto-generate field bindings: map placeholder -> best matching field
+    const fieldBindings: Record<string, string> = {};
+    const suggestions: Array<{
+      placeholder: string;
+      suggestedField: string;
+      confidence: 'exact' | 'fuzzy' | 'none';
+      fieldType: string;
+    }> = [];
+
+    for (const ph of placeholders) {
+      const phLower = ph.name.toLowerCase();
+
+      let bestMatch: { field: string; confidence: 'exact' | 'fuzzy' | 'none' } = { field: ph.name, confidence: 'none' };
+
+      for (const df of detectedFields) {
+        const fieldName = (df.fieldName || df.selector || '').toLowerCase();
+        if (fieldName === phLower || fieldName.replace(/[\s_-]/g, '') === phLower.replace(/[\s_-]/g, '')) {
+          bestMatch = { field: df.fieldName || df.selector || ph.name, confidence: 'exact' };
+          break;
+        }
+        if (fieldName.includes(phLower) || phLower.includes(fieldName)) {
+          bestMatch = { field: df.fieldName || df.selector || ph.name, confidence: 'fuzzy' };
+        }
+      }
+
+      fieldBindings[ph.name] = bestMatch.field;
+      suggestions.push({
+        placeholder: ph.name,
+        suggestedField: bestMatch.field,
+        confidence: bestMatch.confidence,
+        fieldType: inferFieldType(ph.name)
+      });
+    }
+
+    return res.json({
+      success: true,
+      scriptName,
+      placeholders,
+      detectedFields,
+      fieldBindings,
+      suggestions
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to analyze field bindings' });
+  }
+};
+
+/**
+ * Preview field binding substitution on script code
+ * POST /api/testdata/field-bindings/preview
+ */
+export const previewFieldBindingSubstitution = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { scriptId, scriptCode, fieldBindings, dataRow } = req.body;
+
+    if (!fieldBindings || Object.keys(fieldBindings).length === 0) {
+      return res.status(400).json({ success: false, error: 'fieldBindings is required' });
+    }
+    if (!dataRow || Object.keys(dataRow).length === 0) {
+      return res.status(400).json({ success: false, error: 'dataRow is required' });
+    }
+
+    let code: string;
+
+    if (scriptId) {
+      const { rows } = await pool.query(
+        `SELECT code FROM "Script" WHERE id = $1 AND "userId" = $2`,
+        [scriptId, userId]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Script not found' });
+      }
+      code = rows[0].code;
+    } else if (scriptCode) {
+      code = scriptCode;
+    } else {
+      return res.status(400).json({ success: false, error: 'Either scriptId or scriptCode is required' });
+    }
+
+    let result = code;
+    const substitutions: Array<{ placeholder: string; dataField: string; value: string }> = [];
+
+    for (const [placeholder, dataField] of Object.entries(fieldBindings)) {
+      const value = dataRow[dataField as string];
+      if (value === undefined || value === null) continue;
+
+      const stringValue = String(value);
+      const escaped = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`\\{\\{${escaped}\\}\\}`, 'g');
+      result = result.replace(pattern, stringValue);
+
+      substitutions.push({ placeholder, dataField: dataField as string, value: stringValue });
+    }
+
+    return res.json({
+      success: true,
+      originalCode: code,
+      substitutedCode: result,
+      substitutions
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to preview substitution' });
+  }
+};
+
+/**
+ * Generate test data with field bindings from a script
+ * POST /api/testdata/field-bindings/generate
+ */
+export const generateWithFieldBindings = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { scriptId, strategies = ['positive'], countPerStrategy = 5, suiteId, save = false } = req.body;
+
+    if (!scriptId) {
+      return res.status(400).json({ success: false, error: 'scriptId is required' });
+    }
+
+    const { rows: scriptRows } = await pool.query(
+      `SELECT code, name FROM "Script" WHERE id = $1 AND "userId" = $2`,
+      [scriptId, userId]
+    );
+    if (scriptRows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Script not found' });
+    }
+
+    const code = scriptRows[0].code;
+    const scriptName = scriptRows[0].name;
+
+    const placeholders = extractPlaceholdersFromCode(code);
+    const detectedFields = extractFieldsFromScript(code);
+
+    // Auto-generate field bindings
+    const fieldBindings: Record<string, string> = {};
+    for (const ph of placeholders) {
+      const phLower = ph.name.toLowerCase();
+      let matched = ph.name;
+
+      for (const df of detectedFields) {
+        const fieldName = (df.fieldName || df.selector || '').toLowerCase();
+        if (fieldName === phLower || fieldName.replace(/[\s_-]/g, '') === phLower.replace(/[\s_-]/g, '')) {
+          matched = df.fieldName || df.selector || ph.name;
+          break;
+        }
+        if (fieldName.includes(phLower) || phLower.includes(fieldName)) {
+          matched = df.fieldName || df.selector || ph.name;
+        }
+      }
+      fieldBindings[ph.name] = matched;
+    }
+
+    // Generate data rows per strategy
+    const dataRows: Array<{ strategy: string; row: Record<string, any> }> = [];
+
+    for (const strategy of strategies) {
+      for (let i = 0; i < countPerStrategy; i++) {
+        const row: Record<string, any> = {};
+        for (const ph of placeholders) {
+          const fieldType = inferFieldType(ph.name);
+          row[fieldBindings[ph.name]] = generateValueForStrategy(fieldType, strategy, i);
+        }
+        dataRows.push({ strategy, row });
+      }
+    }
+
+    // Optionally save to test suite
+    if (save && suiteId) {
+      const suiteCheck = await pool.query(`SELECT id FROM "TestSuite" WHERE id = $1 AND "userId" = $2`, [suiteId, userId]);
+      if (suiteCheck.rowCount) {
+        for (const strategy of strategies) {
+          const rows = dataRows.filter(r => r.strategy === strategy).map(r => r.row);
+          if (rows.length > 0) {
+            const tdId = randomUUID();
+            await pool.query(
+              `INSERT INTO "TestData" (id, "suiteId", name, environment, type, data, "createdAt", "updatedAt")
+               VALUES ($1, $2, $3, 'dev', $4, $5, now(), now())`,
+              [tdId, suiteId, `${scriptName} - ${strategy} (field-bound)`, strategy, JSON.stringify(rows)]
+            );
+          }
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      scriptName,
+      placeholders,
+      detectedFields,
+      fieldBindings,
+      strategies,
+      dataRows,
+      totalRows: dataRows.length
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to generate with field bindings' });
+  }
+};
+
+// ============================================
+// FIELD BINDING HELPERS
+// ============================================
+
+/**
+ * Extract {{placeholder}} patterns from script code
+ */
+const extractPlaceholdersFromCode = (scriptCode: string): { name: string; line: number; context: string }[] => {
+  const placeholders: { name: string; line: number; context: string }[] = [];
+  const seen = new Set<string>();
+  const lines = scriptCode.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    const lineText = lines[i];
+    const matches = lineText.matchAll(/\{\{(\w+)\}\}/g);
+
+    for (const match of matches) {
+      const name = match[1];
+      if (!seen.has(name)) {
+        seen.add(name);
+        placeholders.push({
+          name,
+          line: i + 1,
+          context: lineText.trim().substring(0, 80)
+        });
+      }
+    }
+  }
+
+  return placeholders;
+};
+
+/**
+ * Generate a value for a given field type and test strategy
+ */
+const generateValueForStrategy = (fieldType: string, strategy: string, index: number): any => {
+  const positiveValues: Record<string, any[]> = {
+    email: ['user@example.com', 'admin@company.org', 'test.user@domain.co', 'john.doe@mail.com', 'info@site.net'],
+    password: ['Password123!', 'Str0ng@Pass', 'MyP@ss2025', 'Secure#456', 'Test!ng789'],
+    tel: ['1234567890', '9876543210', '5551234567', '4445556666', '8007771234'],
+    url: ['https://example.com', 'https://test.org', 'https://app.domain.com', 'https://site.net', 'https://portal.io'],
+    date: ['2025-01-15', '2025-06-30', '2025-12-01', '2024-03-20', '2026-01-01'],
+    number: [10, 25, 50, 100, 999],
+    text: ['valid_input', 'test_value', 'sample_text', 'hello_world', 'user_data'],
+    select: ['option1', 'option2', 'option3', 'default', 'custom']
+  };
+
+  const negativeValues: Record<string, any[]> = {
+    email: ['not-an-email', '@missing.com', 'user@', '', '   '],
+    password: ['123', '', 'a', 'password', '   '],
+    tel: ['abc', '', '12', 'phone-number', '+++'],
+    url: ['htp://bad', 'not-a-url', '', 'ftp://', '://missing'],
+    date: ['2025-13-01', 'not-a-date', '', '00-00-0000', 'abc'],
+    number: ['NaN', -9999999999, 'abc', '', null],
+    text: ['', '   ', '\x00', null, undefined],
+    select: ['', 'invalid_option', null, '   ', 'undefined']
+  };
+
+  const boundaryValues: Record<string, any[]> = {
+    email: ['a@b.c', 'x'.repeat(64) + '@example.com', 'a@b.co', 'user@' + 'x'.repeat(253) + '.com', 'a@b.c'],
+    password: ['a', 'ab', 'a'.repeat(128), 'a'.repeat(255), 'P@1'],
+    tel: ['0', '1'.repeat(15), '1'.repeat(20), '00000', '99999999999999'],
+    url: ['https://a.b', 'https://' + 'x'.repeat(200) + '.com', 'http://1.2.3.4', 'https://a.co', 'https://test.c'],
+    date: ['1970-01-01', '2099-12-31', '2000-02-29', '1900-01-01', '2025-02-28'],
+    number: [0, -1, 1, Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER],
+    text: ['', 'a', 'a'.repeat(255), 'a'.repeat(256), '  a  '],
+    select: ['', 'a', 'option_1', 'last_option', 'default']
+  };
+
+  const securityValues: Record<string, any[]> = {
+    email: ["admin'--@test.com", '<script>alert(1)</script>@x.com', '${7*7}@test.com', 'user@test.com\nBcc: evil@hack.com', '"; DROP TABLE users;--@x.com'],
+    password: ["' OR '1'='1", '<script>alert(1)</script>', '${7*7}', '../../../etc/passwd', 'admin\x00'],
+    tel: ["' OR 1=1--", '$(whoami)', '{{7*7}}', '; ls -la', '<img src=x onerror=alert(1)>'],
+    url: ['javascript:alert(1)', 'data:text/html,<script>alert(1)</script>', 'file:///etc/passwd', 'https://evil.com/redirect', '//evil.com'],
+    date: ["' OR '1'='1", '<script>alert(1)</script>', '2025-01-01; DROP TABLE--', '{{constructor.constructor("return this")()}}', '../../../etc/passwd'],
+    number: ["' OR 1=1--", '0; DROP TABLE--', '${7*7}', 'NaN', '1e308'],
+    text: ["' OR '1'='1", "admin'--", '<script>alert(document.cookie)</script>', '{{7*7}}', '../../../etc/passwd'],
+    select: ["' OR '1'='1", '<script>alert(1)</script>', '${7*7}', 'option1; DROP TABLE--', '../option']
+  };
+
+  const equivalenceValues: Record<string, any[]> = {
+    email: ['valid@example.com', 'UPPER@CASE.COM', 'with+tag@test.com', 'invalid-email', ''],
+    password: ['ValidPass123!', 'short', 'nouppercase123!', 'NOLOWER123!', ''],
+    tel: ['5551234567', '18005551234', '123', 'abcdefghij', ''],
+    url: ['https://valid.com', 'http://also-valid.org', 'ftp://different-scheme.com', 'not-a-url', ''],
+    date: ['2025-06-15', '2000-01-01', '2099-12-31', 'invalid-date', ''],
+    number: [50, 0, -10, 999999, ''],
+    text: ['normal_text', 'UPPERCASE', '  spaced  ', 'with-special!@#', ''],
+    select: ['option1', 'option2', 'default', '', 'invalid']
+  };
+
+  const strategyMap: Record<string, Record<string, any[]>> = {
+    positive: positiveValues,
+    negative: negativeValues,
+    boundary: boundaryValues,
+    security: securityValues,
+    equivalence: equivalenceValues
+  };
+
+  const values = strategyMap[strategy]?.[fieldType] || strategyMap[strategy]?.['text'] || ['test_value'];
+  return values[index % values.length];
+};
