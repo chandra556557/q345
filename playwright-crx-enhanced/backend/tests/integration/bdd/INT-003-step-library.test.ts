@@ -27,7 +27,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await cleanupTestData(userId);
-  await pool.end();
 });
 
 describe('INT-003: Step Library Integration Flow', () => {

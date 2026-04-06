@@ -41,7 +41,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await cleanupTestData(userId);
-  await pool.end();
 });
 
 describe('INT-002: End-to-End Execution Flow', () => {
@@ -177,6 +176,30 @@ describe('INT-002: End-to-End Execution Flow', () => {
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(res.status).toBe(404);
+    });
+
+    it('should fall back to the custom report when Serenity BDD report is unavailable', async () => {
+      const { rows } = await pool.query(
+        `INSERT INTO "BDDRun" (
+          id, "featureId", "userId", status, "totalSteps", browser, "executionMode",
+          "reportHtml", "reportUrl", "createdAt", "updatedAt"
+        )
+        VALUES (
+          gen_random_uuid()::text, $1, $2, 'passed', 1, 'chromium', 'headless',
+          $3, $4, now(), now()
+        )
+        RETURNING id`,
+        [featureId, userId, '<html><body>report</body></html>', '']
+      );
+      const reportRunId = rows[0].id;
+
+      const res = await request(app)
+        .get(`/api/bdd/runs/${reportRunId}/report?type=serenity`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .redirects(0);
+
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toBe(`/api/bdd/runs/${reportRunId}/report`);
     });
   });
 

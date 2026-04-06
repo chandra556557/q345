@@ -4424,11 +4424,14 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
         # Security Tests
         if 'security' in test_types:
             for field in analysis.input_fields:
-                if field.field_type.value in ['text', 'email', 'password', 'textarea']:
-                    # Generate SQL injection tests
+                ft = field.field_type.value
+
+                # Text-input fields: SQLi + XSS + SSTI
+                if ft in ['text', 'email', 'password', 'textarea', 'search', 'tel', 'url', 'number']:
                     generated_tests['security_tests'].append({
                         "field": field.selector,
                         "field_name": field.field_name,
+                        "field_type": ft,
                         "attack_type": "sql_injection",
                         "payloads": [
                             {"payload": "' OR '1'='1", "description": "Classic SQLi"},
@@ -4437,26 +4440,58 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
                         ],
                         "test_code": f"await page.fill('{field.selector}', \"' OR '1'='1\");\nawait expect(page.locator('.error')).toBeVisible();"
                     })
-                    
-                    # Generate XSS tests
                     generated_tests['security_tests'].append({
                         "field": field.selector,
                         "field_name": field.field_name,
+                        "field_type": ft,
                         "attack_type": "xss_attack",
                         "payloads": [
                             {"payload": "<script>alert('XSS')</script>", "description": "Basic XSS"},
-                            {"payload": "<img src=x onerror=alert('XSS')>", "description": "Image XSS"}
+                            {"payload": "<img src=x onerror=alert('XSS')>", "description": "Image XSS"},
+                            {"payload": "${7*7}", "description": "SSTI probe"},
+                            {"payload": "../../../etc/passwd", "description": "Path traversal"}
                         ],
                         "test_code": f"await page.fill('{field.selector}', \"<script>alert('XSS')</script>\");\nawait expect(page).not.toHaveTitle(/XSS/);"
+                    })
+
+                # Select fields: option injection
+                elif ft == 'select':
+                    generated_tests['security_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": ft,
+                        "attack_type": "option_injection",
+                        "payloads": [
+                            {"payload": "' OR '1'='1", "description": "SQLi via select"},
+                            {"payload": "<script>alert(1)</script>", "description": "XSS via option"},
+                            {"payload": "option1; DROP TABLE--", "description": "Destructive option"}
+                        ],
+                        "test_code": f"await page.selectOption('{field.selector}', \"' OR '1'='1\");\nawait expect(page.locator('.error')).toBeVisible();"
+                    })
+
+                # Checkbox fields: boolean coercion
+                elif ft in ['checkbox', 'radio']:
+                    generated_tests['security_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": ft,
+                        "attack_type": "boolean_coercion",
+                        "payloads": [
+                            {"payload": "true", "description": "Force checked"},
+                            {"payload": "1", "description": "Numeric true coercion"},
+                            {"payload": "false", "description": "Force unchecked"}
+                        ],
+                        "test_code": f"// Verify {field.field_name} state cannot be tampered via JS injection\nawait expect(page.locator('{field.selector}')).toBeEnabled();"
                     })
         
         # Boundary Tests
         if 'boundary' in test_types:
             for field in analysis.input_fields:
-                if field.field_type.value == 'number':
+                ft = field.field_type.value
+
+                if ft == 'number':
                     min_val = field.min_length or 0
                     max_val = field.max_length or 999999.99
-                    
                     generated_tests['boundary_tests'].append({
                         "field": field.selector,
                         "field_name": field.field_name,
@@ -4470,21 +4505,87 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
                             {"value": -100, "type": "negative", "isValid": False, "test_code": f"await page.fill('{field.selector}', '-100');"}
                         ]
                     })
-                
-                elif field.field_type.value in ['text', 'email']:
+
+                elif ft in ['text', 'email', 'search', 'textarea']:
                     min_len = field.min_length or 1
                     max_len = field.max_length or 255
-                    
                     generated_tests['boundary_tests'].append({
                         "field": field.selector,
                         "field_name": field.field_name,
                         "field_type": "string",
                         "test_cases": [
                             {"value": "A" * min_len, "type": "min_length", "isValid": True},
-                            {"value": "A" * (min_len - 1), "type": "below_min", "isValid": False},
+                            {"value": "A" * (min_len - 1) if min_len > 0 else "", "type": "below_min", "isValid": False},
                             {"value": "A" * max_len, "type": "max_length", "isValid": True},
                             {"value": "A" * (max_len + 1), "type": "above_max", "isValid": False},
                             {"value": "", "type": "empty", "isValid": False}
+                        ]
+                    })
+
+                elif ft == 'password':
+                    min_len = field.min_length or 8
+                    max_len = field.max_length or 128
+                    generated_tests['boundary_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": "password",
+                        "test_cases": [
+                            {"value": "a", "type": "min-1 (too short)", "isValid": False},
+                            {"value": "A" * min_len, "type": "min_length", "isValid": True},
+                            {"value": "A" * max_len, "type": "max_length", "isValid": True},
+                            {"value": "A" * (max_len + 1), "type": "above_max", "isValid": False},
+                            {"value": "", "type": "empty", "isValid": False}
+                        ]
+                    })
+
+                elif ft == 'tel':
+                    generated_tests['boundary_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": "tel",
+                        "test_cases": [
+                            {"value": "0", "type": "single_digit", "isValid": False},
+                            {"value": "1234567890", "type": "10_digits", "isValid": True},
+                            {"value": "1" * 15, "type": "15_digits", "isValid": True},
+                            {"value": "1" * 20, "type": "20_digits_overflow", "isValid": False},
+                            {"value": "", "type": "empty", "isValid": False}
+                        ]
+                    })
+
+                elif ft == 'url':
+                    generated_tests['boundary_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": "url",
+                        "test_cases": [
+                            {"value": "https://a.b", "type": "min_url", "isValid": True},
+                            {"value": "https://" + "x" * 200 + ".com", "type": "very_long_url", "isValid": False},
+                            {"value": "", "type": "empty", "isValid": False},
+                            {"value": "not-a-url", "type": "no_scheme", "isValid": False}
+                        ]
+                    })
+
+                elif ft == 'select':
+                    generated_tests['boundary_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": "select",
+                        "test_cases": [
+                            {"value": "", "type": "empty_selection", "isValid": False},
+                            {"value": "option1", "type": "first_option", "isValid": True},
+                            {"value": "last_option", "type": "last_option", "isValid": True},
+                            {"value": "invalid_option", "type": "nonexistent_option", "isValid": False}
+                        ]
+                    })
+
+                elif ft in ['checkbox', 'radio']:
+                    generated_tests['boundary_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": ft,
+                        "test_cases": [
+                            {"value": True, "type": "checked", "isValid": True},
+                            {"value": False, "type": "unchecked", "isValid": True}
                         ]
                     })
         
@@ -4492,9 +4593,10 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
         if 'equivalence' in test_types:
             for field in analysis.input_fields:
                 field_name_lower = field.field_name.lower()
-                
-                # Banking amount fields
-                if 'amount' in field_name_lower or 'transfer' in field_name_lower:
+                ft = field.field_type.value
+
+                # Banking amount fields (number with domain keyword)
+                if ft == 'number' and ('amount' in field_name_lower or 'transfer' in field_name_lower):
                     generated_tests['equivalence_tests'].append({
                         "field": field.selector,
                         "field_name": field.field_name,
@@ -4510,9 +4612,8 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
                             {"value": 1500000, "description": "Exceeds limit", "errorCode": "AMOUNT_EXCEEDS_LIMIT"}
                         ]
                     })
-                
-                # Email fields
-                elif field.field_type.value == 'email':
+
+                elif ft == 'email':
                     generated_tests['equivalence_tests'].append({
                         "field": field.selector,
                         "field_name": field.field_name,
@@ -4526,6 +4627,117 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
                             {"value": "invalid.email", "description": "Missing @", "errorCode": "INVALID_EMAIL_FORMAT"},
                             {"value": "user@", "description": "Missing domain", "errorCode": "INVALID_DOMAIN"},
                             {"value": "@example.com", "description": "Missing local part", "errorCode": "MISSING_LOCAL_PART"}
+                        ]
+                    })
+
+                elif ft == 'password':
+                    generated_tests['equivalence_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "partition_type": "password",
+                        "valid_partitions": [
+                            {"example": "Password123!", "description": "Strong password (upper+lower+digit+special)"},
+                            {"example": "Abcdef1@", "description": "Minimum valid password"}
+                        ],
+                        "invalid_partitions": [
+                            {"value": "password", "description": "No uppercase/digit/special", "errorCode": "WEAK_PASSWORD"},
+                            {"value": "123456", "description": "Digits only", "errorCode": "WEAK_PASSWORD"},
+                            {"value": "", "description": "Empty", "errorCode": "REQUIRED"},
+                            {"value": "abc", "description": "Too short", "errorCode": "MIN_LENGTH"}
+                        ]
+                    })
+
+                elif ft == 'tel':
+                    generated_tests['equivalence_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "partition_type": "tel",
+                        "valid_partitions": [
+                            {"example": "1234567890", "description": "10-digit number"},
+                            {"example": "18005551234", "description": "11-digit with country code"}
+                        ],
+                        "invalid_partitions": [
+                            {"value": "abc", "description": "Non-numeric", "errorCode": "INVALID_FORMAT"},
+                            {"value": "123", "description": "Too short", "errorCode": "MIN_LENGTH"},
+                            {"value": "", "description": "Empty", "errorCode": "REQUIRED"}
+                        ]
+                    })
+
+                elif ft == 'url':
+                    generated_tests['equivalence_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "partition_type": "url",
+                        "valid_partitions": [
+                            {"example": "https://example.com", "description": "HTTPS URL"},
+                            {"example": "http://example.com/path?q=1", "description": "HTTP URL with path and query"}
+                        ],
+                        "invalid_partitions": [
+                            {"value": "not-a-url", "description": "No scheme", "errorCode": "INVALID_URL"},
+                            {"value": "ftp://example.com", "description": "Unsupported scheme", "errorCode": "INVALID_SCHEME"},
+                            {"value": "", "description": "Empty", "errorCode": "REQUIRED"}
+                        ]
+                    })
+
+                elif ft == 'number':
+                    generated_tests['equivalence_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "partition_type": "number",
+                        "valid_partitions": [
+                            {"example": 1, "description": "Positive integer"},
+                            {"example": 100, "description": "Mid-range value"},
+                            {"example": 0, "description": "Zero (if valid)"}
+                        ],
+                        "invalid_partitions": [
+                            {"value": -1, "description": "Negative (if not allowed)", "errorCode": "INVALID_RANGE"},
+                            {"value": "abc", "description": "Non-numeric string", "errorCode": "INVALID_TYPE"},
+                            {"value": "", "description": "Empty", "errorCode": "REQUIRED"}
+                        ]
+                    })
+
+                elif ft == 'select':
+                    generated_tests['equivalence_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "partition_type": "select",
+                        "valid_partitions": [
+                            {"example": "option1", "description": "First valid option"},
+                            {"example": "option2", "description": "Another valid option"}
+                        ],
+                        "invalid_partitions": [
+                            {"value": "", "description": "Empty / no selection", "errorCode": "REQUIRED"},
+                            {"value": "invalid_option", "description": "Non-existent option", "errorCode": "INVALID_OPTION"}
+                        ]
+                    })
+
+                elif ft in ['checkbox', 'radio']:
+                    generated_tests['equivalence_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "partition_type": ft,
+                        "valid_partitions": [
+                            {"example": True, "description": "Checked state"},
+                            {"example": False, "description": "Unchecked state (if optional)"}
+                        ],
+                        "invalid_partitions": [
+                            {"value": False, "description": "Unchecked when required", "errorCode": "REQUIRED"}
+                        ]
+                    })
+
+                elif ft in ['text', 'search', 'textarea']:
+                    generated_tests['equivalence_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "partition_type": "text",
+                        "valid_partitions": [
+                            {"example": "valid_input", "description": "Normal text"},
+                            {"example": "with spaces", "description": "Text with spaces"},
+                            {"example": "UPPERCASE", "description": "All uppercase"}
+                        ],
+                        "invalid_partitions": [
+                            {"value": "", "description": "Empty (if required)", "errorCode": "REQUIRED"},
+                            {"value": "   ", "description": "Whitespace only", "errorCode": "BLANK_INPUT"}
                         ]
                     })
         

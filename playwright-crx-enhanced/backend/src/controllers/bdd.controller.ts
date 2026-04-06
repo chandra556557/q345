@@ -368,12 +368,33 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
   const parsed = bddService.parseFeatureContent(feature.featureContent);
   const totalSteps = parsed.scenarios.reduce((sum, s) => sum + s.steps.length, 0);
 
+  const parsedParallelWorkers = parallelWorkers ? parseInt(parallelWorkers, 10) : 1;
+  const parsedRetryCount = retryCount ? parseInt(retryCount, 10) : 0;
+
   // Create run record
   const { rows: runRows } = await pool.query(
-    `INSERT INTO "BDDRun" (id, "featureId", "scenarioId", "userId", "organizationId", status, "totalSteps", browser, "executionMode", "createdAt", "updatedAt")
-     VALUES (gen_random_uuid()::text, $1, $2, $3, $4, 'pending', $5, $6, $7, now(), now())
+    `INSERT INTO "BDDRun" (
+      id, "featureId", "scenarioId", "userId", "organizationId",
+      status, "totalSteps", browser, "executionMode",
+      tags, "parallelWorkers", "retryCount", "environmentName", "environmentProfile",
+      "createdAt", "updatedAt"
+     )
+     VALUES (
+      gen_random_uuid()::text, $1, $2, $3, $4,
+      'pending', $5, $6, $7,
+      $8, $9, $10, $11, $12,
+      now(), now()
+     )
      RETURNING *`,
-    [id, scenarioId || null, userId, organizationId, totalSteps, browser, executionMode]
+    [
+      id, scenarioId || null, userId, organizationId,
+      totalSteps, browser, executionMode,
+      tags || null,
+      parsedParallelWorkers,
+      parsedRetryCount,
+      environment?.name || null,
+      environment ? JSON.stringify(environment) : null,
+    ]
   );
 
   const run = runRows[0];
@@ -382,8 +403,8 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
   setImmediate(() => {
     bddService.executeFeature(run.id, feature.featureContent, stepDefinitions, {
       browser, executionMode, tags,
-      parallelWorkers: parallelWorkers ? parseInt(parallelWorkers, 10) : undefined,
-      retryCount: retryCount ? parseInt(retryCount, 10) : undefined,
+      parallelWorkers: parsedParallelWorkers || undefined,
+      retryCount: parsedRetryCount || undefined,
       retryDelayMs: retryDelayMs ? parseInt(retryDelayMs, 10) : undefined,
       quarantineFailures: quarantineFailures === true || quarantineFailures === 'true',
       environment: environment || undefined,
@@ -478,13 +499,16 @@ export const getRunReport = asyncHandler(async (req: Request, res: Response) => 
 
   // If requesting the actual Serenity BDD report, redirect to the static file
   if (reportType === 'serenity') {
-    if (!run.serenityReportUrl) {
-      return res.status(404).json({
-        error: 'Serenity BDD report not available. Possible causes: Java not installed, or report generation failed.',
-        fallbackReportUrl: `/api/bdd/runs/${id}/report`,
-      });
+    if (run.serenityReportUrl) {
+      return res.redirect(run.serenityReportUrl);
     }
-    return res.redirect(run.serenityReportUrl);
+    if (run.reportHtml) {
+      return res.redirect(`/api/bdd/runs/${id}/report`);
+    }
+    return res.status(404).json({
+      error: 'Serenity BDD report not available.',
+      fallbackReportUrl: `/api/bdd/runs/${id}/report`,
+    });
   }
 
   // Default: return the custom Serenity-style report (always available)

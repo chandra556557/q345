@@ -14,6 +14,27 @@ const execAsync = promisify(exec);
 
 // Track running child processes by runId for cancellation
 const runningProcesses = new Map<string, ChildProcess>();
+const cancelRequested = new Set<string>();
+
+function killProcessTree(child: ChildProcess): void {
+  const pid = child.pid;
+  if (!pid) return;
+
+  if (process.platform === 'win32') {
+    exec(`taskkill /PID ${pid} /T /F`, () => {});
+    return;
+  }
+
+  try {
+    process.kill(-pid, 'SIGTERM');
+  } catch {
+    try {
+      child.kill('SIGTERM');
+    } catch {
+      return;
+    }
+  }
+}
 
 // Report output directory (same as other reports, served by express.static)
 const BDD_REPORTS_DIR = path.join(process.cwd(), 'playwright-crx-reports');
@@ -1466,7 +1487,23 @@ class BDDService {
     const playwrightExists = fs.existsSync(path.join(SHARED_BDD_DIR, 'node_modules', 'playwright'));
     const serenityExists = fs.existsSync(path.join(SHARED_BDD_DIR, 'node_modules', '@serenity-js', 'core'));
 
-    if (cucumberExists && playwrightExists && serenityExists) {
+    let needsReinstall = false;
+    if (cucumberExists) {
+      try {
+        const pkgPath = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'package.json');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        const major = parseInt(String(pkg.version).split('.')[0], 10);
+        if (!Number.isNaN(major) && major >= 10) {
+          needsReinstall = true;
+          logger.warn(`BDD: Detected @cucumber/cucumber v${pkg.version} (ESM with TLA). Reinstalling to a CJS-compatible version for step defs.`);
+        }
+      } catch {
+        // If unable to read version, proceed to reinstall to be safe
+        needsReinstall = true;
+      }
+    }
+
+    if (!needsReinstall && cucumberExists && playwrightExists && serenityExists) {
       logger.info('BDD: Shared environment already exists on disk, skipping install');
       sharedEnvReady = true;
       return;
@@ -1479,7 +1516,8 @@ class BDDService {
       name: 'bdd-shared',
       private: true,
       dependencies: {
-        '@cucumber/cucumber': '^10.0.0',
+        // Pin to a CommonJS-compatible major to avoid ESM/TLA issues with require()
+        '@cucumber/cucumber': '^9.1.0',
         'playwright': '^1.49.0',
         '@playwright/test': '^1.49.0',
         // Serenity BDD integration (actual Serenity CLI for rich reports)
@@ -1490,6 +1528,10 @@ class BDDService {
     };
     fs.writeFileSync(path.join(SHARED_BDD_DIR, 'package.json'), JSON.stringify(pkgJson, null, 2));
 
+    // Clean node_modules if present to ensure correct versions
+    try {
+      fs.rmSync(path.join(SHARED_BDD_DIR, 'node_modules'), { recursive: true, force: true });
+    } catch { /* ignore */ }
     await execAsync('npm install --omit=dev', { cwd: SHARED_BDD_DIR, timeout: 180000 });
 
     try {
@@ -1710,6 +1752,7 @@ module.exports = {
               SERENITY_OUTPUT_DIR: serenityOutputDir,
             },
             stdio: ['pipe', 'pipe', 'pipe'],
+            detached: process.platform !== 'win32',
             shell: false,
           });
 
@@ -1720,7 +1763,9 @@ module.exports = {
           // Configurable timeout (default 5 minutes via BDD_PROCESS_TIMEOUT_MS)
           const timer = setTimeout(() => {
             if (!settled) {
-              child.kill('SIGTERM');
+              settled = true;
+              runningProcesses.delete(runId);
+              killProcessTree(child);
               reject(new Error(`Run timed out after ${BDD_PROCESS_TIMEOUT_MS / 1000}s`));
             }
           }, BDD_PROCESS_TIMEOUT_MS);
@@ -1743,7 +1788,8 @@ module.exports = {
             settled = true;
             clearTimeout(timer);
             runningProcesses.delete(runId);
-            if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+            if (cancelRequested.has(runId) || signal === 'SIGTERM' || signal === 'SIGKILL') {
+              cancelRequested.delete(runId);
               reject(new Error('Run was cancelled'));
             } else {
               // Pass exit code so callers can detect Cucumber failures
@@ -1755,6 +1801,7 @@ module.exports = {
             settled = true;
             clearTimeout(timer);
             runningProcesses.delete(runId);
+            cancelRequested.delete(runId);
             reject(err);
           });
         });
@@ -2027,14 +2074,16 @@ module.exports = {
           "stepResults" = $7, "errorMsg" = $8, "reportUrl" = $10, "screenshotUrls" = $11,
           "reportHtml" = $12,
           "retryCount" = $13, "retryInfo" = $14,
-          "environmentName" = $15, "environmentProfile" = $16,
-          "serenityReportUrl" = $17,
+          tags = $15, "parallelWorkers" = $16,
+          "environmentName" = $17, "environmentProfile" = $18,
+          "serenityReportUrl" = $19,
           "completedAt" = now(), "updatedAt" = now()
          WHERE id = $9`,
         [overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
           JSON.stringify(stepResults), errorMsg || null, runId, reportResult.reportUrl, JSON.stringify(screenshotUrls),
           reportResult.reportHtml,
           retryCount, JSON.stringify(retryInfo),
+          options.tags || null, parallelWorkers,
           options.environment?.name || null, options.environment ? JSON.stringify(options.environment) : null,
           serenityReportUrl || null]
       );
@@ -2050,6 +2099,16 @@ module.exports = {
 
       logger.info(`BDD Run ${runId}: Completed - ${overallStatus} (${passedSteps}/${totalSteps} passed), screenshots: ${screenshotUrls.length}, report: ${reportResult.reportUrl}`);
     } catch (error: any) {
+      if (error?.message === 'Run was cancelled') {
+        logger.info(`BDD Run ${runId}: Cancelled`);
+        this.emitEvent(runId, 'status', { status: 'cancelled' });
+        await pool.query(
+          `UPDATE "BDDRun" SET status = 'cancelled', "errorMsg" = 'Run was cancelled by user', "completedAt" = now(), "updatedAt" = now() WHERE id = $1`,
+          [runId]
+        );
+        return;
+      }
+
       logger.error(`BDD Run ${runId}: Execution error: ${error.message}`);
       this.emitEvent(runId, 'error', { message: error.message });
 
@@ -3995,7 +4054,8 @@ module.exports = {
 
     const child = runningProcesses.get(runId);
     if (child) {
-      child.kill('SIGTERM');
+      cancelRequested.add(runId);
+      killProcessTree(child);
       runningProcesses.delete(runId);
       return true;
     }

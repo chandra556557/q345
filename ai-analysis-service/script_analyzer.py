@@ -201,17 +201,24 @@ class PlaywrightScriptAnalyzer:
         'unroute': r'page\.unroute\([\'"]([^\'"]+)[\'"]',
         
         # ============ LEGACY LOCATOR METHODS ============
-        'fill': r'(?:page|locator)\.fill\([\'"]([^\'"]+)[\'"],\s*[\'"]([^\'"]*)[\'"]',
-        'type': r'(?:page|locator)\.type\([\'"]([^\'"]+)[\'"],\s*[\'"]([^\'"]*)[\'"]',
+        # Group 1 = opening quote, Group 2 = selector (supports single, double, backtick; handles ) in selectors)
+        'fill': r"(?:page|locator)\.fill\((['\"`])(.*?)\1",
+        'type': r"(?:page|locator)\.type\((['\"`])(.*?)\1",
+        'pressSequentially': r"(?:page|locator)\.pressSequentially\((['\"`])(.*?)\1",
         'click': r'(?:page|locator)\.click\([\'"]([^\'"]+)[\'"]',
         'press': r'(?:page|locator)\.press\([\'"]([^\'"]+)[\'"],\s*[\'"]([^\'"]*)[\'"]',
-        'selectOption': r'(?:page|locator)\.selectOption\([\'"]([^\'"]+)[\'"],\s*[\'"]?([^\'"]*)[\'"]?',
-        'check': r'(?:page|locator)\.check\([\'"]([^\'"]+)[\'"]',
-        'uncheck': r'(?:page|locator)\.uncheck\([\'"]([^\'"]+)[\'"]',
+        'selectOption': r"(?:page|locator)\.selectOption\((['\"`])(.*?)\1",
+        'check': r"(?:page|locator)\.check\((['\"`])(.*?)\1",
+        'uncheck': r"(?:page|locator)\.uncheck\((['\"`])(.*?)\1",
         'focus': r'(?:page|locator)\.focus\([\'"]([^\'"]+)[\'"]',
         'blur': r'(?:page|locator)\.blur\([\'"]([^\'"]+)[\'"]',
         'clear': r'(?:page|locator)\.clear\([\'"]([^\'"]+)[\'"]',
         'tap': r'(?:page|locator)\.tap\([\'"]([^\'"]+)[\'"]',
+        # ============ CHAINED LOCATOR PATTERNS ============
+        # Catches page.locator('sel').fill/selectOption/check — Group 1 = quote, Group 2 = selector
+        'locator_fill': r"\.locator\((['\"`])(.*?)\1\)\.(?:fill|type|pressSequentially)\(",
+        'locator_select': r"\.locator\((['\"`])(.*?)\1\)\.selectOption\(",
+        'locator_check': r"\.locator\((['\"`])(.*?)\1\)\.(?:check|uncheck)\(",
         
         # ============ ENHANCED INTERACTION PATTERNS ============
         'hover': r'(?:page|locator)\.hover\([\'"]?([^\'"\)]+)?[\'"]?\)',
@@ -227,11 +234,13 @@ class PlaywrightScriptAnalyzer:
         'addStyleTag': r'page\.addStyleTag\(',
         
         # ============ MODERN PLAYWRIGHT LOCATORS (getBy*) ============
-        'getByRole': r'(?:page|locator)\.getByRole\([\'"]([^\'"]+)[\'"](?:,\s*\{[^}]*name:\s*[\'"]([^\'"]+)[\'"])?',
-        'getByLabel': r'(?:page|locator)\.getByLabel\([\'"]([^\'"]+)[\'"]',
-        'getByPlaceholder': r'(?:page|locator)\.getByPlaceholder\([\'"]([^\'"]+)[\'"]',
+        # getByRole: Group 1=quote, Group 2=role, Group 3=name-quote, Group 4=name
+        'getByRole': r"(?:page|locator)\.getByRole\((['\"`])(.*?)\1(?:,\s*\{[^}]*name:\s*(['\"`])(.*?)\3)?",
+        # getByLabel/getByPlaceholder/getByTestId: Group 1=quote, Group 2=text
+        'getByLabel': r"(?:page|locator)\.getByLabel\((['\"`])(.*?)\1",
+        'getByPlaceholder': r"(?:page|locator)\.getByPlaceholder\((['\"`])(.*?)\1",
         'getByText': r'(?:page|locator)\.getByText\([\'"]([^\'"]+)[\'"]',
-        'getByTestId': r'(?:page|locator)\.getByTestId\([\'"]([^\'"]+)[\'"]',
+        'getByTestId': r"(?:page|locator)\.getByTestId\((['\"`])(.*?)\1",
         'getByAltText': r'(?:page|locator)\.getByAltText\([\'"]([^\'"]+)[\'"]',
         'getByTitle': r'(?:page|locator)\.getByTitle\([\'"]([^\'"]+)[\'"]',
         
@@ -578,15 +587,16 @@ class PlaywrightScriptAnalyzer:
             # ===== MODERN PLAYWRIGHT LOCATORS (getBy* methods) =====
             
             # getByRole - Most recommended by Playwright
+            # Pattern groups: 1=quote, 2=role, 3=name-quote, 4=name
             role_match = re.search(self.PATTERNS['getByRole'], line_stripped)
             if role_match:
-                role = role_match.group(1)
-                name = role_match.group(2) if len(role_match.groups()) > 1 else None
+                role = role_match.group(2)
+                name = role_match.group(4) if role_match.lastindex and role_match.lastindex >= 4 else None
                 selector = f"getByRole('{role}', {{ name: '{name}' }})"
-                
+
                 # Determine action type
                 action_type = self._detect_action_from_line(line_stripped)
-                if action_type in [ActionType.FILL, ActionType.TYPE, ActionType.CHECK]:
+                if action_type in [ActionType.FILL, ActionType.TYPE, ActionType.CHECK, ActionType.SELECT_OPTION]:
                     field_type, field_name, constraints = self._detect_field_from_role(role, name)
                     input_fields.append(InputField(
                         selector=selector,
@@ -606,14 +616,20 @@ class PlaywrightScriptAnalyzer:
                 ))
             
             # getByLabel
+            # Pattern groups: 1=quote, 2=label text
             label_match = re.search(self.PATTERNS['getByLabel'], line_stripped)
             if label_match:
-                label_text = label_match.group(1)
+                label_text = label_match.group(2)
                 selector = f"getByLabel('{label_text}')"
                 action_type = self._detect_action_from_line(line_stripped)
-                
-                if action_type in [ActionType.FILL, ActionType.TYPE]:
-                    field_type, field_name, constraints = self._detect_field_info(label_text, '')
+
+                if action_type in [ActionType.FILL, ActionType.TYPE, ActionType.SELECT_OPTION, ActionType.CHECK, ActionType.UNCHECK]:
+                    if action_type == ActionType.SELECT_OPTION:
+                        field_type, field_name, constraints = FieldType.SELECT, label_text, {}
+                    elif action_type in [ActionType.CHECK, ActionType.UNCHECK]:
+                        field_type, field_name, constraints = FieldType.CHECKBOX, label_text, {}
+                    else:
+                        field_type, field_name, constraints = self._detect_field_info(label_text, '')
                     input_fields.append(InputField(
                         selector=selector,
                         field_type=field_type,
@@ -630,14 +646,14 @@ class PlaywrightScriptAnalyzer:
                     quality=LocatorQuality.EXCELLENT
                 ))
             
-            # getByPlaceholder
+            # getByPlaceholder — Group 1=quote, Group 2=placeholder text
             placeholder_match = re.search(self.PATTERNS['getByPlaceholder'], line_stripped)
             if placeholder_match:
-                placeholder = placeholder_match.group(1)
+                placeholder = placeholder_match.group(2)
                 selector = f"getByPlaceholder('{placeholder}')"
                 action_type = self._detect_action_from_line(line_stripped)
-                
-                if action_type in [ActionType.FILL, ActionType.TYPE]:
+
+                if action_type in [ActionType.FILL, ActionType.TYPE, ActionType.SELECT_OPTION, ActionType.CHECK]:
                     field_type, field_name, constraints = self._detect_field_info(placeholder, '')
                     input_fields.append(InputField(
                         selector=selector,
@@ -655,15 +671,20 @@ class PlaywrightScriptAnalyzer:
                     quality=LocatorQuality.EXCELLENT
                 ))
             
-            # getByTestId
+            # getByTestId — Group 1=quote, Group 2=test id
             testid_match = re.search(self.PATTERNS['getByTestId'], line_stripped)
             if testid_match:
-                test_id = testid_match.group(1)
+                test_id = testid_match.group(2)
                 selector = f"getByTestId('{test_id}')"
                 action_type = self._detect_action_from_line(line_stripped)
-                
-                if action_type in [ActionType.FILL, ActionType.TYPE, ActionType.CHECK]:
-                    field_type, field_name, constraints = self._detect_field_info(test_id, '')
+
+                if action_type in [ActionType.FILL, ActionType.TYPE, ActionType.CHECK, ActionType.SELECT_OPTION]:
+                    if action_type == ActionType.SELECT_OPTION:
+                        field_type, field_name, constraints = FieldType.SELECT, test_id, {}
+                    elif action_type == ActionType.CHECK:
+                        field_type, field_name, constraints = FieldType.CHECKBOX, test_id, {}
+                    else:
+                        field_type, field_name, constraints = self._detect_field_info(test_id, '')
                     input_fields.append(InputField(
                         selector=selector,
                         field_type=field_type,
@@ -692,62 +713,52 @@ class PlaywrightScriptAnalyzer:
                 ))
 
             # ===== LEGACY LOCATOR METHODS =====
-            
-            # Extract fill actions
+            # Patterns now use group(1)=quote, group(2)=selector via backreference
+
+            # Extract fill / type / pressSequentially actions
             fill_match = re.search(self.PATTERNS['fill'], line_stripped)
-            if fill_match:
-                selector = fill_match.group(1)
-                value = fill_match.group(2) if len(fill_match.groups()) > 1 else ""
-                
-                field_type, field_name, constraints = self._detect_field_info(selector, value)
-                
+            type_match = re.search(self.PATTERNS['type'], line_stripped) if not fill_match else None
+            press_seq_match = re.search(self.PATTERNS['pressSequentially'], line_stripped) if not fill_match and not type_match else None
+            active_fill = fill_match or type_match or press_seq_match
+            if active_fill:
+                selector = active_fill.group(2)
+                field_type, field_name, constraints = self._detect_field_info(selector, '')
                 input_fields.append(InputField(
                     selector=selector,
                     field_type=field_type,
                     field_name=field_name,
                     action=ActionType.FILL,
                     line_number=line_num,
-                    example_value=value,
                     constraints=constraints
                 ))
-
-                # Assess locator quality
                 quality = self._assess_locator_quality(selector)
                 actions.append(ScriptAction(
                     action_type=ActionType.FILL,
                     target=selector,
-                    value=value,
                     line_number=line_num,
                     quality=quality
                 ))
 
-            # Extract type actions
-            type_match = re.search(self.PATTERNS['type'], line_stripped)
-            if type_match:
-                selector = type_match.group(1)
-                value = type_match.group(2) if len(type_match.groups()) > 1 else ""
-                
-                field_type, field_name, constraints = self._detect_field_info(selector, value)
-                
+            # Extract chained locator fill: page.locator('sel').fill/type/pressSequentially(...)
+            locator_fill_match = re.search(self.PATTERNS['locator_fill'], line_stripped)
+            if locator_fill_match:
+                selector = locator_fill_match.group(2)
+                field_type, field_name, constraints = self._detect_field_info(selector, '')
                 input_fields.append(InputField(
                     selector=selector,
                     field_type=field_type,
                     field_name=field_name,
-                    action=ActionType.TYPE,
+                    action=ActionType.FILL,
                     line_number=line_num,
-                    example_value=value,
                     constraints=constraints
                 ))
-                
-                quality = self._assess_locator_quality(selector)
                 actions.append(ScriptAction(
-                    action_type=ActionType.TYPE,
+                    action_type=ActionType.FILL,
                     target=selector,
-                    value=value,
                     line_number=line_num,
-                    quality=quality
+                    quality=self._assess_locator_quality(selector)
                 ))
-            
+
             # Extract press actions (for keyboard events)
             press_match = re.search(self.PATTERNS['press'], line_stripped)
             if press_match:
@@ -772,33 +783,46 @@ class PlaywrightScriptAnalyzer:
                     quality=self._assess_locator_quality(selector)
                 ))
 
-            # Extract selectOption actions
+            # Extract selectOption actions — group(1)=quote, group(2)=selector
             select_match = re.search(self.PATTERNS['selectOption'], line_stripped)
             if select_match:
-                selector = select_match.group(1)
-                value = select_match.group(2) if len(select_match.groups()) > 1 else ""
-                
+                selector = select_match.group(2)
                 input_fields.append(InputField(
                     selector=selector,
                     field_type=FieldType.SELECT,
                     field_name=self._extract_field_name(selector),
                     action=ActionType.SELECT_OPTION,
-                    line_number=line_num,
-                    example_value=value
+                    line_number=line_num
                 ))
-                
                 actions.append(ScriptAction(
                     action_type=ActionType.SELECT_OPTION,
                     target=selector,
-                    value=value,
                     line_number=line_num,
                     quality=self._assess_locator_quality(selector)
                 ))
 
-            # Extract check/uncheck actions
+            # Extract chained locator selectOption: page.locator('sel').selectOption(...)
+            locator_select_match = re.search(self.PATTERNS['locator_select'], line_stripped)
+            if locator_select_match:
+                selector = locator_select_match.group(2)
+                input_fields.append(InputField(
+                    selector=selector,
+                    field_type=FieldType.SELECT,
+                    field_name=self._extract_field_name(selector),
+                    action=ActionType.SELECT_OPTION,
+                    line_number=line_num
+                ))
+                actions.append(ScriptAction(
+                    action_type=ActionType.SELECT_OPTION,
+                    target=selector,
+                    line_number=line_num,
+                    quality=self._assess_locator_quality(selector)
+                ))
+
+            # Extract check/uncheck actions — group(1)=quote, group(2)=selector
             check_match = re.search(self.PATTERNS['check'], line_stripped)
             if check_match:
-                selector = check_match.group(1)
+                selector = check_match.group(2)
                 input_fields.append(InputField(
                     selector=selector,
                     field_type=FieldType.CHECKBOX,
@@ -806,7 +830,24 @@ class PlaywrightScriptAnalyzer:
                     action=ActionType.CHECK,
                     line_number=line_num
                 ))
-                
+                actions.append(ScriptAction(
+                    action_type=ActionType.CHECK,
+                    target=selector,
+                    line_number=line_num,
+                    quality=self._assess_locator_quality(selector)
+                ))
+
+            # Extract chained locator check/uncheck: page.locator('sel').check(...)
+            locator_check_match = re.search(self.PATTERNS['locator_check'], line_stripped)
+            if locator_check_match:
+                selector = locator_check_match.group(2)
+                input_fields.append(InputField(
+                    selector=selector,
+                    field_type=FieldType.CHECKBOX,
+                    field_name=self._extract_field_name(selector),
+                    action=ActionType.CHECK,
+                    line_number=line_num
+                ))
                 actions.append(ScriptAction(
                     action_type=ActionType.CHECK,
                     target=selector,
@@ -1200,6 +1241,8 @@ class PlaywrightScriptAnalyzer:
             return ActionType.FILL
         elif '.type(' in line:
             return ActionType.TYPE
+        elif '.pressSequentially(' in line:
+            return ActionType.FILL
         elif '.check(' in line:
             return ActionType.CHECK
         elif '.uncheck(' in line:
@@ -1274,9 +1317,9 @@ class PlaywrightScriptAnalyzer:
             else:
                 return FieldType.TEXT, name or 'Text Input', {}
         
-        elif role_lower == 'checkbox':
+        elif role_lower in ['checkbox', 'switch']:
             return FieldType.CHECKBOX, name or 'Checkbox', {}
-        
+
         elif role_lower == 'radio':
             return FieldType.RADIO, name or 'Radio', {}
         

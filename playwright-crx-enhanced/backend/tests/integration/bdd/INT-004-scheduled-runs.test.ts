@@ -8,7 +8,6 @@
 
 import request from 'supertest';
 import { app } from '../../../src/index';
-import pool from '../../../src/db';
 import {
   ensureTestUser,
   generateTestToken,
@@ -41,7 +40,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await cleanupTestData(userId);
-  await pool.end();
 });
 
 describe('INT-004: Scheduled Runs Integration Flow', () => {

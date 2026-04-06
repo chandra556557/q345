@@ -24,7 +24,6 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await pool.end();
 });
 
 describe('INT-006: Test Case Conversion Integration Flow', () => {

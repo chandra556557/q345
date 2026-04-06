@@ -26,7 +26,6 @@ import workflowRoutes from './routes/workflow.routes';
 import pipelineRoutes from './routes/pipeline.routes';
 import testingStrategiesRoutes from './routes/testing-strategies.routes';
 import visualRegressionRoutes from './routes/visual-regression.routes';
-import databaseTestingRoutes from './routes/database-testing.routes';
 import organizationRoutes from './routes/organization.routes';
 import queueRoutes from './routes/queue.routes';
 // DISABLED: Data-driven testing is now integrated into test data management
@@ -203,7 +202,6 @@ app.use('/api/workflow', workflowRoutes);
 app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/testing-strategies', testingStrategiesRoutes);
 app.use('/api/visual-regression', visualRegressionRoutes);
-app.use('/api/database-testing', databaseTestingRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/queue', queueRoutes);
 // DISABLED: app.use('/api/data-driven-runs', dataDrivenRoutes);
@@ -214,49 +212,57 @@ app.use('/api/python-api', pythonApiRoutes);
 app.use('/api/epic-pipeline', epicPipelineRoutes);
 // DISABLED: app.use('/api/data-driven-pipeline', dataDrivenPipelineRoutes);
 
+(async () => {
+  if (NODE_ENV === 'test') return;
+  const databaseTestingRoutes = (await import('./routes/database-testing.routes')).default;
+  app.use('/api/database-testing', databaseTestingRoutes);
+})();
+
 app.use((_req, res) => { res.status(404).json({ error: 'Route not found' }); });
 app.use(errorHandler);
 
-httpServer.listen(PORT, async () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`📡 Environment: ${NODE_ENV}`);
-  logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
+if (NODE_ENV !== 'test') {
+  httpServer.listen(PORT, async () => {
+    logger.info(`🚀 Server running on port ${PORT}`);
+    logger.info(`📡 Environment: ${NODE_ENV}`);
+    logger.info(`🏥 Health check: http://localhost:${PORT}/health`);
 
-  
-  // Initialize Queue Service
-  if (process.env.ENABLE_QUEUE === 'true') {
-    try {
-      await queueService.initialize();
-      logger.info(`📦 Queue Service: Enabled`);
-    } catch (error: any) {
-      logger.error(`📦 Queue Service: Failed to initialize - ${error.message}`);
+    
+    // Initialize Queue Service
+    if (process.env.ENABLE_QUEUE === 'true') {
+      try {
+        await queueService.initialize();
+        logger.info(`📦 Queue Service: Enabled`);
+      } catch (error: any) {
+        logger.error(`📦 Queue Service: Failed to initialize - ${error.message}`);
+      }
+    } else {
+      logger.info(`📦 Queue Service: Disabled - Set ENABLE_QUEUE=true to enable`);
     }
-  } else {
-    logger.info(`📦 Queue Service: Disabled - Set ENABLE_QUEUE=true to enable`);
-  }
-  
-  // Initialize Worker Pool
-  if (process.env.ENABLE_WORKER_POOL === 'true') {
-    try {
-      await workerPoolService.initialize();
-      logger.info(`👷 Worker Pool: Enabled`);
-    } catch (error: any) {
-      logger.error(`👷 Worker Pool: Failed to initialize - ${error.message}`);
+    
+    // Initialize Worker Pool
+    if (process.env.ENABLE_WORKER_POOL === 'true') {
+      try {
+        await workerPoolService.initialize();
+        logger.info(`👷 Worker Pool: Enabled`);
+      } catch (error: any) {
+        logger.error(`👷 Worker Pool: Failed to initialize - ${error.message}`);
+      }
+    } else {
+      logger.info(`👷 Worker Pool: Disabled - Set ENABLE_WORKER_POOL=true to enable`);
     }
-  } else {
-    logger.info(`👷 Worker Pool: Disabled - Set ENABLE_WORKER_POOL=true to enable`);
-  }
 
-  // Pre-warm BDD/Cucumber environment in background (non-blocking)
-  bddService.warmup().catch((err: any) => {
-    logger.warn(`BDD warmup failed (non-fatal): ${err?.message || err}`);
-  });
+    // Pre-warm BDD/Cucumber environment in background (non-blocking)
+    bddService.warmup().catch((err: any) => {
+      logger.warn(`BDD warmup failed (non-fatal): ${err?.message || err}`);
+    });
 
-  // Initialize BDD scheduled runs
-  bddService.initializeSchedules().catch((err: any) => {
-    logger.warn(`BDD schedule initialization failed (non-fatal): ${err?.message || err}`);
+    // Initialize BDD scheduled runs
+    bddService.initializeSchedules().catch((err: any) => {
+      logger.warn(`BDD schedule initialization failed (non-fatal): ${err?.message || err}`);
+    });
   });
-});
+}
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {

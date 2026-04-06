@@ -550,26 +550,64 @@ const extractFieldsFromScript = (scriptCode: string): Array<{ selector?: string;
   const fields: Array<{ selector?: string; fieldName?: string; fieldType: string; action: string }> = [];
 
   const pushField = (f: { selector?: string; fieldName?: string; fieldType?: string; action: string }) => {
-    const fieldType = inferFieldType(f.fieldName || f.selector || '');
+    const fieldType = f.fieldType || inferFieldType(f.fieldName || f.selector || '');
     fields.push({ selector: f.selector, fieldName: f.fieldName, fieldType, action: f.action });
   };
 
-  const byLabelRegex = /getByLabel\((['"])\s*([^)]+?)\s*\1\)/g;
-  const byPlaceholderRegex = /getByPlaceholder\((['"])\s*([^)]+?)\s*\1\)/g;
-  const byRoleTextboxRegex = /getByRole\(\s*['"]textbox['"]\s*,\s*\{[^}]*name:\s*(['"])\s*([^'"}]+)\s*\1[^}]*\}\s*\)/g;
-  const fillRegex = /page\.(?:fill|type)\(\s*(['"])\s*([^)]+?)\s*\1\s*,/g;
-  const locatorFillRegex = /locator\(\s*(['"])\s*([^)]+?)\s*\1\s*\)\.(?:fill|type)\(/g;
-  const selectOptionRegex = /selectOption\(\s*(['"])\s*([^)]+?)\s*\1\s*,/g;
-  const checkRegex = /check\(\s*(['"])\s*([^)]+?)\s*\1\s*\)/g;
-
   let m: RegExpExecArray | null;
+
+  // getByLabel / getByPlaceholder / getByTestId — single, double, or backtick quotes
+  // Group 1: quote char, Group 2: field name
+  const byLabelRegex = /getByLabel\(\s*(['"`])(.*?)\1\s*\)/g;
+  const byPlaceholderRegex = /getByPlaceholder\(\s*(['"`])(.*?)\1\s*\)/g;
+  const byTestIdRegex = /getByTestId\(\s*(['"`])(.*?)\1\s*\)/g;
+
   while ((m = byLabelRegex.exec(scriptCode))) pushField({ fieldName: m[2], action: 'fill' });
   while ((m = byPlaceholderRegex.exec(scriptCode))) pushField({ fieldName: m[2], action: 'fill' });
-  while ((m = byRoleTextboxRegex.exec(scriptCode))) pushField({ fieldName: m[2], action: 'fill' });
-  while ((m = fillRegex.exec(scriptCode))) pushField({ selector: m[2], action: 'fill' });
+  while ((m = byTestIdRegex.exec(scriptCode))) pushField({ fieldName: m[2], action: 'fill' });
+
+  // getByRole with name option — Group 2: role, Group 4: field name
+  // Text-input roles: textbox, searchbox, spinbutton
+  // Select roles: combobox
+  // Checkbox roles: checkbox, radio, switch
+  const byRoleRegex = /getByRole\(\s*(['"`])(textbox|combobox|searchbox|spinbutton|checkbox|radio|switch)\1\s*,\s*\{[^}]*name:\s*(['"`])([^'"`]*)\3[^}]*\}\s*\)/g;
+  while ((m = byRoleRegex.exec(scriptCode))) {
+    const role = m[2];
+    const name = m[4];
+    if (role === 'combobox') {
+      pushField({ fieldName: name, fieldType: 'select', action: 'selectOption' });
+    } else if (role === 'checkbox' || role === 'radio' || role === 'switch') {
+      pushField({ fieldName: name, fieldType: 'checkbox', action: 'check' });
+    } else {
+      // textbox, searchbox, spinbutton
+      pushField({ fieldName: name, fieldType: role === 'spinbutton' ? 'number' : undefined, action: 'fill' });
+    }
+  }
+
+  // page.fill / page.type / page.pressSequentially — Group 1: quote, Group 2: selector
+  // Uses .*? (lazy) instead of [^)]+? to correctly handle selectors containing ")"
+  const pageFillRegex = /page\.(?:fill|type|pressSequentially)\(\s*(['"`])\s*(.*?)\s*\1\s*,/g;
+  while ((m = pageFillRegex.exec(scriptCode))) pushField({ selector: m[2], action: 'fill' });
+
+  // locator('...').fill/type/pressSequentially — Group 1: quote, Group 2: selector
+  const locatorFillRegex = /locator\(\s*(['"`])\s*(.*?)\s*\1\s*\)\.(?:fill|type|pressSequentially)\(/g;
   while ((m = locatorFillRegex.exec(scriptCode))) pushField({ selector: m[2], action: 'fill' });
-  while ((m = selectOptionRegex.exec(scriptCode))) fields.push({ selector: m[2], fieldName: undefined, fieldType: 'select', action: 'selectOption' });
-  while ((m = checkRegex.exec(scriptCode))) fields.push({ selector: m[2], fieldName: undefined, fieldType: 'checkbox', action: 'check' });
+
+  // locator('...').selectOption — Group 1: quote, Group 2: selector
+  const locatorSelectRegex = /locator\(\s*(['"`])\s*(.*?)\s*\1\s*\)\.selectOption\(/g;
+  while ((m = locatorSelectRegex.exec(scriptCode))) fields.push({ selector: m[2], fieldName: undefined, fieldType: 'select', action: 'selectOption' });
+
+  // locator('...').check / .uncheck — Group 1: quote, Group 2: selector
+  const locatorCheckRegex = /locator\(\s*(['"`])\s*(.*?)\s*\1\s*\)\.(?:check|uncheck)\(/g;
+  while ((m = locatorCheckRegex.exec(scriptCode))) fields.push({ selector: m[2], fieldName: undefined, fieldType: 'checkbox', action: 'check' });
+
+  // page.selectOption('selector', ...) — Group 1: quote, Group 2: selector
+  const pageSelectRegex = /page\.selectOption\(\s*(['"`])\s*(.*?)\s*\1\s*,/g;
+  while ((m = pageSelectRegex.exec(scriptCode))) fields.push({ selector: m[2], fieldName: undefined, fieldType: 'select', action: 'selectOption' });
+
+  // page.check / page.uncheck('selector') — Group 1: quote, Group 2: selector
+  const pageCheckRegex = /page\.(?:check|uncheck)\(\s*(['"`])\s*(.*?)\s*\1\s*\)/g;
+  while ((m = pageCheckRegex.exec(scriptCode))) fields.push({ selector: m[2], fieldName: undefined, fieldType: 'checkbox', action: 'check' });
 
   // Deduplicate by selector/fieldName
   const seen = new Set<string>();
@@ -624,22 +662,43 @@ const generateDataForField = (field: { selector?: string; fieldName?: string; fi
     text: ['', 'a', 'a'.repeat(254), 'a'.repeat(255)],
     password: ['a', 'Pass123!', 'a'.repeat(128)],
     email: ['a@b.c', 'x@y.z'.repeat(30)],
-    tel: ['0', '1'.repeat(20)]
+    tel: ['0', '1'.repeat(20)],
+    select: ['', 'option1', 'last_option'],
+    checkbox: [true, false]
   };
 
   const equivalenceSamples: Record<string, any[]> = {
     email: ['valid@example.com', 'invalid-email'],
     tel: ['9876543210', 'phone-number'],
     number: [10, -5],
-    text: ['normal', '']
+    text: ['normal', ''],
+    select: ['option1', 'option2', '', 'invalid_option'],
+    checkbox: [true, false]
   };
 
   const securityPayloads = [
     "' OR '1'='1",
     "admin'--",
     "<script>alert('xss')</script>",
-    "'; DROP TABLE users--"
+    "'; DROP TABLE users--",
+    "${7*7}",
+    "../../../etc/passwd"
   ];
+
+  const securitySelectPayloads = [
+    "' OR '1'='1",
+    "<script>alert(1)</script>",
+    "option1; DROP TABLE--"
+  ];
+
+  let security: Array<Record<string, any>>;
+  if (type === 'select') {
+    security = securitySelectPayloads.map(p => ({ [name]: p }));
+  } else if (type === 'checkbox') {
+    security = [{ [name]: "' OR '1'='1" }, { [name]: true }, { [name]: false }];
+  } else {
+    security = securityPayloads.map(p => ({ [name]: p }));
+  }
 
   return {
     field: name,
@@ -648,7 +707,7 @@ const generateDataForField = (field: { selector?: string; fieldName?: string; fi
     negative: (negativeSamples[type] ?? negativeSamples.text).map(v => ({ [name]: v })),
     boundary: (boundarySamples[type] ?? []).map(v => ({ [name]: v })),
     equivalence: (equivalenceSamples[type] ?? []).map(v => ({ [name]: v })),
-    security: ['text', 'password', 'textarea'].includes(type) ? securityPayloads.map(p => ({ [name]: p })) : []
+    security
   };
 };
 
@@ -658,7 +717,8 @@ const generateDataForField = (field: { selector?: string; fieldName?: string; fi
 export const generateFromScriptTestData = async (req: Request, res: Response) => {
   try {
     const {
-      scriptCode,
+      scriptId,
+      scriptCode: rawScriptCode,
       testTypes = ['positive', 'negative', 'boundary', 'equivalence', 'security'],
       count = 10,
       counts,
@@ -671,8 +731,23 @@ export const generateFromScriptTestData = async (req: Request, res: Response) =>
       save = false,
       suiteId
     } = req.body || {};
+
+    let scriptCode = rawScriptCode;
+
+    if (!scriptCode && scriptId) {
+      const userId = (req as any).user?.userId;
+      const { rows } = await pool.query(
+        `SELECT code FROM "Script" WHERE id = $1 AND "userId" = $2`,
+        [scriptId, userId]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Script not found' });
+      }
+      scriptCode = rows[0].code;
+    }
+
     if (!scriptCode || typeof scriptCode !== 'string') {
-      return res.status(400).json({ success: false, error: 'scriptCode is required' });
+      return res.status(400).json({ success: false, error: 'Either scriptCode or scriptId is required' });
     }
 
     const pythonUrl = (process.env.PYTHON_API_URL || 'http://localhost:8000').replace(/\/+$/, '') + '/api/ai-analysis/generate-tests-from-script';
@@ -904,7 +979,7 @@ export const analyzeFieldBindings = async (req: Request, res: Response) => {
           bestMatch = { field: df.fieldName || df.selector || ph.name, confidence: 'exact' };
           break;
         }
-        if (fieldName.includes(phLower) || phLower.includes(fieldName)) {
+        if (bestMatch.confidence === 'none' && (fieldName.includes(phLower) || phLower.includes(fieldName))) {
           bestMatch = { field: df.fieldName || df.selector || ph.name, confidence: 'fuzzy' };
         }
       }
@@ -972,8 +1047,7 @@ export const previewFieldBindingSubstitution = async (req: Request, res: Respons
       if (value === undefined || value === null) continue;
 
       const stringValue = String(value);
-      const escaped = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp(`\\{\\{${escaped}\\}\\}`, 'g');
+      const pattern = new RegExp(`\\{\\{${escapeRegex(placeholder)}\\}\\}`, 'g');
       result = result.replace(pattern, stringValue);
 
       substitutions.push({ placeholder, dataField: dataField as string, value: stringValue });
@@ -997,22 +1071,28 @@ export const previewFieldBindingSubstitution = async (req: Request, res: Respons
 export const generateWithFieldBindings = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.userId;
-    const { scriptId, strategies = ['positive'], countPerStrategy = 5, suiteId, save = false } = req.body;
+    const { scriptId, scriptCode: inlineCode, strategies = ['positive'], countPerStrategy = 5, suiteId, save = false } = req.body;
 
-    if (!scriptId) {
-      return res.status(400).json({ success: false, error: 'scriptId is required' });
+    if (!scriptId && !inlineCode) {
+      return res.status(400).json({ success: false, error: 'Either scriptId or scriptCode is required' });
     }
 
-    const { rows: scriptRows } = await pool.query(
-      `SELECT code, name FROM "Script" WHERE id = $1 AND "userId" = $2`,
-      [scriptId, userId]
-    );
-    if (scriptRows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Script not found' });
-    }
+    let code: string;
+    let scriptName = 'unknown';
 
-    const code = scriptRows[0].code;
-    const scriptName = scriptRows[0].name;
+    if (scriptId) {
+      const { rows: scriptRows } = await pool.query(
+        `SELECT code, name FROM "Script" WHERE id = $1 AND "userId" = $2`,
+        [scriptId, userId]
+      );
+      if (scriptRows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Script not found' });
+      }
+      code = scriptRows[0].code;
+      scriptName = scriptRows[0].name;
+    } else {
+      code = inlineCode;
+    }
 
     const placeholders = extractPlaceholdersFromCode(code);
     const detectedFields = extractFieldsFromScript(code);
@@ -1022,15 +1102,18 @@ export const generateWithFieldBindings = async (req: Request, res: Response) => 
     for (const ph of placeholders) {
       const phLower = ph.name.toLowerCase();
       let matched = ph.name;
+      let foundFuzzy = false;
 
       for (const df of detectedFields) {
         const fieldName = (df.fieldName || df.selector || '').toLowerCase();
         if (fieldName === phLower || fieldName.replace(/[\s_-]/g, '') === phLower.replace(/[\s_-]/g, '')) {
           matched = df.fieldName || df.selector || ph.name;
+          foundFuzzy = false;
           break;
         }
-        if (fieldName.includes(phLower) || phLower.includes(fieldName)) {
+        if (!foundFuzzy && (fieldName.includes(phLower) || phLower.includes(fieldName))) {
           matched = df.fieldName || df.selector || ph.name;
+          foundFuzzy = true;
         }
       }
       fieldBindings[ph.name] = matched;
@@ -1086,6 +1169,8 @@ export const generateWithFieldBindings = async (req: Request, res: Response) => 
 // ============================================
 // FIELD BINDING HELPERS
 // ============================================
+
+const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Extract {{placeholder}} patterns from script code

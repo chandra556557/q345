@@ -9,7 +9,7 @@ const config: Config = {
     '^.+\\.ts$': 'ts-jest',
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
-  setupFilesAfterSetup: [],
+  setupFilesAfterEnv: [],
   testTimeout: 30000,
   verbose: true,
 };

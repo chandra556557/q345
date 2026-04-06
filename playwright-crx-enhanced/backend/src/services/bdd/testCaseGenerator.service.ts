@@ -473,7 +473,7 @@ Be specific with test data values. Include realistic boundary values. For securi
   // Negative test cases
   // ---------------------------------------------------------------------------
 
-  private generateNegativeCases(story: JiraStory, ctx: StoryContext, max: number): GeneratedTestCase[] {
+  private generateNegativeCases(_story: JiraStory, ctx: StoryContext, max: number): GeneratedTestCase[] {
     const cases: GeneratedTestCase[] = [];
     let caseNum = 0;
 
@@ -580,7 +580,7 @@ Be specific with test data values. Include realistic boundary values. For securi
   // Edge cases
   // ---------------------------------------------------------------------------
 
-  private generateEdgeCases(story: JiraStory, ctx: StoryContext, max: number): GeneratedTestCase[] {
+  private generateEdgeCases(_story: JiraStory, ctx: StoryContext, max: number): GeneratedTestCase[] {
     const cases: GeneratedTestCase[] = [];
     let caseNum = 0;
 
@@ -707,7 +707,7 @@ Be specific with test data values. Include realistic boundary values. For securi
   // Boundary value analysis
   // ---------------------------------------------------------------------------
 
-  private generateBoundaryCases(story: JiraStory, ctx: StoryContext, max: number): GeneratedTestCase[] {
+  private generateBoundaryCases(_story: JiraStory, ctx: StoryContext, max: number): GeneratedTestCase[] {
     const cases: GeneratedTestCase[] = [];
     let caseNum = 0;
 
@@ -826,7 +826,7 @@ Be specific with test data values. Include realistic boundary values. For securi
   // ---------------------------------------------------------------------------
 
   private generateSecurityCases(
-    story: JiraStory,
+    _story: JiraStory,
     ctx: StoryContext,
     max: number,
     options: GenerationOptions

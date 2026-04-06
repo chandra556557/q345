@@ -13,7 +13,6 @@ import {
   ensureTestUser,
   generateTestToken,
   cleanupTestData,
-  cleanupTestUser,
   SAMPLE_FEATURE_CONTENT,
   SAMPLE_FEATURE_CONTENT_OUTLINE,
   UPDATED_FEATURE_CONTENT,
@@ -30,7 +29,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await cleanupTestData(userId);
-  await pool.end();
 });
 
 describe('INT-001: End-to-End Feature Creation Flow', () => {

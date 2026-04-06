@@ -7,7 +7,6 @@
  * Supports: Jira Cloud (REST API v3) and Jira Server (REST API v2)
  */
 
-import { logger } from '../../utils/logger';
 import pool from '../../db';
 
 // ---------------------------------------------------------------------------
@@ -268,7 +267,7 @@ export class JiraService {
     };
   }
 
-  private async mapToStory(config: JiraConfig, issue: JiraIssue): Promise<JiraStory> {
+  private async mapToStory(_config: JiraConfig, issue: JiraIssue): Promise<JiraStory> {
     const fields = issue.fields;
     const description = this.extractDescription(fields.description);
 

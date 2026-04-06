@@ -64,15 +64,20 @@ const ssl =
     ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
     : undefined;
 
+const DB_MAX_CLIENTS = parseInt(process.env.DB_MAX_CLIENTS || '10', 10);
+const DB_MIN_CLIENTS = parseInt(process.env.DB_MIN_CLIENTS || '2', 10);
+const DB_IDLE_TIMEOUT = parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10);
+const DB_QUERY_TIMEOUT = parseInt(process.env.DB_QUERY_TIMEOUT || '30000', 10);
+const DB_CONNECTION_TIMEOUT = parseInt(process.env.DB_CONNECTION_TIMEOUT || '5000', 10);
+
 const pool = new Pool({
   connectionString,
   ssl,
-  // Fix for PostgreSQL case sensitivity issues
-  // Force all identifiers to be quoted to preserve case
-  // This ensures "createdAt" is treated as a proper identifier, not "createdat"
-  query_timeout: 30000,
-  connectionTimeoutMillis: 2000,
-  idleTimeoutMillis: 30000,
+  max: DB_MAX_CLIENTS,
+  min: DB_MIN_CLIENTS,
+  idleTimeoutMillis: DB_IDLE_TIMEOUT,
+  query_timeout: DB_QUERY_TIMEOUT,
+  connectionTimeoutMillis: DB_CONNECTION_TIMEOUT,
 });
 
 export default pool;

@@ -12,7 +12,6 @@ import pool from '../../../src/db';
 import {
   ensureTestUser,
   generateTestToken,
-  cleanupTestData,
 } from './testHelper';
 
 let authToken: string;
@@ -31,7 +30,6 @@ afterAll(async () => {
   await pool.query(`DELETE FROM "ScreenplayTask" WHERE "userId" = $1`, [userId]);
   await pool.query(`DELETE FROM "ScreenplayAction" WHERE "userId" = $1`, [userId]);
   await pool.query(`DELETE FROM "ScreenplayQuestion" WHERE "userId" = $1`, [userId]);
-  await pool.end();
 });
 
 describe('INT-005: Screenplay Pattern Integration Flow', () => {

@@ -19,9 +19,7 @@ import {
   GenerationOptions,
   TestCaseGenerationResult,
   TestCaseCategory,
-  GeneratedTestCase,
 } from './testCaseGenerator.service';
-import { testCaseConverter } from './testCaseConverter.service';
 import { bddService } from './bdd.service';
 import { EventEmitter } from 'events';
 
@@ -346,7 +344,7 @@ export class WorkflowOrchestratorService {
     for (const feature of run.gherkinFeatures!) {
       // Parse the Gherkin and generate Playwright code
       const parsed = bddService.parseFeatureContent(feature.featureContent);
-      const code = bddService.generatePlaywrightCode(parsed, feature.featureContent);
+      const code = bddService.generatePlaywrightCode(parsed, 'typescript');
 
       playwrightCode.push({
         storyKey: feature.storyKey,
@@ -377,20 +375,58 @@ export class WorkflowOrchestratorService {
       if (!feature.featureId) continue;
 
       try {
-        const bddRun = await bddService.executeFeature(
-          feature.featureId,
-          run.userId,
-          run.organizationId,
+        const { rows: featureRows } = await pool.query(
+          `SELECT id, "featureContent" FROM "BDDFeature" WHERE id = $1 AND "userId" = $2`,
+          [feature.featureId, run.userId]
+        );
+        if (featureRows.length === 0) {
+          throw new Error('Feature not found for execution');
+        }
+
+        const { rows: runRows } = await pool.query(
+          `INSERT INTO "BDDRun" (
+            id, "featureId", "userId", "organizationId",
+            status, "totalSteps", browser, "executionMode",
+            "createdAt", "updatedAt"
+          )
+          VALUES (
+            gen_random_uuid()::text, $1, $2, $3,
+            'pending', 0, $4, $5,
+            now(), now()
+          )
+          RETURNING id`,
+          [
+            feature.featureId,
+            run.userId,
+            run.organizationId,
+            run.config.executionBrowser || 'chromium',
+            run.config.executionMode || 'headless',
+          ]
+        );
+        const bddRunId = runRows[0].id as string;
+
+        await bddService.executeFeature(
+          bddRunId,
+          featureRows[0].featureContent as string,
+          {},
           {
             browser: run.config.executionBrowser || 'chromium',
             executionMode: run.config.executionMode || 'headless',
-          }
+          },
+          run.userId,
+          run.organizationId
         );
+
+        const { rows: statusRows } = await pool.query(
+          `SELECT status FROM "BDDRun" WHERE id = $1`,
+          [bddRunId]
+        );
+        const status = statusRows[0]?.status as string | undefined;
 
         executionResults.push({
           storyKey: feature.storyKey,
-          runId: bddRun.id,
-          status: bddRun.status,
+          runId: bddRunId,
+          status: status || 'unknown',
         });
       } catch (err) {
         logger.warn(`Execution failed for ${feature.storyKey}: ${err}`);
@@ -593,8 +629,8 @@ export class WorkflowOrchestratorService {
    * Generate test cases from manual input (no Jira needed)
    */
   async generateFromManualInput(
-    userId: string,
-    organizationId: string | null,
+    _userId: string,
+    _organizationId: string | null,
     input: {
       summary: string;
       description: string;

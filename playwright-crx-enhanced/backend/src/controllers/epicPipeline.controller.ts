@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler';
-import { logger } from '../utils/logger';
 import { jiraService } from '../services/bdd/jira.service';
 import { testCaseGenerator } from '../services/bdd/testCaseGenerator.service';
 import { workflowOrchestrator, workflowEventEmitter } from '../services/bdd/workflowOrchestrator.service';
