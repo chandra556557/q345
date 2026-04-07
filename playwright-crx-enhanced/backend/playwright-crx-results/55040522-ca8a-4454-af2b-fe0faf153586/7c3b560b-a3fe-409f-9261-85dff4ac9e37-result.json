@@ -1,0 +1,144 @@
+{
+  "uuid": "7c3b560b-a3fe-409f-9261-85dff4ac9e37",
+  "historyId": "55040522-ca8a-4454-af2b-fe0faf153586-Add product to cart",
+  "testCaseId": "7c3b560b-a3fe-409f-9261-85dff4ac9e37",
+  "fullName": "Login with valid credentials > Add product to cart",
+  "name": "Add product to cart",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774865703173,
+  "stop": 1774865708947,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Add product to cart"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708495,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in with standard_user",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865705674,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708282,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708852,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708892,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708822,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708875,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "Then Verify the cart badge shows \"1\"",
+      "status": "failed",
+      "statusDetails": {
+        "message": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('1')\nExpected: visible\nError: strict mode violation: getByText('1') resolved to 5 elements:\n    1) <span class=\"shopping_cart_badge\" data-test=\"shopping-cart-badge\">1</span> aka locator('[data-test=\"shopping-cart-link\"]')\n    2) <div class=\"inventory_item_desc\" data-test=\"inventory-item-desc\">A red light isn't the desired state in testing bu…</div> aka getByText('A red light isn\\'t the desired')\n    3) <div class=\"inventory_item_desc\" data-test=\"inventory-item-desc\">Get your testing superhero on with the Sauce Labs…</div> aka getByText('Get your testing superhero on')\n    4) <div class=\"inventory_item_price\" data-test=\"inventory-item-price\">$15.99</div> aka locator('[data-test=\"inventory-item-price\"]').nth(2)\n    5) <div class=\"inventory_item_price\" data-test=\"inventory-item-price\">$15.99</div> aka locator('[data-test=\"inventory-item-price\"]').nth(5)\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 10000ms\n  - waiting for getByText('1')\n\n    at Proxy.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\playwright\\lib\\matchers\\expect.js:213:24)\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1026:42)"
+      },
+      "stage": "finished",
+      "start": 1774865708275,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "And Cart badge displays 1 and the button changes to Remove",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708947,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708595,
+      "stop": 1774865708947,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708934,
+      "stop": 1774865708947,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

@@ -1,0 +1,133 @@
+{
+  "uuid": "f5589395-b559-4915-a574-470416613f6c",
+  "historyId": "b1e6a4c5-a5ab-44f3-b6b5-69f108c433c2-Verify role restriction persists across sessions",
+  "testCaseId": "f5589395-b559-4915-a574-470416613f6c",
+  "fullName": "Verify rejected role is restricted for re-application > Verify role restriction persists across sessions",
+  "name": "Verify role restriction persists across sessions",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774518925785,
+  "stop": 1774518926120,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify role restriction persists across sessions"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518925830,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926119,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login.\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926119,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "And User is rejected for Role A.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926120,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "And Logout.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926119,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "And Login again.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926119,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to Apply page.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926119,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "Then Rejected role should remain restricted across sessions. System should maintain rejection history.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926119,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926092,
+      "stop": 1774518926120,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926109,
+      "stop": 1774518926120,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

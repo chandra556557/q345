@@ -1,0 +1,602 @@
+[
+  {
+    "description": "  As a user of SauceDemo\n  I want to verify core shopping functionality\n  So that the application works correctly",
+    "elements": [
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-tests;successful-login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 7,
+        "name": "Successful login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 429185900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "I navigate to \"https://www.saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:257"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2310978198
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 9,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 74113600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 10,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 36150199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 11,
+            "name": "I click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 116413698
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 12,
+            "name": "I should see \"Products\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:644"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 16547399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "the URL should contain \"inventory\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:674"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5087698
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 40722099
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 19023400
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@login",
+            "line": 6
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-tests;add-product-to-cart-and-verify-badge",
+        "keyword": "Scenario",
+        "line": 16,
+        "name": "Add product to cart and verify badge",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 292155600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 17,
+            "name": "I navigate to \"https://www.saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:257"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2215114200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 18,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 70406899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 19,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 40898298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 20,
+            "name": "I click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 96470698
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "I click \"Add to cart\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 56399498
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 22,
+            "name": "I should see \"Remove\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:644"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5630799
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 29787500
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 13580599
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@cart",
+            "line": 15
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-tests;complete-checkout-flow-end-to-end",
+        "keyword": "Scenario",
+        "line": 25,
+        "name": "Complete checkout flow end to end",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 270581599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 26,
+            "name": "I navigate to \"https://www.saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:257"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2213687000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 27,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 55950698
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 28,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 32864500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 29,
+            "name": "I click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 68396999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 30,
+            "name": "I click \"Add to cart\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 34818398
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 31,
+            "name": "I click \".shopping_cart_link\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 48249599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 32,
+            "name": "I click the \"Checkout\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 34429997
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 33,
+            "name": "I fill \"First Name\" with \"John\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 22763699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 34,
+            "name": "I fill \"Last Name\" with \"Doe\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 18552099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 35,
+            "name": "I fill \"Zip/Postal Code\" with \"12345\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 17544299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 36,
+            "name": "I click the \"Continue\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 50286998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 37,
+            "name": "I click the \"Finish\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 35567098
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 38,
+            "name": "I should see \"Thank you for your order!\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:644"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2723199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 23628899
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20522899
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@checkout",
+            "line": 24
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-tests;logout-from-the-application",
+        "keyword": "Scenario",
+        "line": 41,
+        "name": "Logout from the application",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 171936400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 42,
+            "name": "I navigate to \"https://www.saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:257"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2197912398
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 43,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 45524998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 44,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 25229099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 45,
+            "name": "I click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 69399899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 46,
+            "name": "I click \"Open Menu\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 33877600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 47,
+            "name": "I click \"Logout\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 965524998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 48,
+            "name": "I should see \"Login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:644"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3891299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 49,
+            "name": "the URL should contain \"saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:674"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1668098
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20814100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 10853600
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@logout",
+            "line": 40
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "saucedemo-e-commerce-tests",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "SauceDemo E-Commerce Tests",
+    "tags": [],
+    "uri": "features\\test.feature"
+  }
+]

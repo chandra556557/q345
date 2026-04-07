@@ -8,6 +8,8 @@ import ImportScriptModal from './ImportScriptModal';
 import ScriptValidationModal from './ScriptValidationModal';
 import ScriptCueCards from './ScriptCueCards';
 import BDDFeatureManager from './BDDFeatureManager';
+import TestDataManagement from './TestDataManagement';
+import CucumberTestRunner from './CucumberTestRunner';
 import './Dashboard.css';
 
 const API_URL = 'http://localhost:3001/api';
@@ -709,24 +711,20 @@ export const Dashboard: React.FC = () => {
 
           {/* Test Data Management */}
           {activeView === 'testdata' && (
-            <div className="view-container">
-              <h1 className="view-title">Test Data Management</h1>
-              <div className="empty-state">
-                <div className="empty-icon">🗄️</div>
-                <h3>Test Data Management</h3>
-                <p>Test data management features are currently being developed.</p>
-                <p>This section will allow you to manage test data repositories, snapshots, and synthetic data generation.</p>
-              </div>
-            </div>
+            <TestDataManagement />
           )}
 
           {/* BDD Features */}
           {activeView === 'bdd' && (
-            <BDDFeatureManager
-              selectedProjectId={selectedProjectId}
-              currentProjectName={currentProjectName}
-              token={token}
-            />
+            <div className="bdd-view">
+              <CucumberTestRunner token={token} />
+              <hr style={{ margin: '40px 0', border: 'none', borderTop: '2px solid #e9ecef' }} />
+              <BDDFeatureManager
+                selectedProjectId={selectedProjectId}
+                currentProjectName={currentProjectName}
+                token={token}
+              />
+            </div>
           )}
 
           {/* API Testing */}

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "user-p1-001",
+    "email": "admin@project1.com",
+    "username": "project1_admin",
+    "password": "AdminPass123!",
+    "firstName": "Admin",
+    "lastName": "User",
+    "role": "admin",
+    "status": "active",
+    "organization": "project1"
+  },
+  {
+    "id": "user-p1-002",
+    "email": "tester@project1.com",
+    "username": "project1_tester",
+    "password": "TesterPass123!",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "role": "user",
+    "status": "active",
+    "organization": "project1"
+  },
+  {
+    "id": "user-p1-003",
+    "email": "developer@project1.com",
+    "username": "project1_developer",
+    "password": "DevPass123!",
+    "firstName": "Dev",
+    "lastName": "User",
+    "role": "user",
+    "status": "active",
+    "organization": "project1"
+  }
+]

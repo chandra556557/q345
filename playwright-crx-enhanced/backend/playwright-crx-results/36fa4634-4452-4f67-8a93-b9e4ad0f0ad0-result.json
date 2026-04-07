@@ -1,0 +1,22 @@
+{
+  "uuid": "36fa4634-4452-4f67-8a93-b9e4ad0f0ad0",
+  "historyId": "36fa4634-4452-4f67-8a93-b9e4ad0f0ad0",
+  "testCaseId": "36fa4634-4452-4f67-8a93-b9e4ad0f0ad0",
+  "fullName": "36fa4634-4452-4f67-8a93-b9e4ad0f0ad0",
+  "name": "36fa4634-4452-4f67-8a93-b9e4ad0f0ad0",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1770785729674,
+  "stop": 1770785729674,
+  "steps": [
+    {
+      "name": "navigate https://www.google.com/",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1770785728926,
+      "stop": 1770785729226
+    }
+  ]
+}

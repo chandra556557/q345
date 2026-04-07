@@ -1,0 +1,18 @@
+{
+  "uuid": "999156fb-365a-453f-9912-acf7048ca823",
+  "name": "Verify rejected role is restricted for re-application",
+  "children": [
+    "95fdf0f9-9bfe-477c-b83d-c7e84bf153e7",
+    "15d13f6f-22e0-4b7f-a5ff-913420c26055",
+    "058b20f8-a5eb-4059-9b03-e5bfd2731fec",
+    "4f863672-2fb3-441d-af46-8f11413ddcec",
+    "b2601f87-d0ac-49b2-a1b7-8cce10155258",
+    "ed439fdf-0295-4804-b034-135444dcb6ef",
+    "0f4e02c5-6924-4b22-9c5d-f28049d7748f",
+    "6e52e5a7-32d1-4792-bc92-074fef1e0ed2"
+  ],
+  "befores": [],
+  "afters": [],
+  "start": 1774860982874,
+  "stop": 1774860985272
+}

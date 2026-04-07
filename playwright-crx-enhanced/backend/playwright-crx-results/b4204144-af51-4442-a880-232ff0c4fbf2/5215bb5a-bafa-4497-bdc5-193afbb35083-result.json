@@ -1,0 +1,142 @@
+{
+  "uuid": "5215bb5a-bafa-4497-bdc5-193afbb35083",
+  "historyId": "b4204144-af51-4442-a880-232ff0c4fbf2-Add product to cart",
+  "testCaseId": "5215bb5a-bafa-4497-bdc5-193afbb35083",
+  "fullName": "Login with valid credentials > Add product to cart",
+  "name": "Add product to cart",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774863476225,
+  "stop": 1774863476627,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Add product to cart"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476282,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in with standard_user",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476625,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476627,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476627,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476627,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476627,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476627,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "Then Verify the cart badge shows \"1\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476627,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "And Cart badge displays 1 and the button changes to Remove",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476627,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476592,
+      "stop": 1774863476627,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476607,
+      "stop": 1774863476627,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

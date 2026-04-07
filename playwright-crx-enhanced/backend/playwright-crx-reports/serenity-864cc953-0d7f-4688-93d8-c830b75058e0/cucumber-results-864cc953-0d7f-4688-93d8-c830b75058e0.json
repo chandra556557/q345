@@ -1,0 +1,87 @@
+[
+  {
+    "description": "  As a tester\n  I want to verify Serenity BDD reporting\n  So that I get rich test reports",
+    "elements": [
+      {
+        "description": "",
+        "id": "serenity-test;simple-navigation-test",
+        "keyword": "Scenario",
+        "line": 6,
+        "name": "Simple navigation test",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 819278099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 7,
+            "name": "I navigate to \"https://example.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:251"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 661715798
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 8,
+            "name": "I should see \"Example Domain\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:638"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 49627799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 9,
+            "name": "the page title should contain \"Example\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:676"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5337698
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 31784300
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12362100
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "serenity-test",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Serenity Test",
+    "tags": [],
+    "uri": "features\\test.feature"
+  }
+]

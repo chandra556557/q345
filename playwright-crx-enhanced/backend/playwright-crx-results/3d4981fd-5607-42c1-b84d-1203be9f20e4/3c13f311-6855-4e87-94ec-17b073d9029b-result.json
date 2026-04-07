@@ -1,0 +1,153 @@
+{
+  "uuid": "3c13f311-6855-4e87-94ec-17b073d9029b",
+  "historyId": "3d4981fd-5607-42c1-b84d-1203be9f20e4-Checkout with empty cart",
+  "testCaseId": "3c13f311-6855-4e87-94ec-17b073d9029b",
+  "fullName": "Login with valid credentials > Checkout with empty cart",
+  "name": "Checkout with empty cart",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774863852749,
+  "stop": 1774863855860,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Checkout with empty cart"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855584,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in with empty cart",
+      "status": "failed",
+      "statusDetails": {
+        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"networkidle\"\u001b[22m\n\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\3d4981fd-5607-42c1-b84d-1203be9f20e4\\features\\step_definitions\\steps.js:401:19)"
+      },
+      "stage": "finished",
+      "start": 1774863853231,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855860,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855860,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855860,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855860,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "When Click the cart icon",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855860,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "Then Verify the cart is empty",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855860,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "When Verify the \"Checkout\" button is visible",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855860,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "Then Cart page shows no items and user can see Continue Shopping button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855860,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855670,
+      "stop": 1774863855860,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855844,
+      "stop": 1774863855860,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

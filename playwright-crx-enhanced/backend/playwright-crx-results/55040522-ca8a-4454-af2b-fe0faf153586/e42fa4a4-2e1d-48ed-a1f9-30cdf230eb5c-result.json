@@ -1,0 +1,144 @@
+{
+  "uuid": "e42fa4a4-2e1d-48ed-a1f9-30cdf230eb5c",
+  "historyId": "55040522-ca8a-4454-af2b-fe0faf153586-Logout from application",
+  "testCaseId": "e42fa4a4-2e1d-48ed-a1f9-30cdf230eb5c",
+  "fullName": "Login with valid credentials > Logout from application",
+  "name": "Logout from application",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774865642880,
+  "stop": 1774865708978,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Logout from application"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708600,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865705876,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708306,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708891,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708925,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708859,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "When Click the hamburger menu icon",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708921,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Logout\" link",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865707947,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "Then User is redirected back to the login page at \"https://saucedemo.com\"",
+      "status": "failed",
+      "statusDetails": {
+        "message": "page.waitForURL: Timeout 60000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation until \"load\"\n============================================================\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1078:19)"
+      },
+      "stage": "finished",
+      "start": 1774865648696,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708674,
+      "stop": 1774865708978,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708965,
+      "stop": 1774865708978,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

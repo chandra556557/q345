@@ -1,0 +1,142 @@
+{
+  "uuid": "4ad95762-531f-462e-93c0-207b336951fb",
+  "historyId": "92a6bded-f010-45c8-b4f1-1a8fe0c64b60-Logout from application",
+  "testCaseId": "4ad95762-531f-462e-93c0-207b336951fb",
+  "fullName": "Login with valid credentials > Logout from application",
+  "name": "Logout from application",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774861693370,
+  "stop": 1774861693659,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Logout from application"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693432,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693658,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693658,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693659,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693659,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693659,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "When Click the hamburger menu icon",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693659,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Logout\" link",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693658,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "Then User is redirected back to the login page at \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693658,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693627,
+      "stop": 1774861693659,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861693633,
+      "stop": 1774861693659,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

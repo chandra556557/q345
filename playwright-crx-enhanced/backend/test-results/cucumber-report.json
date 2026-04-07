@@ -1,0 +1,2636 @@
+[
+  {
+    "description": "  As an API consumer\n  I want to test API endpoints\n  So that I can verify the API works correctly",
+    "elements": [
+      {
+        "description": "",
+        "id": "rest-api-testing;get-list-of-all-users",
+        "keyword": "Scenario",
+        "line": 18,
+        "name": "Get list of all users",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12913300
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 691409600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the API is running on \"http://localhost:3001\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "I have a valid authentication token",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "the database is seeded with test data",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 19,
+            "name": "I send a GET request to \"/api/users\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 20,
+            "name": "the response status should be 200",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "the response should contain a JSON array",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 22,
+            "name": "the array should have at least 3 users",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "id"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "email"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "name"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "role"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 23,
+            "name": "each user should have the following fields:",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 28,
+            "name": "the response time should be less than 500ms",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 31523199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 453099
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@rest-api",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 17
+          },
+          {
+            "name": "@get",
+            "line": 17
+          },
+          {
+            "name": "@positive",
+            "line": 17
+          },
+          {
+            "name": "@smoke",
+            "line": 17
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "rest-api-testing",
+    "line": 5,
+    "keyword": "Feature",
+    "name": "REST API Testing",
+    "tags": [
+      {
+        "name": "@bdd",
+        "line": 4
+      },
+      {
+        "name": "@api",
+        "line": 4
+      },
+      {
+        "name": "@rest-api",
+        "line": 4
+      }
+    ],
+    "uri": "features\\api-testing.feature"
+  },
+  {
+    "description": "  As a developer\n  I want to test database operations\n  So that I can ensure data integrity and consistency",
+    "elements": [
+      {
+        "description": "",
+        "id": "database-crud-operations;retrieve-record-by-primary-key",
+        "keyword": "Scenario",
+        "line": 57,
+        "name": "Retrieve record by primary key",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 10225699
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 674056899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the database is connected",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the database tables are clean",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "test data fixtures are available",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 58,
+            "name": "a user with ID \"1\" exists",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 59,
+            "name": "I query the user by ID \"1\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 60,
+            "name": "the query should return exactly 1 record",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 61,
+            "name": "the record should contain all expected fields",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 62,
+            "name": "the query should execute in less than 100ms",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 37610099
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 430799
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@database",
+            "line": 4
+          },
+          {
+            "name": "@data-operations",
+            "line": 4
+          },
+          {
+            "name": "@database",
+            "line": 56
+          },
+          {
+            "name": "@read",
+            "line": 56
+          },
+          {
+            "name": "@positive",
+            "line": 56
+          },
+          {
+            "name": "@smoke",
+            "line": 56
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "database-crud-operations",
+    "line": 5,
+    "keyword": "Feature",
+    "name": "Database CRUD Operations",
+    "tags": [
+      {
+        "name": "@bdd",
+        "line": 4
+      },
+      {
+        "name": "@database",
+        "line": 4
+      },
+      {
+        "name": "@data-operations",
+        "line": 4
+      }
+    ],
+    "uri": "features\\database-operations.feature"
+  },
+  {
+    "description": "  As a QA Engineer\n  I want to run tests against multiple projects with different configurations\n  So that I can verify each project works independently",
+    "elements": [
+      {
+        "description": "",
+        "id": "dynamic-project-management;switch-to-project-1",
+        "keyword": "Scenario",
+        "line": 16,
+        "name": "Switch to project 1",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 5050699
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 738434199
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 18314000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 17,
+            "name": "I use project \"project1\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:16"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 19275399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 18,
+            "name": "I should be using project \"project1\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:254"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5982600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 19,
+            "name": "the project should have database \"playwright_project1\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:270"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5076900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 20,
+            "name": "the project should use port 3001",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:289"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3165899
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 21636099
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 495499
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 15
+          },
+          {
+            "name": "@project1",
+            "line": 15
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;switch-to-project-2",
+        "keyword": "Scenario",
+        "line": 23,
+        "name": "Switch to project 2",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 4111800
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 763090700
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 11733100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 24,
+            "name": "I use project \"project2\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:16"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 14338700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 25,
+            "name": "I should be using project \"project2\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:254"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5898200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 26,
+            "name": "the project should have database \"playwright_project2\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:270"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 4997899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 27,
+            "name": "the project should use port 3002",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:289"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3280200
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18200800
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 291899
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 22
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;health-check-for-project-1",
+        "keyword": "Scenario",
+        "line": 30,
+        "name": "Health check for project 1",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 5516999
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 620525400
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 992999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 31,
+            "name": "I use project \"project1\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:16"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5410200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 32,
+            "name": "I call the health check endpoint",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:105"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 46507999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 33,
+            "name": "the API should return status 200",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:184"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2216699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 34,
+            "name": "the health check status should be \"ok\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:216"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2912900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 35,
+            "name": "the environment should be \"development\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:235"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2589299
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12102799
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 168499
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 29
+          },
+          {
+            "name": "@health",
+            "line": 29
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;health-check-for-project-2",
+        "keyword": "Scenario",
+        "line": 38,
+        "name": "Health check for project 2",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 5689599
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 633180900
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1250900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 39,
+            "name": "I use project \"project2\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:16"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 4970300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 40,
+            "name": "I call the health check endpoint",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:105"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 62747499,
+              "error_message": "Error: Health check failed: Error\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\projectSteps.ts:120:11)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 41,
+            "name": "the API should return status 200",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:184"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 42,
+            "name": "the health check status should be \"ok\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:216"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 43,
+            "name": "the environment should be \"staging\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:235"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 21068999
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1538100
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 37
+          },
+          {
+            "name": "@health",
+            "line": 37
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;database-connection-for-project-1",
+        "keyword": "Scenario",
+        "line": 46,
+        "name": "Database connection for project 1",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 4955899
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 697048799
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1372100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 47,
+            "name": "I use project \"project1\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:16"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 11981600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 48,
+            "name": "I call the database health check endpoint",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:130"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 10366799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 49,
+            "name": "the API should return status 200",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:184"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 457899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 50,
+            "name": "the health check status should be \"ok\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:216"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 380099
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 13084500
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 190499
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 45
+          },
+          {
+            "name": "@database",
+            "line": 45
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;database-connection-for-project-2",
+        "keyword": "Scenario",
+        "line": 53,
+        "name": "Database connection for project 2",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 4606700
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 712118399
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1822199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 54,
+            "name": "I use project \"project2\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:16"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5281100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 55,
+            "name": "I call the database health check endpoint",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:130"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 5504100,
+              "error_message": "Error: Database health check failed: Error\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\projectSteps.ts:145:11)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 56,
+            "name": "the API should return status 200",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:184"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 57,
+            "name": "the health check status should be \"ok\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:216"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12960100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 204600
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 52
+          },
+          {
+            "name": "@database",
+            "line": 52
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;verify-project-1-configuration",
+        "keyword": "Scenario",
+        "line": 60,
+        "name": "Verify project 1 configuration",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 4464899
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 726032599
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1023800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 61,
+            "name": "I have project \"project1\" with database name \"playwright_project1\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:72"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 10051800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 62,
+            "name": "I call the health check endpoint",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:105"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 9421599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 63,
+            "name": "the API should return status 200",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:184"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 322799
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 14750700
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 176400
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@parallel",
+            "line": 59
+          },
+          {
+            "name": "@project1",
+            "line": 59
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;verify-project-2-configuration",
+        "keyword": "Scenario",
+        "line": 66,
+        "name": "Verify project 2 configuration",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 6342999
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 696472299
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1035899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 67,
+            "name": "I have project \"project2\" with database name \"playwright_project2\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:72"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 9448800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 68,
+            "name": "I call the health check endpoint",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:105"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 7569099,
+              "error_message": "Error: Health check failed: Error\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\projectSteps.ts:120:11)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 69,
+            "name": "the API should return status 200",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:184"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18379499
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 306900
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@parallel",
+            "line": 65
+          },
+          {
+            "name": "@project2",
+            "line": 65
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;access-api-endpoints-for-project-1",
+        "keyword": "Scenario",
+        "line": 72,
+        "name": "Access API endpoints for project 1",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 4964400
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 844592600,
+              "error_message": "browserContext.newPage: Target page, context or browser has been closed\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:23:34)"
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 73,
+            "name": "I use project \"project1\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:16"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 74,
+            "name": "I make a request to \"/api\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:155"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 75,
+            "name": "the API should return status 200",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:184"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 76,
+            "name": "the response should contain \"playwright-crx-backend\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:200"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 230199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 103499
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 71
+          },
+          {
+            "name": "@endpoints",
+            "line": 71
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "dynamic-project-management;access-api-endpoints-for-project-2",
+        "keyword": "Scenario",
+        "line": 79,
+        "name": "Access API endpoints for project 2",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 5363900
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 853567300,
+              "error_message": "browserContext.newPage: Target page, context or browser has been closed\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:23:34)"
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "project1"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "project2"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the following projects are available:",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:50"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 80,
+            "name": "I use project \"project2\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:16"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 81,
+            "name": "I make a request to \"/api\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:155"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 82,
+            "name": "the API should return status 200",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:184"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 83,
+            "name": "the response should contain \"playwright-crx-backend\"",
+            "match": {
+              "location": "features\\step-definitions\\projectSteps.ts:200"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 247199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 96900
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@project-management",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 4
+          },
+          {
+            "name": "@health",
+            "line": 4
+          },
+          {
+            "name": "@api",
+            "line": 78
+          },
+          {
+            "name": "@endpoints",
+            "line": 78
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "dynamic-project-management",
+    "line": 5,
+    "keyword": "Feature",
+    "name": "Dynamic Project Management",
+    "tags": [
+      {
+        "name": "@bdd",
+        "line": 4
+      },
+      {
+        "name": "@project-management",
+        "line": 4
+      },
+      {
+        "name": "@smoke",
+        "line": 4
+      },
+      {
+        "name": "@api",
+        "line": 4
+      },
+      {
+        "name": "@health",
+        "line": 4
+      }
+    ],
+    "uri": "features\\project-management.feature"
+  },
+  {
+    "description": "  As a QA Engineer\n  I want to test the Sauce Demo e-commerce website\n  So that I can verify shopping functionality",
+    "elements": [
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;successful-login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 15,
+        "name": "Successful login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 7679899
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 130324200,
+              "error_message": "browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-9ovve9 --remote-debugging-pipe --no-startup-window\n<launched> pid=57456\nCall log:\n\u001b[2m  - <launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-9ovve9 --remote-debugging-pipe --no-startup-window\u001b[22m\n\u001b[2m  - <launched> pid=57456\u001b[22m\n\u001b[2m  - [pid=57456] <gracefully close start>\u001b[22m\n\u001b[2m  - [pid=57456] <kill>\u001b[22m\n\u001b[2m  - [pid=57456] <will force kill>\u001b[22m\n\u001b[2m  - [pid=57456] <process did exit: exitCode=3221225794, signal=null>\u001b[22m\n\u001b[2m  - [pid=57456] starting temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=57456] finished temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=57456] <gracefully close end>\u001b[22m\n\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:21:28)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "I navigate to the login page",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 17,
+            "name": "I enter username \"standard_user\"",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 18,
+            "name": "I enter password \"secret_sauce\"",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 19,
+            "name": "I click the login button",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 20,
+            "name": "I should see the products page",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "the page title should contain \"Swag Labs\"",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 231099
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 146999
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 14
+          },
+          {
+            "name": "@login",
+            "line": 14
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;view-products-list",
+        "keyword": "Scenario",
+        "line": 24,
+        "name": "View products list",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 7034800
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 132674899,
+              "error_message": "browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-ERbRZG --remote-debugging-pipe --no-startup-window\n<launched> pid=82348\nCall log:\n\u001b[2m  - <launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-ERbRZG --remote-debugging-pipe --no-startup-window\u001b[22m\n\u001b[2m  - <launched> pid=82348\u001b[22m\n\u001b[2m  - [pid=82348] <gracefully close start>\u001b[22m\n\u001b[2m  - [pid=82348] <kill>\u001b[22m\n\u001b[2m  - [pid=82348] <will force kill>\u001b[22m\n\u001b[2m  - [pid=82348] <process did exit: exitCode=3221225794, signal=null>\u001b[22m\n\u001b[2m  - [pid=82348] starting temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=82348] finished temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=82348] <gracefully close end>\u001b[22m\n\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:21:28)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 25,
+            "name": "I am logged in as \"standard_user\"",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 26,
+            "name": "I view the products list",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 27,
+            "name": "I should see at least 6 products",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 28,
+            "name": "each product should have a name and price",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 29,
+            "name": "each product should have an \"Add to cart\" button",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 204999
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 133299
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 23
+          },
+          {
+            "name": "@products",
+            "line": 23
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "saucedemo-e-commerce-application",
+    "line": 5,
+    "keyword": "Feature",
+    "name": "SauceDemo E-commerce Application",
+    "tags": [
+      {
+        "name": "@bdd",
+        "line": 4
+      },
+      {
+        "name": "@saucedemo",
+        "line": 4
+      },
+      {
+        "name": "@e2e",
+        "line": 4
+      }
+    ],
+    "uri": "features\\saucedemo.feature"
+  },
+  {
+    "description": "  As a user\n  I want to register, login, and manage my account\n  So that I can access the application securely",
+    "elements": [
+      {
+        "description": "",
+        "id": "user-authentication-and-account-management;successfully-register-new-user-with-valid-data",
+        "keyword": "Scenario",
+        "line": 17,
+        "name": "Successfully register new user with valid data",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 3813799
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 88011300,
+              "error_message": "browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-HewQn7 --remote-debugging-pipe --no-startup-window\n<launched> pid=91096\nCall log:\n\u001b[2m  - <launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-HewQn7 --remote-debugging-pipe --no-startup-window\u001b[22m\n\u001b[2m  - <launched> pid=91096\u001b[22m\n\u001b[2m  - [pid=91096] <gracefully close start>\u001b[22m\n\u001b[2m  - [pid=91096] <kill>\u001b[22m\n\u001b[2m  - [pid=91096] <will force kill>\u001b[22m\n\u001b[2m  - [pid=91096] <process did exit: exitCode=3221225794, signal=null>\u001b[22m\n\u001b[2m  - [pid=91096] starting temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=91096] finished temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=91096] <gracefully close end>\u001b[22m\n\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:21:28)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application is accessible",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the database is connected",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 18,
+            "name": "I am on the registration page",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "firstName",
+                      "John"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "lastName",
+                      "Doe"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "email",
+                      "john@example.com"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "password",
+                      "SecurePass123!"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "confirm",
+                      "SecurePass123!"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "When ",
+            "line": 19,
+            "name": "I enter the following user details:",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 25,
+            "name": "I accept the terms and conditions",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 26,
+            "name": "I click the register button",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 27,
+            "name": "I should see a success message \"Account created successfully\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 28,
+            "name": "I should be redirected to the login page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoSteps.ts:512"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 29,
+            "name": "the user \"john@example.com\" should exist in the database",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 564100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 344199
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@authentication",
+            "line": 4
+          },
+          {
+            "name": "@user-management",
+            "line": 4
+          },
+          {
+            "name": "@registration",
+            "line": 16
+          },
+          {
+            "name": "@positive",
+            "line": 16
+          },
+          {
+            "name": "@smoke",
+            "line": 16
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "user-authentication-and-account-management;successfully-login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 75,
+        "name": "Successfully login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 3632499
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 81619200,
+              "error_message": "browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-62j6OT --remote-debugging-pipe --no-startup-window\n<launched> pid=57976\nCall log:\n\u001b[2m  - <launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-62j6OT --remote-debugging-pipe --no-startup-window\u001b[22m\n\u001b[2m  - <launched> pid=57976\u001b[22m\n\u001b[2m  - [pid=57976] <gracefully close start>\u001b[22m\n\u001b[2m  - [pid=57976] <kill>\u001b[22m\n\u001b[2m  - [pid=57976] <will force kill>\u001b[22m\n\u001b[2m  - [pid=57976] <process did exit: exitCode=3221225794, signal=null>\u001b[22m\n\u001b[2m  - [pid=57976] starting temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=57976] finished temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=57976] <gracefully close end>\u001b[22m\n\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:21:28)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application is accessible",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the database is connected",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 76,
+            "name": "the user \"user@example.com\" exists with password \"ValidPass123\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 77,
+            "name": "I am on the login page",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 78,
+            "name": "I enter email \"user@example.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 79,
+            "name": "I enter password \"ValidPass123\"",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 80,
+            "name": "I click the login button",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 81,
+            "name": "I should be redirected to the dashboard",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 82,
+            "name": "I should see the user greeting \"Welcome, User\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 83,
+            "name": "a session cookie should be created",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 202800
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 153599
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@authentication",
+            "line": 4
+          },
+          {
+            "name": "@user-management",
+            "line": 4
+          },
+          {
+            "name": "@login",
+            "line": 74
+          },
+          {
+            "name": "@positive",
+            "line": 74
+          },
+          {
+            "name": "@smoke",
+            "line": 74
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "user-authentication-and-account-management",
+    "line": 5,
+    "keyword": "Feature",
+    "name": "User Authentication and Account Management",
+    "tags": [
+      {
+        "name": "@bdd",
+        "line": 4
+      },
+      {
+        "name": "@authentication",
+        "line": 4
+      },
+      {
+        "name": "@user-management",
+        "line": 4
+      }
+    ],
+    "uri": "features\\user-authentication.feature"
+  }
+]

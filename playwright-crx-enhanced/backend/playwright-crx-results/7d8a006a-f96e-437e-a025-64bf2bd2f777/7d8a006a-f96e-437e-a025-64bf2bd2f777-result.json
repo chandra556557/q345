@@ -1,0 +1,43 @@
+{
+  "uuid": "7d8a006a-f96e-437e-a025-64bf2bd2f777",
+  "historyId": "7d8a006a-f96e-437e-a025-64bf2bd2f777",
+  "testCaseId": "7d8a006a-f96e-437e-a025-64bf2bd2f777",
+  "fullName": "example56.spec",
+  "name": "example56.spec",
+  "description": "",
+  "stage": "finished",
+  "start": 1774518436119,
+  "statusDetails": {},
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Playwright CRX Tests"
+    },
+    {
+      "name": "parentSuite",
+      "value": "Playwright CRX"
+    },
+    {
+      "name": "host",
+      "value": "BT-PG04LNSX"
+    },
+    {
+      "name": "thread",
+      "value": "thread-7d8a006a"
+    },
+    {
+      "name": "framework",
+      "value": "Playwright CRX"
+    },
+    {
+      "name": "language",
+      "value": "typescript"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [],
+  "attachments": [],
+  "status": "passed",
+  "stop": 1774518438282
+}

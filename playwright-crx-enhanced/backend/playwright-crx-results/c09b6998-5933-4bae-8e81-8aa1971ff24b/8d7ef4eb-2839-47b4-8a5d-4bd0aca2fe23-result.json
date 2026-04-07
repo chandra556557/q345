@@ -1,0 +1,126 @@
+{
+  "uuid": "8d7ef4eb-2839-47b4-8a5d-4bd0aca2fe23",
+  "historyId": "c09b6998-5933-4bae-8e81-8aa1971ff24b-Successful login with valid credentials",
+  "testCaseId": "8d7ef4eb-2839-47b4-8a5d-4bd0aca2fe23",
+  "fullName": "User Login > Successful login with valid credentials",
+  "name": "Successful login with valid credentials",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775121262271,
+  "stop": 1775121264296,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "User Login"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "User Login"
+    },
+    {
+      "name": "story",
+      "value": "Successful login with valid credentials"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775121263922,
+      "stop": 1775121264296,
+      "attachments": []
+    },
+    {
+      "name": "Given I am on the login page",
+      "status": "failed",
+      "statusDetails": {
+        "message": "Error: Step not implemented: Given I am on the login page\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\c09b6998-5933-4bae-8e81-8aa1971ff24b\\features\\step_definitions\\steps.js:1002:7)"
+      },
+      "stage": "finished",
+      "start": 1775121262806,
+      "stop": 1775121264296,
+      "attachments": []
+    },
+    {
+      "name": "When I enter \"admin@test.com\" in the email field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775121264296,
+      "stop": 1775121264296,
+      "attachments": []
+    },
+    {
+      "name": "And I enter \"password123\" in the password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775121264296,
+      "stop": 1775121264296,
+      "attachments": []
+    },
+    {
+      "name": "And I click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775121264296,
+      "stop": 1775121264296,
+      "attachments": []
+    },
+    {
+      "name": "Then I should see the dashboard page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775121264296,
+      "stop": 1775121264296,
+      "attachments": []
+    },
+    {
+      "name": "And I should see a welcome message",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775121264296,
+      "stop": 1775121264296,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775121264159,
+      "stop": 1775121264296,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775121264272,
+      "stop": 1775121264296,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

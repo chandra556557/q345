@@ -1,0 +1,32 @@
+{
+  "uuid": "13ac98a3-3573-495b-a3dc-d8df098496e7",
+  "historyId": "13ac98a3-3573-495b-a3dc-d8df098496e7",
+  "testCaseId": "13ac98a3-3573-495b-a3dc-d8df098496e7",
+  "fullName": "exam.spec",
+  "name": "exam.spec",
+  "status": "failed",
+  "statusDetails": {
+    "message": "page.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('//input[@id=username]')\u001b[22m\n"
+  },
+  "stage": "finished",
+  "start": 1770877527844,
+  "stop": 1770877561508,
+  "steps": [
+    {
+      "name": "navigate https://demo.applitools.com",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1770877530274,
+      "stop": 1770877530574
+    },
+    {
+      "name": "unknown ",
+      "status": "failed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1770877561154,
+      "stop": 1770877561454
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "uuid": "d781b0d5-c239-438f-8f00-37440831adbf",
+  "name": "Playwright CRX Tests",
+  "children": [
+    "3ff4e63f-ebe2-4f94-91fa-c711b46b0c96"
+  ],
+  "befores": [],
+  "afters": [],
+  "start": 1774587719722,
+  "stop": 1774587723239
+}

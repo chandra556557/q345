@@ -1,0 +1,133 @@
+{
+  "uuid": "279fe473-109f-45a0-95f4-a87959f87c0e",
+  "historyId": "49f48e3b-2b96-4c55-ac37-05c17fbe58c8-Sort products by name Z to A",
+  "testCaseId": "279fe473-109f-45a0-95f4-a87959f87c0e",
+  "fullName": "Login with valid credentials > Sort products by name Z to A",
+  "name": "Sort products by name Z to A",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774861896315,
+  "stop": 1774861896601,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Sort products by name Z to A"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896361,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896600,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896600,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896601,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896600,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896600,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "When Select \"Name (Z to A)\" from the sort dropdown",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896601,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "Then Products are sorted alphabetically in descending order",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896599,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896573,
+      "stop": 1774861896601,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896589,
+      "stop": 1774861896601,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

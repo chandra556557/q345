@@ -1,0 +1,196 @@
+{
+  "uuid": "2238e82b-2a5e-405c-8e6e-1a42edc02b7b",
+  "historyId": "b4204144-af51-4442-a880-232ff0c4fbf2-Complete checkout flow",
+  "testCaseId": "2238e82b-2a5e-405c-8e6e-1a42edc02b7b",
+  "fullName": "Login with valid credentials > Complete checkout flow",
+  "name": "Complete checkout flow",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774863476290,
+  "stop": 1774863476633,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Complete checkout flow"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476342,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in and has item in cart",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476632,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Click the cart icon",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Checkout\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"John\" in the First Name field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"Doe\" in the Last Name field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"12345\" in the Zip/Postal Code field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Continue\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Finish\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "Then Order confirmation page displays Thank you for your order!",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476633,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476599,
+      "stop": 1774863476633,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476616,
+      "stop": 1774863476633,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

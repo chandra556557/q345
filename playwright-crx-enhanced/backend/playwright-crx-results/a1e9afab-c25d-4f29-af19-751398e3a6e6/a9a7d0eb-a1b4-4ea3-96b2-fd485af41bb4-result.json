@@ -1,0 +1,142 @@
+{
+  "uuid": "a9a7d0eb-a1b4-4ea3-96b2-fd485af41bb4",
+  "historyId": "a1e9afab-c25d-4f29-af19-751398e3a6e6-Successful login with valid credentials",
+  "testCaseId": "a9a7d0eb-a1b4-4ea3-96b2-fd485af41bb4",
+  "fullName": "SauceDemo E-commerce Application > Successful login with valid credentials",
+  "name": "Successful login with valid credentials",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775545670206,
+  "stop": 1775545673409,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Successful login with valid credentials"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545670313,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673409,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673409,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "When I navigate to the login page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673409,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "And I enter username \"standard_user\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673409,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "And I enter password \"secret_sauce\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673409,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "And I click the login button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673409,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "Then I should see the products page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673409,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "And the page title should contain \"Swag Labs\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673409,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673328,
+      "stop": 1775545673409,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673383,
+      "stop": 1775545673409,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

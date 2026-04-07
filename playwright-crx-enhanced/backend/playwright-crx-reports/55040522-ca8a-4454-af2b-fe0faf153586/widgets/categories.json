@@ -1,0 +1,1 @@
+{"total":2,"items":[{"uid":"8fb3a91ba5aaf9de24cc8a92edc82b5d","name":"Product defects","statistic":{"failed":8,"broken":0,"skipped":0,"passed":0,"unknown":0,"total":8}},{"uid":"85646a29c9a85eb9066bee89566dbdf8","name":"Skipped Tests","statistic":{"failed":0,"broken":0,"skipped":1,"passed":0,"unknown":0,"total":1}}]}

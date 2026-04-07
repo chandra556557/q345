@@ -1,0 +1,124 @@
+{
+  "uuid": "6e52e5a7-32d1-4792-bc92-074fef1e0ed2",
+  "historyId": "059d8344-4f5d-4332-b2e6-cbd76f7616e8-Verify backend validation prevents bypassing rejected role restriction",
+  "testCaseId": "6e52e5a7-32d1-4792-bc92-074fef1e0ed2",
+  "fullName": "Verify rejected role is restricted for re-application > Verify backend validation prevents bypassing rejected role restriction",
+  "name": "Verify backend validation prevents bypassing rejected role restriction",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774860984944,
+  "stop": 1774860985270,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify backend validation prevents bypassing rejected role restriction"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985002,
+      "stop": 1774860985270,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985268,
+      "stop": 1774860985270,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985269,
+      "stop": 1774860985270,
+      "attachments": []
+    },
+    {
+      "name": "And Inspect rejected role element via browser DevTools",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985269,
+      "stop": 1774860985270,
+      "attachments": []
+    },
+    {
+      "name": "When Attempt to enable and submit application manually",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985269,
+      "stop": 1774860985270,
+      "attachments": []
+    },
+    {
+      "name": "Then Observe system response.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985269,
+      "stop": 1774860985270,
+      "attachments": []
+    },
+    {
+      "name": "And Backend validation should prevent application for rejected role even if UI is manipulated. Application should not be accepted.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985269,
+      "stop": 1774860985270,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985235,
+      "stop": 1774860985270,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985254,
+      "stop": 1774860985270,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

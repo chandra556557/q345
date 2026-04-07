@@ -1,0 +1,31 @@
+Task ID,Module,Sub-Module,Task Name,Description,Priority,Status,Dependencies,API Endpoint,Test Type
+FB-001,Scripts,Field Binding,Add field binding state variables,Add useState hooks for bindingPlaceholders / fieldBindings / extractingPlaceholders / savingBindings / bindingSaved / manualPlaceholderName / manualPlaceholderField in ScriptEnhancementModal,P0,Implemented,,,Code
+FB-002,Scripts,Field Binding,Extract placeholders via backend API,Call POST /api/data-driven-runs/extract-placeholders to detect {{placeholder}} patterns in enhanced script,P0,Implemented,,POST /api/data-driven-runs/extract-placeholders,Functional
+FB-003,Scripts,Field Binding,Extract placeholders via client-side fallback,Regex-based fallback extraction of {{placeholder}} patterns from enhanced script code when backend API fails,P0,Implemented,FB-002,,Functional
+FB-004,Scripts,Field Binding,Extract fields from selector patterns,Detect bindable fields from .fill() / getByLabel() / getByPlaceholder() selectors in enhanced script,P1,Implemented,FB-003,,Functional
+FB-005,Scripts,Field Binding,Get available data fields from generated test data,Extract field names from generated test data array excluding internal _prefixed keys,P0,Implemented,,,Functional
+FB-006,Scripts,Field Binding,Auto-bind placeholders to data fields,Automatically map placeholders to test data fields by exact match then fuzzy (partial) match,P0,Implemented,FB-002 FB-005,,Functional
+FB-007,Scripts,Field Binding,Save field bindings as Data-Driven Run,Call POST /api/data-driven-runs to create a DDR with scriptId / dataRows / fieldBindings / browser / executionMode / executionConfig,P0,Implemented,FB-006,POST /api/data-driven-runs,Functional
+FB-008,Scripts,Field Binding,Display inline field binding section,Show compact binding panel in main enhancement view below test data results with Auto-Detect button and binding dropdowns,P0,Implemented,FB-002 FB-005,N/A,UI
+FB-009,Scripts,Field Binding,Display modal field binding section,Show full binding panel inside test data generation modal after results with Auto-Detect / Clear / manual add / save actions,P0,Implemented,FB-002 FB-005,N/A,UI
+FB-010,Scripts,Field Binding,Auto-Detect Fields button,Click triggers extractPlaceholders() to scan enhanced script and populate binding table,P0,Implemented,FB-002,N/A,UI
+FB-011,Scripts,Field Binding,Placeholder-to-field dropdown mapping,Each detected placeholder shows a dropdown listing available test data fields with visual bound/unbound indicators,P0,Implemented,FB-005,N/A,UI
+FB-012,Scripts,Field Binding,Display placeholder context info,Show line number and code context snippet for each detected placeholder,P1,Implemented,FB-002,N/A,UI
+FB-013,Scripts,Field Binding,Manual placeholder addition,Input field + dropdown + Add button to manually add a placeholder-to-field binding,P1,Implemented,,N/A,UI
+FB-014,Scripts,Field Binding,Clear bindings button,Reset bindingPlaceholders and fieldBindings state to empty,P1,Implemented,,N/A,UI
+FB-015,Scripts,Field Binding,Binding summary display,Show count of bound fields / total placeholders / data rows count,P1,Implemented,FB-006,N/A,UI
+FB-016,Scripts,Field Binding,Save and Create Data-Driven Run button,Click triggers saveFieldBindings() and shows success state with checkmark,P0,Implemented,FB-007,N/A,UI
+FB-017,Scripts,Field Binding,Clear binding state on modal close,Reset all binding state variables when test data modal is closed,P1,Implemented,,N/A,UI
+FB-018,Scripts,Field Binding,Bound field visual indicator,Dropdown border turns green and background changes when a field is successfully bound,P2,Implemented,,N/A,UI
+FB-019,Scripts,Field Binding,Verify placeholder extraction with {{}} patterns,Test script containing {{username}} / {{password}} / {{email}} placeholders are correctly detected,P0,Not Started,FB-002,,E2E
+FB-020,Scripts,Field Binding,Verify selector-based field extraction,Test script containing .fill('#email') / getByLabel('Password') selectors are detected as bindable fields,P1,Not Started,FB-004,,E2E
+FB-021,Scripts,Field Binding,Verify auto-bind exact match,Generated data with field 'username' auto-binds to placeholder {{username}},P0,Not Started,FB-006,,E2E
+FB-022,Scripts,Field Binding,Verify auto-bind fuzzy match,Generated data with field 'user_email' auto-binds to placeholder {{email}},P1,Not Started,FB-006,,E2E
+FB-023,Scripts,Field Binding,Verify manual binding addition,Add manual placeholder 'customField' mapped to data field 'name' and confirm it appears in binding table,P1,Not Started,FB-013,,E2E
+FB-024,Scripts,Field Binding,Verify DDR creation with bindings,Save bindings and confirm Data-Driven Run is created in database with correct fieldBindings / dataRows / scriptId,P0,Not Started,FB-007,POST /api/data-driven-runs,E2E
+FB-025,Scripts,Field Binding,Verify binding persists across modal reopen,Generate data and bind fields then close and reopen modal to verify state is maintained within session,P2,Not Started,FB-008,,E2E
+FB-026,Scripts,Field Binding,Verify empty state messaging,When no placeholders detected show instructional message prompting Auto-Detect or manual add,P2,Not Started,,N/A,UI
+FB-027,Scripts,Field Binding,Verify loading states,Auto-Detect button shows spinner during extraction / Save button shows spinner during DDR creation,P2,Not Started,,N/A,UI
+FB-028,Scripts,Field Binding,Verify success state after save,Save button changes to green checkmark with 'DDR Created!' text after successful save,P2,Not Started,FB-016,N/A,UI
+FB-029,Scripts,Field Binding,Error handling for failed placeholder extraction,When backend API and client-side fallback both fail show graceful empty state,P1,Not Started,FB-003,,Functional
+FB-030,Scripts,Field Binding,Error handling for failed DDR creation,When POST /api/data-driven-runs fails show alert with error message,P1,Not Started,FB-007,POST /api/data-driven-runs,Functional

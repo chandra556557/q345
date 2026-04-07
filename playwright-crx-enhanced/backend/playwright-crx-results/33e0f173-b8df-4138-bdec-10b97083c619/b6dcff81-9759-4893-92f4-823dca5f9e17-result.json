@@ -1,0 +1,133 @@
+{
+  "uuid": "b6dcff81-9759-4893-92f4-823dca5f9e17",
+  "historyId": "33e0f173-b8df-4138-bdec-10b97083c619-Verify behavior when multiple roles are rejected separately",
+  "testCaseId": "b6dcff81-9759-4893-92f4-823dca5f9e17",
+  "fullName": "Verify rejected role is restricted for re-application > Verify behavior when multiple roles are rejected separately",
+  "name": "Verify behavior when multiple roles are rejected separately",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774597878030,
+  "stop": 1774597878532,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify behavior when multiple roles are rejected separately"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878124,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878531,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login.\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878531,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "And Apply and get rejected for Role A.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878530,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "And Apply and get rejected for Role B.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878530,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to Apply page again.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878530,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "When Check role availability.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878531,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "Then Roles A and B should be restricted. Any remaining available roles should remain selectable.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878529,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878468,
+      "stop": 1774597878532,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878514,
+      "stop": 1774597878532,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BDD End-to-End Architecture Diagram</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      color: #63b3ed;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #718096;
+      margin-bottom: 30px;
+      font-size: 0.95rem;
+    }
+
+    /* ── GRID LAYOUT ── */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ── LANE HEADERS ── */
+    .lane-header {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-bottom: -4px;
+    }
+    .lane-label {
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 6px 10px;
+      border-radius: 6px 6px 0 0;
+    }
+    .lane-label.frontend  { background: #2d3748; color: #90cdf4; border-top: 3px solid #63b3ed; }
+    .lane-label.backend   { background: #2d3748; color: #9ae6b4; border-top: 3px solid #48bb78; }
+    .lane-label.data      { background: #2d3748; color: #fbd38d; border-top: 3px solid #ed8936; }
+
+    /* ── CARDS ── */
+    .card {
+      border-radius: 10px;
+      padding: 14px 16px;
+      position: relative;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .card-title .icon { font-size: 1rem; }
+    .item {
+      font-size: 0.8rem;
+      padding: 5px 8px;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      line-height: 1.4;
+    }
+    .item .tag {
+      font-size: 0.65rem;
+      padding: 1px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── COLOR THEMES ── */
+    .blue  { background: #1a2740; border: 1px solid #2b4a7a; }
+    .blue .card-title { color: #90cdf4; }
+    .blue .item { background: #1e3a5f; }
+
+    .green { background: #1a2e20; border: 1px solid #2d5a3a; }
+    .green .card-title { color: #9ae6b4; }
+    .green .item { background: #1e3b24; }
+
+    .orange { background: #2d2010; border: 1px solid #6b4a1a; }
+    .orange .card-title { color: #fbd38d; }
+    .orange .item { background: #3a2a10; }
+
+    .purple { background: #1e1a2e; border: 1px solid #4a3a7a; }
+    .purple .card-title { color: #d6bcfa; }
+    .purple .item { background: #2a2040; }
+
+    .red { background: #2d1a1a; border: 1px solid #7a2a2a; }
+    .red .card-title { color: #fc8181; }
+    .red .item { background: #3a2020; }
+
+    .teal { background: #1a2d2d; border: 1px solid #2a5a5a; }
+    .teal .card-title { color: #81e6d9; }
+    .teal .item { background: #1e3a3a; }
+
+    .tag.get    { background: #2a5a2a; color: #9ae6b4; }
+    .tag.post   { background: #2a4a6a; color: #90cdf4; }
+    .tag.put    { background: #4a3a10; color: #fbd38d; }
+    .tag.delete { background: #4a1a1a; color: #fc8181; }
+    .tag.db     { background: #2a3a5a; color: #bee3f8; }
+    .tag.svc    { background: #3a1a4a; color: #d6bcfa; }
+    .tag.ui     { background: #1a3a3a; color: #81e6d9; }
+    .tag.sse    { background: #4a2a10; color: #fed7aa; }
+    .tag.cron   { background: #2a2a2a; color: #e2e8f0; }
+
+    /* ── FLOW SECTION ── */
+    .flow-section {
+      max-width: 1400px;
+      margin: 20px auto 0;
+    }
+    .flow-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #63b3ed;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .flow-steps {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+    .flow-step {
+      background: #1a2740;
+      border: 1px solid #2b4a7a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      text-align: center;
+      min-width: 120px;
+      max-width: 145px;
+      line-height: 1.4;
+    }
+    .flow-step .step-num {
+      display: block;
+      font-size: 0.65rem;
+      color: #4a7aaa;
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+    .flow-arrow {
+      color: #4a7aaa;
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    /* ── FULL-WIDTH SPANS ── */
+    .span-all { grid-column: 1 / -1; }
+    .span-2   { grid-column: span 2; }
+
+    /* ── DIVIDER ── */
+    .section-divider {
+      grid-column: 1 / -1;
+      border: none;
+      border-top: 1px dashed #2d3748;
+      margin: 4px 0;
+    }
+
+    /* ── LEGEND ── */
+    .legend {
+      max-width: 1400px;
+      margin: 20px auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: #a0aec0;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>BDD End-to-End Architecture</h1>
+<p class="subtitle">Playwright CRX Enhanced — Full-Stack BDD Testing Platform</p>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LANE HEADERS
+═══════════════════════════════════════════════════════════ -->
+<div class="arch-grid">
+  <div class="lane-header">
+    <div class="lane-label frontend">Frontend (React + TypeScript)</div>
+    <div class="lane-label backend">Backend (Express + TypeScript)</div>
+    <div class="lane-label data">Data &amp; Infrastructure</div>
+  </div>
+
+  <!-- ── ROW 1: Entry Points ── -->
+
+  <!-- Frontend: UI Components -->
+  <div class="card blue">
+    <div class="card-title"><span class="icon">🖥️</span>UI Components</div>
+    <div class="item"><span class="tag ui">UI</span> BDDTesting.tsx — Feature editor &amp; executor</div>
+    <div class="item"><span class="tag ui">UI</span> Gherkin syntax editor with live parse preview</div>
+    <div class="item"><span class="tag ui">UI</span> Scenario builder (Given / When / Then)</div>
+    <div class="item"><span class="tag ui">UI</span> CSV / TXT test case file upload</div>
+    <div class="item"><span class="tag ui">UI</span> Live execution progress &amp; SSE stream</div>
+    <div class="item"><span class="tag ui">UI</span> Step-level pass/fail results viewer</div>
+    <div class="item"><span class="tag ui">UI</span> Allure &amp; Serenity report viewer</div>
+    <div class="item"><span class="tag ui">UI</span> EpicPipeline.tsx — Jira → Test orchestration</div>
+  </div>
+
+  <!-- Backend: API Layer -->
+  <div class="card green">
+    <div class="card-title"><span class="icon">🔌</span>API Layer — BDD Routes</div>
+    <div class="item"><span class="tag post">POST</span> /api/bdd/features — Create feature</div>
+    <div class="item"><span class="tag get">GET</span>  /api/bdd/features — List features</div>
+    <div class="item"><span class="tag put">PUT</span>  /api/bdd/features/:id — Update</div>
+    <div class="item"><span class="tag delete">DEL</span> /api/bdd/features/:id — Delete</div>
+    <div class="item"><span class="tag post">POST</span> /api/bdd/parse — Preview parse</div>
+    <div class="item"><span class="tag post">POST</span> /api/bdd/features/:id/run — Execute</div>
+    <div class="item"><span class="tag get">GET</span>  /api/bdd/runs/:id/stream — SSE stream</div>
+    <div class="item"><span class="tag post">POST</span> /api/bdd/convert — CSV→Gherkin</div>
+    <div class="item"><span class="tag get">GET</span>  /api/bdd/runs/:id/report — HTML report</div>
+    <div class="item"><span class="tag get">GET</span>  /api/bdd/step-library — Reusable steps</div>
+    <div class="item"><span class="tag cron">CRON</span> /api/bdd/schedules — Scheduled runs</div>
+  </div>
+
+  <!-- Database Models -->
+  <div class="card orange">
+    <div class="card-title"><span class="icon">🗄️</span>Database Models (PostgreSQL + Prisma)</div>
+    <div class="item"><span class="tag db">DB</span> BDDFeature — Gherkin feature files</div>
+    <div class="item"><span class="tag db">DB</span> BDDScenario — Scenarios per feature</div>
+    <div class="item"><span class="tag db">DB</span> BDDStep — Given/When/Then/And steps</div>
+    <div class="item"><span class="tag db">DB</span> BDDRun — Execution records &amp; results</div>
+    <div class="item"><span class="tag db">DB</span> BDDSchedule — Cron schedule jobs</div>
+    <div class="item"><span class="tag db">DB</span> BDDStepLibrary — Reusable step defs</div>
+    <div class="item"><span class="tag db">DB</span> User / Organization / Project</div>
+    <div class="item"><span class="tag db">DB</span> Environment — Profile per target env</div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ── ROW 2: Core Services ── -->
+
+  <!-- Frontend: Supporting UI -->
+  <div class="card blue">
+    <div class="card-title"><span class="icon">🧩</span>Supporting UI Components</div>
+    <div class="item"><span class="tag ui">UI</span> Dashboard.tsx — Project overview</div>
+    <div class="item"><span class="tag ui">UI</span> DataDrivenTesting.tsx — Parameterization</div>
+    <div class="item"><span class="tag ui">UI</span> TestDataManager.tsx — Test data sets</div>
+    <div class="item"><span class="tag ui">UI</span> ScriptEnhancementModal.tsx — AI suggestions</div>
+    <div class="item"><span class="tag sse">SSE</span> Real-time execution log via EventSource</div>
+    <div class="item"><span class="tag ui">UI</span> Screenshot gallery on step failure</div>
+  </div>
+
+  <!-- Backend: BDD Service (Core) -->
+  <div class="card green">
+    <div class="card-title"><span class="icon">⚙️</span>BDD Service (bdd.service.ts · 4006 lines)</div>
+    <div class="item"><span class="tag svc">SVC</span> parseFeatureContent() — Gherkin parser</div>
+    <div class="item"><span class="tag svc">SVC</span> generatePlaywrightCode() — Code gen</div>
+    <div class="item"><span class="tag svc">SVC</span> executeFeature() — Spawn Playwright subprocess</div>
+    <div class="item"><span class="tag svc">SVC</span> Real-time step tracking via EventEmitter</div>
+    <div class="item"><span class="tag svc">SVC</span> MAX_CONCURRENT_RUNS = 3 (configurable)</div>
+    <div class="item"><span class="tag svc">SVC</span> Process timeout = 5 min (configurable)</div>
+    <div class="item"><span class="tag svc">SVC</span> Retry &amp; flaky test handling</div>
+    <div class="item"><span class="tag svc">SVC</span> Screenshot / artifact collection</div>
+    <div class="item"><span class="tag svc">SVC</span> Environment profile injection</div>
+  </div>
+
+  <!-- Infrastructure -->
+  <div class="card orange">
+    <div class="card-title"><span class="icon">🏗️</span>Infrastructure</div>
+    <div class="item"><span class="tag db">PG</span> PostgreSQL 15 — Primary database</div>
+    <div class="item"><span class="tag db">ORM</span> Prisma ORM — Type-safe queries</div>
+    <div class="item"><span class="tag db">MQ</span> BullMQ + Redis — Job queue</div>
+    <div class="item"><span class="tag db">JWT</span> JWT Auth — Access + Refresh tokens</div>
+    <div class="item"><span class="tag db">ENV</span> .env config — DB, AI, Jira credentials</div>
+    <div class="item"><span class="tag db">FS</span> Temp dirs — Feature files, screenshots</div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ── ROW 3: Supporting Services ── -->
+
+  <!-- Auth & Tenant (Frontend side) -->
+  <div class="card purple">
+    <div class="card-title"><span class="icon">🔐</span>Auth &amp; Multi-Tenancy (Frontend)</div>
+    <div class="item"><span class="tag ui">UI</span> JWT token management (access + refresh)</div>
+    <div class="item"><span class="tag ui">UI</span> Organization-scoped feature access</div>
+    <div class="item"><span class="tag ui">UI</span> User role-based UI rendering</div>
+    <div class="item"><span class="tag ui">UI</span> Project selector — filter by project</div>
+  </div>
+
+  <!-- Backend Supporting Services -->
+  <div class="card teal">
+    <div class="card-title"><span class="icon">🛠️</span>Supporting BDD Services</div>
+    <div class="item"><span class="tag svc">SVC</span> testCaseConverter.service — CSV→Gherkin</div>
+    <div class="item"><span class="tag svc">SVC</span> testCaseGenerator.service — AI test gen</div>
+    <div class="item"><span class="tag svc">SVC</span> screenplay.service — Actor/Task/Ability</div>
+    <div class="item"><span class="tag svc">SVC</span> serenityReport.service — Serenity reports</div>
+    <div class="item"><span class="tag svc">SVC</span> allure.service — Allure reports</div>
+    <div class="item"><span class="tag svc">SVC</span> jira.service — Epic/story fetching</div>
+    <div class="item"><span class="tag svc">SVC</span> workflowOrchestrator.service — Pipeline</div>
+    <div class="item"><span class="tag svc">SVC</span> context-aware-locator.service — Locators</div>
+  </div>
+
+  <!-- CI/CD & Reporting -->
+  <div class="card red">
+    <div class="card-title"><span class="icon">📊</span>Reporting &amp; CI/CD</div>
+    <div class="item"><span class="tag get">OUT</span> Allure HTML report — /playwright-crx-reports/</div>
+    <div class="item"><span class="tag get">OUT</span> Serenity BDD reports — /serenity-&lt;runId&gt;/</div>
+    <div class="item"><span class="tag get">OUT</span> Allure history — /allure-history/</div>
+    <div class="item"><span class="tag cron">CI</span> GitHub Actions — ci-cd.yml pipeline</div>
+    <div class="item"><span class="tag cron">CI</span> Stages: Test → Build → Docker → Deploy</div>
+    <div class="item"><span class="tag cron">CI</span> Lighthouse CI — Performance on PR</div>
+    <div class="item"><span class="tag db">DOCK</span> Docker Compose — PG + Backend + Nginx</div>
+  </div>
+
+  <hr class="section-divider" />
+
+  <!-- ── ROW 4: Playwright Execution ── -->
+
+  <!-- Playwright Execution (spans all 3) -->
+  <div class="card green span-all">
+    <div class="card-title"><span class="icon">🎭</span>Playwright Execution Engine</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+      <div>
+        <div style="font-size:0.7rem;color:#9ae6b4;font-weight:700;margin-bottom:6px;">BROWSERS</div>
+        <div class="item"><span class="tag svc">▶</span> Chromium</div>
+        <div class="item"><span class="tag svc">▶</span> Firefox</div>
+        <div class="item"><span class="tag svc">▶</span> WebKit</div>
+        <div class="item"><span class="tag svc">⚙</span> Headless / Headed</div>
+      </div>
+      <div>
+        <div style="font-size:0.7rem;color:#9ae6b4;font-weight:700;margin-bottom:6px;">EXECUTION</div>
+        <div class="item"><span class="tag svc">⚡</span> Parallel workers</div>
+        <div class="item"><span class="tag svc">🔁</span> Retry on flake</div>
+        <div class="item"><span class="tag svc">⏱</span> 5 min timeout</div>
+        <div class="item"><span class="tag svc">📸</span> Screenshot on fail</div>
+      </div>
+      <div>
+        <div style="font-size:0.7rem;color:#9ae6b4;font-weight:700;margin-bottom:6px;">REPORTERS</div>
+        <div class="item"><span class="tag svc">📋</span> allure-playwright</div>
+        <div class="item"><span class="tag svc">📋</span> Serenity/BDD</div>
+        <div class="item"><span class="tag svc">📋</span> HTML built-in</div>
+        <div class="item"><span class="tag svc">📋</span> JSON results</div>
+      </div>
+      <div>
+        <div style="font-size:0.7rem;color:#9ae6b4;font-weight:700;margin-bottom:6px;">PACKAGES</div>
+        <div class="item"><span class="tag svc">📦</span> @playwright/test ^1.58</div>
+        <div class="item"><span class="tag svc">📦</span> playwright-core ^1.56</div>
+        <div class="item"><span class="tag svc">📦</span> allure-playwright ^3.4</div>
+        <div class="item"><span class="tag svc">📦</span> Node.js 20+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ROW 5: Tests ── -->
+
+  <!-- Integration Tests -->
+  <div class="card purple span-2">
+    <div class="card-title"><span class="icon">🧪</span>Integration Test Suite (Jest + ts-jest)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <div class="item"><span class="tag svc">INT</span> INT-001 — Feature CRUD &amp; Gherkin parsing</div>
+        <div class="item"><span class="tag svc">INT</span> INT-002 — Execution flow &amp; status lifecycle</div>
+        <div class="item"><span class="tag svc">INT</span> INT-003 — Step library CRUD</div>
+      </div>
+      <div>
+        <div class="item"><span class="tag svc">INT</span> INT-004 — Scheduled / cron runs</div>
+        <div class="item"><span class="tag svc">INT</span> INT-005 — Screenplay pattern</div>
+        <div class="item"><span class="tag svc">INT</span> INT-006 — CSV/TXT → Gherkin conversion</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- External Integrations -->
+  <div class="card red">
+    <div class="card-title"><span class="icon">🔗</span>External Integrations</div>
+    <div class="item"><span class="tag svc">AI</span> OpenAI API — test generation &amp; enhancement</div>
+    <div class="item"><span class="tag svc">JIRA</span> Jira API — Epic/story/acceptance criteria</div>
+    <div class="item"><span class="tag svc">CRX</span> Chrome Extension — browser recorder</div>
+    <div class="item"><span class="tag svc">PM2</span> PM2 — process management (ecosystem.config.js)</div>
+  </div>
+
+</div><!-- end .arch-grid -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     END-TO-END EXECUTION FLOW
+═══════════════════════════════════════════════════════════ -->
+<div class="flow-section">
+  <div class="flow-title">End-to-End Execution Flow</div>
+  <div class="flow-steps">
+
+    <div class="flow-step">
+      <span class="step-num">STEP 1</span>
+      User writes / uploads Gherkin<br/>in BDDTesting.tsx
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 2</span>
+      POST /api/bdd/parse<br/>Preview parse (no save)
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 3</span>
+      POST /api/bdd/features<br/>Persist Feature + Scenarios + Steps
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 4</span>
+      POST /api/bdd/features/:id/run<br/>Trigger execution
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 5</span>
+      BDD Service generates<br/>Playwright TS code
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 6</span>
+      Spawn Playwright subprocess<br/>(chromium/firefox/webkit)
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 7</span>
+      SSE stream → live step<br/>results to frontend
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 8</span>
+      Generate Allure +<br/>Serenity reports
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 9</span>
+      Persist BDDRun record<br/>with all step results
+    </div>
+    <div class="flow-arrow">→</div>
+
+    <div class="flow-step">
+      <span class="step-num">STEP 10</span>
+      GET /api/bdd/runs/:id/report<br/>View HTML report
+    </div>
+
+  </div>
+
+  <!-- JIRA PIPELINE FLOW -->
+  <div class="flow-title" style="margin-top:24px;">Jira → Gherkin Pipeline Flow</div>
+  <div class="flow-steps">
+    <div class="flow-step" style="background:#2d1a1a;border-color:#7a2a2a;">
+      <span class="step-num" style="color:#fc8181;">JIRA</span>
+      Fetch Epic / Stories<br/>via jira.service
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:#2d1a1a;border-color:#7a2a2a;">
+      <span class="step-num" style="color:#fc8181;">EXTRACT</span>
+      Parse acceptance<br/>criteria from stories
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:#1e1a2e;border-color:#4a3a7a;">
+      <span class="step-num" style="color:#d6bcfa;">AI GEN</span>
+      OpenAI generates<br/>Gherkin feature file
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:#1a2e20;border-color:#2d5a3a;">
+      <span class="step-num" style="color:#9ae6b4;">CONVERT</span>
+      workflowOrchestrator<br/>saves BDDFeature
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:#1a2740;border-color:#2b4a7a;">
+      <span class="step-num" style="color:#90cdf4;">RUN</span>
+      Playwright executes<br/>generated scenarios
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:#2d2010;border-color:#6b4a1a;">
+      <span class="step-num" style="color:#fbd38d;">REPORT</span>
+      Serenity + Allure<br/>reports generated
+    </div>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#63b3ed;"></div>Frontend Layer</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#48bb78;"></div>Backend Services</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ed8936;"></div>Data / DB / Infra</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d6bcfa;"></div>Auth / Multi-tenancy</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#81e6d9;"></div>Supporting Services</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fc8181;"></div>CI/CD / External</div>
+  <div class="legend-item" style="margin-left:16px; color:#4a7aaa;">Tech: React · Express · PostgreSQL · Playwright · BullMQ · Redis · Docker</div>
+</div>
+
+</body>
+</html>

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import axios, { AxiosError } from 'axios';
 import { randomUUID } from 'crypto';
 import pool from '../db';
@@ -25,17 +26,36 @@ import {
   previewFieldBindingSubstitution,
   generateWithFieldBindings
 } from '../controllers/testData.controller';
+import {
+  uploadCsvAndBind,
+  parseCsvInline,
+  previewCsvBinding,
+  exportSuiteAsCsv
+} from '../controllers/csvTestData.controller';
 import { analyzeXPath } from '../controllers/ai-analysis.controller';
 
 const router = Router();
 
-// Skip authentication for external API forwarding endpoints
+// Configure multer for CSV uploads
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5_000_000 }, // 5MB max
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  }
+});
+
+// Skip authentication for external API forwarding endpoints (only generation endpoints)
 router.use((req, res, next) => {
-  // Skip auth for external API generation endpoints
+  // Skip auth for external API generation endpoints (NO AUTH REQUIRED)
   if (req.path.startsWith('/generate/')) {
     return next();
   }
-  // Apply auth middleware for other routes
+  // Apply auth middleware for ALL other routes (including field-bindings and csv)
   return authMiddleware(req, res, next);
 });
 
@@ -305,9 +325,17 @@ router.post('/xpath-analysis', analyzeXPath);
 // ============================================
 // Field Binding endpoints (requires auth)
 // ============================================
-router.post('/field-bindings/extract-placeholders', extractPlaceholders);
-router.post('/field-bindings/analyze', analyzeFieldBindings);
-router.post('/field-bindings/preview', previewFieldBindingSubstitution);
-router.post('/field-bindings/generate', generateWithFieldBindings);
+router.post('/field-bindings/extract-placeholders', authMiddleware, extractPlaceholders);
+router.post('/field-bindings/analyze', authMiddleware, analyzeFieldBindings);
+router.post('/field-bindings/preview', authMiddleware, previewFieldBindingSubstitution);
+router.post('/field-bindings/generate', authMiddleware, generateWithFieldBindings);
+
+// ============================================
+// CSV Data-Driven Testing endpoints (requires auth)
+// ============================================
+router.post('/csv/upload-and-bind', authMiddleware, csvUpload.single('file'), uploadCsvAndBind);
+router.post('/csv/parse', authMiddleware, parseCsvInline);
+router.post('/csv/preview-binding', authMiddleware, previewCsvBinding);
+router.get('/csv/export/:suiteId', authMiddleware, exportSuiteAsCsv);
 
 export default router;

@@ -1,0 +1,2092 @@
+[
+  {
+    "description": "  As a QA Engineer\n  I want to test the Sauce Demo e-commerce website\n  So that I can verify shopping functionality",
+    "elements": [
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;successful-login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 15,
+        "name": "Successful login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 955512099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1014"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 17,
+            "name": "I enter username \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:548"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 18,
+            "name": "I enter password \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:553"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 19,
+            "name": "I click the login button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:563"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 20,
+            "name": "I should see the products page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1019"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "the page title should contain \"Swag Labs\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:903"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 63579599
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 25283200
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 14
+          },
+          {
+            "name": "@login",
+            "line": 14
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;view-products-list",
+        "keyword": "Scenario",
+        "line": 24,
+        "name": "View products list",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 631060600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 25,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 26,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1029"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 27,
+            "name": "I should see at least 6 products",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1035"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 28,
+            "name": "each product should have a name and price",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1040"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 29,
+            "name": "each product should have an \"Add to cart\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1046"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 58343899
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 13301999
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@smoke",
+            "line": 23
+          },
+          {
+            "name": "@products",
+            "line": 23
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;add-single-product-to-cart",
+        "keyword": "Scenario",
+        "line": 32,
+        "name": "Add single product to cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 445210899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 33,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 34,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1029"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 35,
+            "name": "I add the first product to cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1051"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 36,
+            "name": "the cart counter should show \"1\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1057"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 37,
+            "name": "the product should show \"Remove\" button instead of \"Add to cart\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1062"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 57092299
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20703099
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@shopping-cart",
+            "line": 31
+          },
+          {
+            "name": "@add-to-cart",
+            "line": 31
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;add-multiple-products-to-cart",
+        "keyword": "Scenario",
+        "line": 40,
+        "name": "Add multiple products to cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 476487099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 41,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 42,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1029"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 43,
+            "name": "I add 3 products to cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1067"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 44,
+            "name": "the cart counter should show \"3\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1057"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 45,
+            "name": "I navigate to the cart page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1073"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 46,
+            "name": "I should see 3 items in the cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1078"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 57018599
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18542799
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@shopping-cart",
+            "line": 39
+          },
+          {
+            "name": "@multi-add",
+            "line": 39
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;remove-product-from-cart",
+        "keyword": "Scenario",
+        "line": 49,
+        "name": "Remove product from cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 474041999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 50,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 51,
+            "name": "I have added 2 products to cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1083"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 52,
+            "name": "I navigate to the cart page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1073"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 53,
+            "name": "I remove the first product from cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1089"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 54,
+            "name": "I should see 1 item in the cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1095"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 55,
+            "name": "the cart counter should show \"1\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1057"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 56107100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 24761200
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@shopping-cart",
+            "line": 48
+          },
+          {
+            "name": "@remove",
+            "line": 48
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;complete-checkout-process",
+        "keyword": "Scenario",
+        "line": 58,
+        "name": "Complete checkout process",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 670104499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 59,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "Sauce Labs Backpack"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Sauce Labs Bike Light"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 60,
+            "name": "I have added products to cart:",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1100"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 63,
+            "name": "I navigate to the cart page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1073"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 64,
+            "name": "I click the checkout button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1106"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "firstName",
+                      "John"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "lastName",
+                      "Doe"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "zipCode",
+                      "12345"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 65,
+            "name": "I fill in checkout information:",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1111"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 69,
+            "name": "I click continue",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1116"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 70,
+            "name": "I should see the order summary",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1121"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 71,
+            "name": "I should see the total price",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1126"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 76939899
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 19842799
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@checkout",
+            "line": 57
+          },
+          {
+            "name": "@complete-purchase",
+            "line": 57
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;finalize-order",
+        "keyword": "Scenario",
+        "line": 74,
+        "name": "Finalize order",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 457076099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 75,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 76,
+            "name": "I have products in cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1131"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 77,
+            "name": "I am on the checkout summary page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1137"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 78,
+            "name": "I click the \"Finish\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:646"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 79,
+            "name": "I should see the order confirmation page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1142"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 80,
+            "name": "I should see \"Thank you for your order\" message",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1147"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 62412000
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16261999
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@checkout",
+            "line": 73
+          },
+          {
+            "name": "@finalize",
+            "line": 73
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;sort-products-by-price-low-to-high",
+        "keyword": "Scenario",
+        "line": 83,
+        "name": "Sort products by price low to high",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 514332399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 84,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 85,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1029"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 86,
+            "name": "I select sort option \"Price (low to high)\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1152"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 87,
+            "name": "the products should be sorted by price in ascending order",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1157"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 65135800
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 21960500
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@sorting",
+            "line": 82
+          },
+          {
+            "name": "@price-low-high",
+            "line": 82
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;sort-products-by-price-high-to-low",
+        "keyword": "Scenario",
+        "line": 90,
+        "name": "Sort products by price high to low",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 477703700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 91,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 92,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1029"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 93,
+            "name": "I select sort option \"Price (high to low)\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1152"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 94,
+            "name": "the products should be sorted by price in descending order",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1163"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 65827300
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 19047300
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@sorting",
+            "line": 89
+          },
+          {
+            "name": "@price-high-low",
+            "line": 89
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;filter-to-view-single-product",
+        "keyword": "Scenario",
+        "line": 97,
+        "name": "Filter to view single product",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 494737699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 98,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 99,
+            "name": "I click on \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:648"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 100,
+            "name": "I should see the product detail page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1169"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 101,
+            "name": "I should see the product name \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1174"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 102,
+            "name": "I should see the product price",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1179"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 103,
+            "name": "I should see the product description",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1184"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 54837299
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 21273600
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@filter",
+            "line": 96
+          },
+          {
+            "name": "@single-item",
+            "line": 96
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;logout-from-application",
+        "keyword": "Scenario",
+        "line": 106,
+        "name": "Logout from application",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 500665300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 107,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 108,
+            "name": "I click the menu button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1189"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 109,
+            "name": "I click the logout link",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1194"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 110,
+            "name": "I should be redirected to the login page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1199"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 111,
+            "name": "the username field should be empty",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1204"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 44750800
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 19704700
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@logout",
+            "line": 105
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;login-with-invalid-credentials",
+        "keyword": "Scenario",
+        "line": 114,
+        "name": "Login with invalid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 433318200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 115,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1014"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 116,
+            "name": "I enter username \"invalid_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:548"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 117,
+            "name": "I enter password \"wrong_password\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:553"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 118,
+            "name": "I click the login button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:563"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 119,
+            "name": "I should see an error message",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1210"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 120,
+            "name": "the error message should contain \"Username and password do not match\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1215"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 55061399
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 21450499
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@error-handling",
+            "line": 113
+          },
+          {
+            "name": "@invalid-login",
+            "line": 113
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;verify-page-load-performance",
+        "keyword": "Scenario",
+        "line": 123,
+        "name": "Verify page load performance",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 414798000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 124,
+            "name": "I navigate to \"https://saucedemo.com\"",
+            "result": {
+              "status": "ambiguous",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 125,
+            "name": "the page should load within 5 seconds",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1220"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 126,
+            "name": "all images should be loaded",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1226"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 127,
+            "name": "the page should be responsive",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1232"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 37273199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20791300
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@performance",
+            "line": 122
+          },
+          {
+            "name": "@page-load",
+            "line": 122
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;verify-page-accessibility",
+        "keyword": "Scenario",
+        "line": 130,
+        "name": "Verify page accessibility",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 433275399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 131,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1014"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 132,
+            "name": "all form inputs should have labels",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1238"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 133,
+            "name": "buttons should have accessible text",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1244"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 134,
+            "name": "page should have proper heading hierarchy",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1250"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 46439200
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16307099
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@accessibility",
+            "line": 129
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "saucedemo-e-commerce-application",
+    "line": 5,
+    "keyword": "Feature",
+    "name": "SauceDemo E-commerce Application",
+    "tags": [
+      {
+        "name": "@bdd",
+        "line": 4
+      },
+      {
+        "name": "@saucedemo",
+        "line": 4
+      },
+      {
+        "name": "@e2e",
+        "line": 4
+      }
+    ],
+    "uri": "features\\test.feature"
+  }
+]

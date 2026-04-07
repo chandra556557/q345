@@ -1,0 +1,23 @@
+{
+  "id": "user-001",
+  "email": "testuser@project1.com",
+  "username": "project1_testuser",
+  "password": "SecurePass123!",
+  "firstName": "Project1",
+  "lastName": "TestUser",
+  "role": "user",
+  "status": "active",
+  "createdAt": "2024-01-15T10:00:00Z",
+  "updatedAt": "2024-01-15T10:00:00Z",
+  "organization": "project1",
+  "permissions": [
+    "read:tests",
+    "write:tests",
+    "read:reports"
+  ],
+  "preferences": {
+    "theme": "light",
+    "notifications": true,
+    "language": "en"
+  }
+}

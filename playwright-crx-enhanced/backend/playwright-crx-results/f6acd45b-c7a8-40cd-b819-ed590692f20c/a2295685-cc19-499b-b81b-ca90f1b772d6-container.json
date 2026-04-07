@@ -1,0 +1,21 @@
+{
+  "uuid": "a2295685-cc19-499b-b81b-ca90f1b772d6",
+  "name": "Login with valid credentials",
+  "children": [
+    "46708b02-44a6-46a9-a249-5d7a8e81c254",
+    "3bc954c7-fb67-44ee-8c94-0fcd2bc492b9",
+    "3c1e9634-8027-4e83-b797-c49707000967",
+    "adc80a2b-95fd-499b-ba7b-d4e952a4a782",
+    "d9faf709-d6e7-4584-bc42-2d406ebe6d89",
+    "af1ad75e-a4a6-4964-8852-b86c1c3c53ab",
+    "c9dd013d-5125-4da1-b473-4c8a42270eed",
+    "354fbe14-1fb2-4edf-807b-a852c095a582",
+    "99905acb-8da0-41a5-ace4-8ae5f7adea9e",
+    "de49f6df-41e5-4bfe-aa1a-7aa0e8ae2443",
+    "3d3c017a-af67-4e34-9b9b-289a4d95e549"
+  ],
+  "befores": [],
+  "afters": [],
+  "start": 1774864623843,
+  "stop": 1774864662457
+}

@@ -1,0 +1,135 @@
+{
+  "uuid": "c9dd013d-5125-4da1-b473-4c8a42270eed",
+  "historyId": "f6acd45b-c7a8-40cd-b819-ed590692f20c-Sort products by name Z to A",
+  "testCaseId": "c9dd013d-5125-4da1-b473-4c8a42270eed",
+  "fullName": "Login with valid credentials > Sort products by name Z to A",
+  "name": "Sort products by name Z to A",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774864659259,
+  "stop": 1774864662442,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Sort products by name Z to A"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662139,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in",
+      "status": "failed",
+      "statusDetails": {
+        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"networkidle\"\u001b[22m\n\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\f6acd45b-c7a8-40cd-b819-ed590692f20c\\features\\step_definitions\\steps.js:398:21)"
+      },
+      "stage": "finished",
+      "start": 1774864659806,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662442,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662442,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662442,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662442,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "When Select \"Name (Z to A)\" from the sort dropdown",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662442,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "Then Products are sorted alphabetically in descending order",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662442,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662216,
+      "stop": 1774864662442,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662424,
+      "stop": 1774864662442,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

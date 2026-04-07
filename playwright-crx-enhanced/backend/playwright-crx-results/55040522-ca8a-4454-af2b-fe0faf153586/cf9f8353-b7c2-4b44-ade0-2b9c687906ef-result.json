@@ -1,0 +1,135 @@
+{
+  "uuid": "cf9f8353-b7c2-4b44-ade0-2b9c687906ef",
+  "historyId": "55040522-ca8a-4454-af2b-fe0faf153586-Sort products by price low to high",
+  "testCaseId": "cf9f8353-b7c2-4b44-ade0-2b9c687906ef",
+  "fullName": "Login with valid credentials > Sort products by price low to high",
+  "name": "Sort products by price low to high",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774865703362,
+  "stop": 1774865708959,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Sort products by price low to high"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708432,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865705656,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708302,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708868,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708902,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708830,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "When Select \"Price (low to high)\" from the sort dropdown",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708927,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "Then Products are sorted by price in ascending order with cheapest item first",
+      "status": "failed",
+      "statusDetails": {
+        "message": "Error: Assertion not implemented: Then Products are sorted by price in ascending order with cheapest item first\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1050:7)"
+      },
+      "stage": "finished",
+      "start": 1774865708552,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708583,
+      "stop": 1774865708959,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708941,
+      "stop": 1774865708959,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

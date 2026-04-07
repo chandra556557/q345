@@ -1,0 +1,38 @@
+[
+  {
+    "id": "user-p2-001",
+    "email": "admin@project2.staging.com",
+    "username": "project2_admin",
+    "password": "AdminStaging123!",
+    "firstName": "Staging",
+    "lastName": "Admin",
+    "role": "admin",
+    "status": "active",
+    "organization": "project2-staging",
+    "environment": "staging"
+  },
+  {
+    "id": "user-p2-002",
+    "email": "qa@project2.staging.com",
+    "username": "project2_qa",
+    "password": "QAStaging123!",
+    "firstName": "QA",
+    "lastName": "Engineer",
+    "role": "user",
+    "status": "active",
+    "organization": "project2-staging",
+    "environment": "staging"
+  },
+  {
+    "id": "user-p2-003",
+    "email": "manager@project2.staging.com",
+    "username": "project2_manager",
+    "password": "ManagerStaging123!",
+    "firstName": "Project",
+    "lastName": "Manager",
+    "role": "user",
+    "status": "active",
+    "organization": "project2-staging",
+    "environment": "staging"
+  }
+]

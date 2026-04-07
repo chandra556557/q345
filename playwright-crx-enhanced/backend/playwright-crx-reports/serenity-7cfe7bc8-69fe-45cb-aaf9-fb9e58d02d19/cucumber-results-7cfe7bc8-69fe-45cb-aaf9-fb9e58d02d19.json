@@ -1,0 +1,606 @@
+[
+  {
+    "description": "  As a user of SauceDemo\n  I want to verify core shopping functionality\n  So that the application works correctly",
+    "elements": [
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-tests;successful-login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 7,
+        "name": "Successful login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1246310999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "I navigate to \"https://www.saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:257"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2481010999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 9,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 119360698
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 10,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 39636999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 11,
+            "name": "I click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 153666397
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 12,
+            "name": "I should see \"Products\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:644"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 19825297
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "the URL should contain \"inventory\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:674"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 9611700
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 1232799,
+              "error_message": "TypeError: Cannot read properties of undefined (reading 'getInvocationParameters')\n    at Object.run (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\step_runner.js:40:47)\n    at TestCaseRunner.invokeStep (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:114:44)\n    at TestCaseRunner.runHook (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:222:27)\n    at C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:193:39\n    at TestCaseRunner.aroundTestStep (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:139:38)\n    at TestCaseRunner.runAttempt (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:180:24)\n    at async TestCaseRunner.run (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:155:35)\n    at async Worker.runTestCase (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\parallel\\worker.js:87:9)\n    at async Worker.receiveMessage (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\parallel\\worker.js:68:13)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 689733000
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@login",
+            "line": 6
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-tests;add-product-to-cart-and-verify-badge",
+        "keyword": "Scenario",
+        "line": 16,
+        "name": "Add product to cart and verify badge",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1130639500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 17,
+            "name": "I navigate to \"https://www.saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:257"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2522970898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 18,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 110517699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 19,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 47643998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 20,
+            "name": "I click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 153671998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "I click \"Add to cart\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 85132299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 22,
+            "name": "I should see \"Remove\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:644"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 21908497
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 238100,
+              "error_message": "TypeError: Cannot read properties of undefined (reading 'getInvocationParameters')\n    at Object.run (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\step_runner.js:40:47)\n    at TestCaseRunner.invokeStep (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:114:44)\n    at TestCaseRunner.runHook (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:222:27)\n    at C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:193:39\n    at TestCaseRunner.aroundTestStep (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:139:38)\n    at TestCaseRunner.runAttempt (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:180:24)\n    at async TestCaseRunner.run (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:155:35)\n    at async Worker.runTestCase (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\parallel\\worker.js:87:9)\n    at async Worker.receiveMessage (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\parallel\\worker.js:68:13)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 559657600
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@cart",
+            "line": 15
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-tests;complete-checkout-flow-end-to-end",
+        "keyword": "Scenario",
+        "line": 25,
+        "name": "Complete checkout flow end to end",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 757601399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 26,
+            "name": "I navigate to \"https://www.saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:257"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2383732199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 27,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 85399899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 28,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 37505300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 29,
+            "name": "I click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 147617898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 30,
+            "name": "I click \"Add to cart\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 78901697
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 31,
+            "name": "I click \".shopping_cart_link\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 75661498
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 32,
+            "name": "I click the \"Checkout\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 56855998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 33,
+            "name": "I fill \"First Name\" with \"John\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 36207098
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 34,
+            "name": "I fill \"Last Name\" with \"Doe\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 34554399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 35,
+            "name": "I fill \"Zip/Postal Code\" with \"12345\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 34497799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 36,
+            "name": "I click the \"Continue\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 63851498
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 37,
+            "name": "I click the \"Finish\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 71936697
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 38,
+            "name": "I should see \"Thank you for your order!\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:644"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 11582100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 182299,
+              "error_message": "TypeError: Cannot read properties of undefined (reading 'getInvocationParameters')\n    at Object.run (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\step_runner.js:40:47)\n    at TestCaseRunner.invokeStep (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:114:44)\n    at TestCaseRunner.runHook (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:222:27)\n    at C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:193:39\n    at TestCaseRunner.aroundTestStep (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:139:38)\n    at TestCaseRunner.runAttempt (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:180:24)\n    at async TestCaseRunner.run (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:155:35)\n    at async Worker.runTestCase (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\parallel\\worker.js:87:9)\n    at async Worker.receiveMessage (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\parallel\\worker.js:68:13)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 314700100
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@checkout",
+            "line": 24
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-tests;logout-from-the-application",
+        "keyword": "Scenario",
+        "line": 41,
+        "name": "Logout from the application",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 708733500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 42,
+            "name": "I navigate to \"https://www.saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:257"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2380811997
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 43,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 89406099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 44,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:388"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 34787898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 45,
+            "name": "I click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:425"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 147985298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 46,
+            "name": "I click \"Open Menu\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 84606398
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 47,
+            "name": "I click \"Logout\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:424"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 968131198
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 48,
+            "name": "I should see \"Login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:644"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 9543799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 49,
+            "name": "the URL should contain \"saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:674"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5424399
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "failed",
+              "duration": 262099,
+              "error_message": "TypeError: Cannot read properties of undefined (reading 'getInvocationParameters')\n    at Object.run (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\step_runner.js:40:47)\n    at TestCaseRunner.invokeStep (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:114:44)\n    at TestCaseRunner.runHook (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:222:27)\n    at C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:193:39\n    at TestCaseRunner.aroundTestStep (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:139:38)\n    at TestCaseRunner.runAttempt (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:180:24)\n    at async TestCaseRunner.run (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\test_case_runner.js:155:35)\n    at async Worker.runTestCase (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\parallel\\worker.js:87:9)\n    at async Worker.receiveMessage (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\@cucumber\\cucumber\\lib\\runtime\\parallel\\worker.js:68:13)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 195320899
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@logout",
+            "line": 40
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "saucedemo-e-commerce-tests",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "SauceDemo E-Commerce Tests",
+    "tags": [],
+    "uri": "features\\test.feature"
+  }
+]

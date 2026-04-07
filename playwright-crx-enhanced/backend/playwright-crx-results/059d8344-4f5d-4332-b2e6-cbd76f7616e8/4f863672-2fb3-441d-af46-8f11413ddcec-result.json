@@ -1,0 +1,133 @@
+{
+  "uuid": "4f863672-2fb3-441d-af46-8f11413ddcec",
+  "historyId": "059d8344-4f5d-4332-b2e6-cbd76f7616e8-Verify restriction applies only to the specific rejected role",
+  "testCaseId": "4f863672-2fb3-441d-af46-8f11413ddcec",
+  "fullName": "Verify rejected role is restricted for re-application > Verify restriction applies only to the specific rejected role",
+  "name": "Verify restriction applies only to the specific rejected role",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774860984983,
+  "stop": 1774860985258,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify restriction applies only to the specific rejected role"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985031,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985256,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985257,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "And User gets rejected for Role A",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985257,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "When Check availability of other roles",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985257,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "And Attempt to apply for another role",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985257,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "Then Verify team access.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985257,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "And Only Role A should be restricted. Other roles should function normally without blocking team application.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985257,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985235,
+      "stop": 1774860985258,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985241,
+      "stop": 1774860985258,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

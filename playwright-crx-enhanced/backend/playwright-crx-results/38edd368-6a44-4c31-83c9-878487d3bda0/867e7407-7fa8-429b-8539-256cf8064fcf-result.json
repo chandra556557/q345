@@ -1,0 +1,124 @@
+{
+  "uuid": "867e7407-7fa8-429b-8539-256cf8064fcf",
+  "historyId": "38edd368-6a44-4c31-83c9-878487d3bda0-Sort products by price low to high",
+  "testCaseId": "867e7407-7fa8-429b-8539-256cf8064fcf",
+  "fullName": "SauceDemo E-commerce Application > Sort products by price low to high",
+  "name": "Sort products by price low to high",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775546445435,
+  "stop": 1775546446036,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Sort products by price low to high"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546445522,
+      "stop": 1775546446036,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446036,
+      "stop": 1775546446036,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446036,
+      "stop": 1775546446036,
+      "attachments": []
+    },
+    {
+      "name": "Given I am logged in as \"standard_user\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446036,
+      "stop": 1775546446036,
+      "attachments": []
+    },
+    {
+      "name": "When I view the products list",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446036,
+      "stop": 1775546446036,
+      "attachments": []
+    },
+    {
+      "name": "And I select sort option \"Price (low to high)\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446036,
+      "stop": 1775546446036,
+      "attachments": []
+    },
+    {
+      "name": "Then the products should be sorted by price in ascending order",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446036,
+      "stop": 1775546446036,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546445971,
+      "stop": 1775546446036,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446014,
+      "stop": 1775546446036,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

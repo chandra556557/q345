@@ -1,0 +1,237 @@
+Task ID,Module,Sub-Module,Task Name,Description,Priority,Status,Dependencies,API Endpoint,Test Type
+TC-001,Jira Integration,Connection,Configure Jira connection,Enter Jira Base URL / Email / API Token / API Version (v2 or v3),P0,Implemented,,POST /api/epic-pipeline/jira/test-connection,Functional
+TC-002,Jira Integration,Connection,Test Jira connectivity,Click Test Connection to validate Jira credentials against REST API,P0,Implemented,TC-001,POST /api/epic-pipeline/jira/test-connection,Functional
+TC-003,Jira Integration,Connection,Save Jira configuration,Persist Jira config per user and organization for reuse,P0,Implemented,TC-002,POST /api/epic-pipeline/jira/save-config,Functional
+TC-004,Jira Integration,Connection,Load saved Jira config,Retrieve saved Jira config on page load (API token excluded from response),P0,Implemented,TC-003,GET /api/epic-pipeline/jira/config,Functional
+TC-005,Jira Integration,Connection,Support Jira Cloud v3 API,Handle Atlassian Document Format (ADF) parsing for Cloud instances,P0,Implemented,TC-001,,Functional
+TC-006,Jira Integration,Connection,Support Jira Server v2 API,Handle plain text descriptions for Server/Data Center instances,P0,Implemented,TC-001,,Functional
+TC-007,Jira Integration,Projects,List Jira projects,Fetch and display all accessible projects from Jira,P0,Implemented,TC-002,GET /api/epic-pipeline/jira/projects,Functional
+TC-008,Jira Integration,Projects,Select project from dropdown,User selects a project to browse its epics,P0,Implemented,TC-007,,UI
+TC-009,Jira Integration,Epics,List epics for project,Fetch all epics for selected project ordered by creation date,P0,Implemented,TC-008,GET /api/epic-pipeline/jira/epics/:projectKey,Functional
+TC-010,Jira Integration,Epics,Display epic cards,Show epic key / summary / status / description in card layout,P0,Implemented,TC-009,,UI
+TC-011,Jira Integration,Epics,Select epic to fetch stories,Click epic card to fetch all linked stories with acceptance criteria,P0,Implemented,TC-010,GET /api/epic-pipeline/jira/epic/:epicKey,Functional
+TC-012,Jira Integration,Stories,Extract story summary and description,Parse story summary / description / status / priority / labels,P0,Implemented,TC-011,,Functional
+TC-013,Jira Integration,Stories,Extract acceptance criteria from custom fields,Check customfield_10014 / customfield_10015 / customfield_10020 for AC,P0,Implemented,TC-011,,Functional
+TC-014,Jira Integration,Stories,Extract AC from description sections,Parse AC section headers: Acceptance Criteria / Definition of Done / Given-When-Then blocks,P0,Implemented,TC-011,,Functional
+TC-015,Jira Integration,Stories,Parse ADF to plain text,Convert Atlassian Document Format nodes (paragraphs / lists / headings) to plain text,P0,Implemented,TC-011,,Functional
+TC-016,Jira Integration,Stories,Extract subtasks,Fetch subtask key / summary / status linked to each story,P1,Implemented,TC-011,,Functional
+TC-017,Jira Integration,Stories,Extract comments,Fetch last 5 comments for context enrichment,P1,Implemented,TC-011,,Functional
+TC-018,Jira Integration,Stories,Extract attachment filenames,List attachment names for reference,P2,Implemented,TC-011,,Functional
+TC-019,Jira Integration,Stories,Derive AC from description when none found,Split description into sentences as implicit acceptance criteria,P1,Implemented,TC-011,,Functional
+TC-020,Jira Integration,Stories,Derive AC from subtasks when none found,Use subtask summaries as acceptance criteria fallback,P1,Implemented,TC-019,,Functional
+TC-021,Jira Integration,Search,Fetch stories by specific story keys,Support comma-separated story key input for targeted generation,P0,Implemented,,POST /api/epic-pipeline/jira/search,Functional
+TC-022,Jira Integration,Search,Fetch stories by sprint ID,Select sprint to fetch all stories within that sprint,P1,Implemented,TC-007,,Functional
+TC-023,Jira Integration,Search,Fetch stories by custom JQL,User enters free-form JQL query to select stories,P1,Implemented,,POST /api/epic-pipeline/jira/search,Functional
+TC-024,Jira Integration,Security,Never return API token to frontend,Ensure GET /jira/config excludes apiToken field,P0,Implemented,TC-004,,Security
+TC-025,Jira Integration,Security,Never store API token in workflow results,Sanitize config before persisting to WorkflowRun table,P0,Implemented,TC-003,,Security
+TC-026,Test Case Generation,Configuration,Select test case categories,Toggle checkboxes for: Positive / Negative / Edge / Boundary / Security,P0,Implemented,,,UI
+TC-027,Test Case Generation,Configuration,Set max cases per category,Configure maximum test cases generated per category (default 5),P0,Implemented,,,UI
+TC-028,Test Case Generation,Configuration,Set security depth,Choose Basic or Thorough (OWASP Top 10) security testing depth,P0,Implemented,,,UI
+TC-029,Test Case Generation,Configuration,Set application context,Enter context string: web application / mobile app / REST API,P0,Implemented,,,UI
+TC-030,Test Case Generation,Configuration,Select AI provider,Choose between Rule-based (no AI) / OpenAI GPT-4o / Anthropic Claude,P1,Implemented,,,UI
+TC-031,Test Case Generation,Configuration,Enter AI API key,Provide API key for selected AI provider (never persisted to disk),P1,Implemented,TC-030,,UI
+TC-032,Test Case Generation,Context Analysis,Detect login context,Identify login / signin / auth / password / credential keywords in story text,P0,Implemented,,,Functional
+TC-033,Test Case Generation,Context Analysis,Detect form context,Identify form / input / field / submit / fill keywords,P0,Implemented,,,Functional
+TC-034,Test Case Generation,Context Analysis,Detect search context,Identify search / filter / find / query keywords,P0,Implemented,,,Functional
+TC-035,Test Case Generation,Context Analysis,Detect upload context,Identify upload / file / image / document / attachment keywords,P0,Implemented,,,Functional
+TC-036,Test Case Generation,Context Analysis,Detect payment context,Identify pay / checkout / cart / order / purchase keywords,P0,Implemented,,,Functional
+TC-037,Test Case Generation,Context Analysis,Detect CRUD context,Identify create / add / edit / update / delete / remove keywords,P0,Implemented,,,Functional
+TC-038,Test Case Generation,Context Analysis,Detect permissions context,Identify role / permission / admin / access / restrict keywords,P0,Implemented,,,Functional
+TC-039,Test Case Generation,Context Analysis,Detect datetime fields,Identify date / time / schedule / calendar keywords,P0,Implemented,,,Functional
+TC-040,Test Case Generation,Context Analysis,Detect numeric fields,Identify amount / price / quantity / count / number keywords,P0,Implemented,,,Functional
+TC-041,Test Case Generation,Context Analysis,Detect input field types,Identify email / password / phone / name / address / URL / file / select / checkbox fields,P0,Implemented,,,Functional
+TC-042,Test Case Generation,Context Analysis,Detect user actions,Identify click / type / select / upload / submit / navigate / search / delete / drag / scroll actions,P0,Implemented,,,Functional
+TC-043,Test Case Generation,Positive Cases,Generate AC verification cases,Create one positive test case per acceptance criterion,P0,Implemented,TC-026,,Functional
+TC-044,Test Case Generation,Positive Cases,Generate happy path from summary,Create positive case from story summary when no AC available,P0,Implemented,TC-043,,Functional
+TC-045,Test Case Generation,Positive Cases,Generate form submission case,Create valid-data form submission test when form context detected,P1,Implemented,TC-033,,Functional
+TC-046,Test Case Generation,Positive Cases,Generate data-driven variations,Create Scenario Outline with email variations for form stories,P1,Implemented,TC-045,,Functional
+TC-047,Test Case Generation,Positive Cases,Assign smoke tags to top 2 cases,Tag first 2 positive cases with @smoke,P1,Implemented,TC-043,,Functional
+TC-048,Test Case Generation,Negative Cases,Generate empty required field cases,Create one negative case per detected input field (leave field empty),P0,Implemented,TC-041,,Functional
+TC-049,Test Case Generation,Negative Cases,Generate invalid email format case,Test with invalid-email and user@ inputs,P0,Implemented,TC-041,,Functional
+TC-050,Test Case Generation,Negative Cases,Generate invalid phone format case,Test with alphabetic characters in phone field,P0,Implemented,TC-041,,Functional
+TC-051,Test Case Generation,Negative Cases,Generate invalid URL format case,Test with non-URL string,P0,Implemented,TC-041,,Functional
+TC-052,Test Case Generation,Negative Cases,Generate invalid date case,Test with 99/99/9999 date value,P0,Implemented,TC-039,,Functional
+TC-053,Test Case Generation,Negative Cases,Generate unauthorized access case,Test restricted feature access without proper role,P0,Implemented,TC-038,,Functional
+TC-054,Test Case Generation,Negative Cases,Generate wrong password case,Test login with incorrect credentials,P0,Implemented,TC-032,,Functional
+TC-055,Test Case Generation,Edge Cases,Generate empty state case,Test page display when no data exists,P0,Implemented,TC-037,,Functional
+TC-056,Test Case Generation,Edge Cases,Generate special characters case,Test input with Unicode / HTML / emoji / quotes,P0,Implemented,TC-041,,Functional
+TC-057,Test Case Generation,Edge Cases,Generate max length input case,Test text field with 500+ character input,P0,Implemented,TC-041,,Functional
+TC-058,Test Case Generation,Edge Cases,Generate double-submit case,Test rapid double-click on submit button,P1,Implemented,TC-042,,Functional
+TC-059,Test Case Generation,Edge Cases,Generate network timeout case,Test behavior with slow 3G network throttling,P1,Implemented,,,Functional
+TC-060,Test Case Generation,Edge Cases,Generate browser back button case,Test back navigation after form submission,P1,Implemented,TC-042,,Functional
+TC-061,Test Case Generation,Boundary Cases,Generate zero value case,Test numeric field with 0,P0,Implemented,TC-040,,Functional
+TC-062,Test Case Generation,Boundary Cases,Generate negative value case,Test numeric field with -1,P0,Implemented,TC-040,,Functional
+TC-063,Test Case Generation,Boundary Cases,Generate min decimal case,Test numeric field with 0.01,P0,Implemented,TC-040,,Functional
+TC-064,Test Case Generation,Boundary Cases,Generate max integer case,Test with 2147483647 (max 32-bit int),P1,Implemented,TC-040,,Functional
+TC-065,Test Case Generation,Boundary Cases,Generate past date boundary,Test with 2000-01-01 (Y2K) date,P0,Implemented,TC-039,,Functional
+TC-066,Test Case Generation,Boundary Cases,Generate far future date boundary,Test with 2099-12-31 date,P0,Implemented,TC-039,,Functional
+TC-067,Test Case Generation,Boundary Cases,Generate Unix epoch date boundary,Test with 1970-01-01 date,P1,Implemented,TC-039,,Functional
+TC-068,Test Case Generation,Boundary Cases,Generate single character string boundary,Test text field with 1 character,P0,Implemented,TC-041,,Functional
+TC-069,Test Case Generation,Boundary Cases,Generate varchar limit boundary,Test text field with 255 chars (varchar max),P0,Implemented,TC-041,,Functional
+TC-070,Test Case Generation,Boundary Cases,Generate varchar overflow boundary,Test text field with 256 chars (one beyond limit),P0,Implemented,TC-041,,Functional
+TC-071,Test Case Generation,Boundary Cases,Generate pagination boundary case,Test pagination when total items equals page size exactly,P1,Implemented,TC-037,,Functional
+TC-072,Test Case Generation,Security Cases,Generate XSS script injection case,Test <script>alert("XSS")</script> in text input,P0,Implemented,TC-041,,Security
+TC-073,Test Case Generation,Security Cases,Generate stored XSS attribute injection,Test " onmouseover="alert(1)" payload (thorough mode),P1,Implemented,TC-072,,Security
+TC-074,Test Case Generation,Security Cases,Generate SQL injection case,Test ' OR '1'='1'; DROP TABLE users; -- in search/form,P0,Implemented,TC-034,,Security
+TC-075,Test Case Generation,Security Cases,Generate auth bypass case,Test direct URL access to protected page without login,P0,Implemented,TC-032,,Security
+TC-076,Test Case Generation,Security Cases,Generate CSRF case,Test form submission with removed/modified CSRF token,P1,Implemented,TC-033,,Security
+TC-077,Test Case Generation,Security Cases,Generate malicious file upload case,Test .exe renamed to .jpg and .php upload,P1,Implemented,TC-035,,Security
+TC-078,Test Case Generation,Security Cases,Generate IDOR case,Test accessing other user's resource by changing ID in URL,P0,Implemented,TC-038,,Security
+TC-079,Test Case Generation,Security Cases,Generate session fixation case,Verify session token regenerated after login (thorough mode),P2,Implemented,TC-032,,Security
+TC-080,Test Case Generation,Security Cases,Tag security cases with OWASP reference,Add @owasp-a1 through @owasp-a8 tags to security cases,P1,Implemented,TC-072,,Functional
+TC-081,Test Case Generation,AI Generation,Build AI prompt with story context,Construct structured prompt with story details / AC / categories / output format,P1,Implemented,TC-030,,Functional
+TC-082,Test Case Generation,AI Generation,Call OpenAI API for generation,Send prompt to GPT-4o and parse JSON response,P1,Implemented,TC-031,,Integration
+TC-083,Test Case Generation,AI Generation,Call Anthropic API for generation,Send prompt to Claude and parse JSON response,P1,Implemented,TC-031,,Integration
+TC-084,Test Case Generation,AI Generation,Parse AI response to test cases,Extract structured test cases from AI JSON response,P1,Implemented,TC-082,,Functional
+TC-085,Test Case Generation,AI Generation,Fallback to rule-based on AI failure,Gracefully catch AI errors and generate using rules instead,P0,Implemented,TC-084,,Functional
+TC-086,Test Case Generation,Manual Input,Generate from manual story input,Accept summary / description / acceptance criteria without Jira,P0,Implemented,,POST /api/epic-pipeline/generate,Functional
+TC-087,Test Case Generation,Manual Input,Parse AC from textarea (one per line),Split multiline text into individual acceptance criteria,P0,Implemented,TC-086,,Functional
+TC-088,Gherkin Conversion,Feature Header,Generate Feature header with story key,Create Feature: line with story summary and @story_key tag,P0,Implemented,,,Functional
+TC-089,Gherkin Conversion,Feature Header,Generate narrative (As a / I want / So that),Add user story narrative to feature description,P0,Implemented,TC-088,,Functional
+TC-090,Gherkin Conversion,Feature Header,Add story metadata as comments,Include story key / priority / AC list as Gherkin comments,P0,Implemented,TC-088,,Functional
+TC-091,Gherkin Conversion,Background,Extract common preconditions,Identify preconditions shared across ALL test cases,P1,Implemented,TC-088,,Functional
+TC-092,Gherkin Conversion,Background,Generate Background section,Move common preconditions into Background: block,P1,Implemented,TC-091,,Functional
+TC-093,Gherkin Conversion,Scenarios,Generate positive scenarios,Convert positive test cases to Gherkin Scenario blocks,P0,Implemented,TC-043,,Functional
+TC-094,Gherkin Conversion,Scenarios,Generate negative scenarios,Convert negative test cases to Gherkin Scenario blocks,P0,Implemented,TC-048,,Functional
+TC-095,Gherkin Conversion,Scenarios,Generate edge case scenarios,Convert edge test cases to Gherkin Scenario blocks,P0,Implemented,TC-055,,Functional
+TC-096,Gherkin Conversion,Scenarios,Generate boundary scenarios,Convert boundary test cases to Gherkin Scenario blocks,P0,Implemented,TC-061,,Functional
+TC-097,Gherkin Conversion,Scenarios,Generate security scenarios,Convert security test cases to Gherkin Scenario blocks,P0,Implemented,TC-072,,Functional
+TC-098,Gherkin Conversion,Scenarios,Add category section comments,Insert # POSITIVE TEST CASES / # NEGATIVE TEST CASES section headers,P0,Implemented,TC-093,,Functional
+TC-099,Gherkin Conversion,Scenarios,Add tags per scenario,Include @category / @priority / @feature tags on each scenario,P0,Implemented,TC-093,,Functional
+TC-100,Gherkin Conversion,Scenarios,Use proper Given/When/Then structure,Map preconditions to Given / steps to When / expected to Then,P0,Implemented,TC-093,,Functional
+TC-101,Gherkin Conversion,Scenario Outline,Generate Scenario Outline for data variations,Use Scenario Outline when test case has dataVariations,P1,Implemented,TC-046,,Functional
+TC-102,Gherkin Conversion,Scenario Outline,Generate Examples table,Create pipe-delimited Examples table from data variations,P1,Implemented,TC-101,,Functional
+TC-103,Gherkin Conversion,Scenario Outline,Replace test data with angle-bracket parameters,Convert hardcoded test data to <parameter> placeholders,P1,Implemented,TC-101,,Functional
+TC-104,Gherkin Conversion,Save,Auto-save Gherkin as BDDFeature,Persist generated feature content to BDDFeature table,P0,Implemented,,POST /api/bdd/features,Functional
+TC-105,Gherkin Conversion,Save,Create BDDScenario records,Insert each scenario with type / tags / examples data,P0,Implemented,TC-104,,Functional
+TC-106,Gherkin Conversion,Save,Create BDDStep records,Insert each step with keyword / text / data table / doc string,P0,Implemented,TC-105,,Functional
+TC-107,Gherkin Conversion,Existing Converter,Convert CSV to Gherkin,Parse CSV with header detection and step extraction,P0,Implemented,,POST /api/bdd/convert,Functional
+TC-108,Gherkin Conversion,Existing Converter,Convert structured text to Gherkin,Parse Test Case / Preconditions / Steps / Expected Result sections,P0,Implemented,,POST /api/bdd/convert,Functional
+TC-109,Gherkin Conversion,Existing Converter,Convert plain text to Gherkin,Parse free-form sentences and classify Given/When/Then,P0,Implemented,,POST /api/bdd/convert,Functional
+TC-110,Gherkin Conversion,Existing Converter,Upload file for conversion,Support .csv / .tsv / .txt file upload via multer,P0,Implemented,,POST /api/bdd/convert,Functional
+TC-111,Playwright Generation,Code Generation,Parse Gherkin to structured format,Convert feature content into ParsedFeature with scenarios and steps,P0,Implemented,,POST /api/bdd/parse,Functional
+TC-112,Playwright Generation,Code Generation,Generate Playwright test code,Convert parsed feature to @playwright/test script with page actions,P0,Implemented,,POST /api/bdd/features/:id/generate,Functional
+TC-113,Playwright Generation,Code Generation,Inject step library definitions,Match step patterns to custom step library entries and inject code,P1,Implemented,TC-112,,Functional
+TC-114,Playwright Generation,Code Generation,Generate navigation steps,Create page.goto() calls for navigation Given steps,P0,Implemented,TC-112,,Functional
+TC-115,Playwright Generation,Code Generation,Generate form fill steps,Create page.fill() and page.click() for When steps,P0,Implemented,TC-112,,Functional
+TC-116,Playwright Generation,Code Generation,Generate assertion steps,Create expect() calls for Then verification steps,P0,Implemented,TC-112,,Functional
+TC-117,Playwright Generation,Code Generation,Support chromium browser,Generate code compatible with Chromium launcher,P0,Implemented,TC-112,,Functional
+TC-118,Playwright Generation,Code Generation,Support firefox browser,Generate code compatible with Firefox launcher,P0,Implemented,TC-112,,Functional
+TC-119,Playwright Generation,Code Generation,Support webkit browser,Generate code compatible with WebKit launcher,P0,Implemented,TC-112,,Functional
+TC-120,Test Execution,Run Feature,Execute BDD feature,Start Cucumber/Playwright execution for a feature,P0,Implemented,,POST /api/bdd/features/:id/run,Functional
+TC-121,Test Execution,Run Feature,Select browser for execution,Choose chromium / firefox / webkit for test run,P0,Implemented,TC-120,,UI
+TC-122,Test Execution,Run Feature,Select execution mode,Choose headless or headed mode,P0,Implemented,TC-120,,UI
+TC-123,Test Execution,Run Feature,Filter by tags,Run only scenarios matching specified tags,P1,Implemented,TC-120,,Functional
+TC-124,Test Execution,Run Feature,Set parallel workers,Configure number of parallel Cucumber workers,P1,Implemented,TC-120,,Functional
+TC-125,Test Execution,Run Feature,Set retry count,Configure 0-5 retries for failed scenarios,P1,Implemented,TC-120,,Functional
+TC-126,Test Execution,Run Feature,Set retry delay,Configure delay between retries in milliseconds,P2,Implemented,TC-125,,Functional
+TC-127,Test Execution,Run Feature,Quarantine flaky tests,Mark @quarantine tests so failures dont fail the run,P1,Implemented,TC-125,,Functional
+TC-128,Test Execution,Run Feature,Set environment profile,Inject baseUrl / credentials / variables / headers / timeout,P1,Implemented,TC-120,,Functional
+TC-129,Test Execution,Concurrency,Enforce max concurrent runs,Limit to 3 concurrent executions (configurable via env),P0,Implemented,TC-120,,Functional
+TC-130,Test Execution,Concurrency,Queue pending runs,Queue up to 20 pending runs when slots full,P0,Implemented,TC-129,,Functional
+TC-131,Test Execution,Concurrency,Track execution status,Show active runs / queued count / available slots,P0,Implemented,TC-129,GET /api/bdd/status,Functional
+TC-132,Test Execution,Streaming,Stream live execution via SSE,Send step-by-step results to frontend in real-time,P0,Implemented,TC-120,GET /api/bdd/runs/:id/stream,Functional
+TC-133,Test Execution,Streaming,Capture screenshots on failure,Take page screenshot when step fails and store URL,P0,Implemented,TC-120,,Functional
+TC-134,Test Execution,Streaming,Track step durations,Record execution time per step in milliseconds,P0,Implemented,TC-120,,Functional
+TC-135,Test Execution,Cancel,Cancel running execution,Send cancel signal to terminate child process,P0,Implemented,TC-120,POST /api/bdd/runs/:id/cancel,Functional
+TC-136,Test Execution,Timeout,Enforce process timeout,Kill execution after 5 minutes (configurable via BDD_PROCESS_TIMEOUT_MS),P0,Implemented,TC-120,,Functional
+TC-137,Test Execution,Step Definitions,Built-in navigation steps,Given I navigate to / go back / reload page,P0,Implemented,TC-120,,Functional
+TC-138,Test Execution,Step Definitions,Built-in input steps,When I click / fill / select / upload / hover / check,P0,Implemented,TC-120,,Functional
+TC-139,Test Execution,Step Definitions,Built-in assertion steps,Then I should see / text should be / URL should contain,P0,Implemented,TC-120,,Functional
+TC-140,Test Execution,Step Definitions,Built-in auth steps,Given I am logged in / When I login with credentials,P1,Implemented,TC-120,,Functional
+TC-141,Test Execution,Hooks,BeforeAll / AfterAll hooks,Setup and teardown for entire test suite,P1,Implemented,TC-120,,Functional
+TC-142,Test Execution,Hooks,Before / After scenario hooks,Setup and cleanup per scenario,P1,Implemented,TC-120,,Functional
+TC-143,Test Execution,Hooks,Tagged hooks,Execute hooks only for @api / @slow / @flaky tags,P2,Implemented,TC-142,,Functional
+TC-144,Reporting,Serenity Report,Generate Serenity HTML report,Create rich HTML report with charts / stats / step details,P0,Implemented,,GET /api/bdd/runs/:id/report,Functional
+TC-145,Reporting,Serenity Report,Show donut chart summary,Display pass/fail/skip distribution chart,P0,Implemented,TC-144,,UI
+TC-146,Reporting,Serenity Report,Show stat cards,Display duration / total / passed / failed / skipped counts,P0,Implemented,TC-144,,UI
+TC-147,Reporting,Serenity Report,Show scenario details,Collapsible cards with step-by-step results and error messages,P0,Implemented,TC-144,,UI
+TC-148,Reporting,Serenity Report,Embed failure screenshots,Display screenshots inline within failed scenario details,P0,Implemented,TC-144,,UI
+TC-149,Reporting,Serenity Report,Show feature syntax highlighting,Display original Gherkin with syntax coloring,P1,Implemented,TC-144,,UI
+TC-150,Reporting,Serenity Report,Show narrative section,Display As a / I want to / So that from feature,P1,Implemented,TC-144,,UI
+TC-151,Reporting,Allure Report,Generate Allure report,Create Allure report from test results using allure-commandline,P1,Implemented,,POST /api/allure/bdd-report/:runId,Functional
+TC-152,Reporting,Allure Report,Store Allure history,Maintain allure-history directory for trend tracking,P2,Implemented,TC-151,,Functional
+TC-153,Reporting,Allure Report,Clean up old reports,Remove reports older than retention period,P2,Implemented,,POST /api/allure/cleanup,Functional
+TC-154,BDD Feature Management,CRUD,Create BDD feature,Save Gherkin content with name / description / tags / project,P0,Implemented,,POST /api/bdd/features,Functional
+TC-155,BDD Feature Management,CRUD,List BDD features,Paginated list with status / project filtering,P0,Implemented,,GET /api/bdd/features,Functional
+TC-156,BDD Feature Management,CRUD,Get feature details,Fetch feature with nested scenarios and steps,P0,Implemented,,GET /api/bdd/features/:id,Functional
+TC-157,BDD Feature Management,CRUD,Update feature content,Re-parse Gherkin and rebuild scenarios/steps on save,P0,Implemented,,PUT /api/bdd/features/:id,Functional
+TC-158,BDD Feature Management,CRUD,Delete feature,Cascade delete scenarios / steps / runs / schedules,P0,Implemented,,DELETE /api/bdd/features/:id,Functional
+TC-159,BDD Feature Management,Editor,Gherkin syntax editor,Text area with syntax awareness for writing features,P0,Implemented,,,UI
+TC-160,BDD Feature Management,Editor,Parse preview,Show structured JSON tree of parsed scenarios,P0,Implemented,,POST /api/bdd/parse,UI
+TC-161,BDD Feature Management,Editor,Sample feature template,Pre-fill editor with sample login Gherkin feature,P1,Implemented,,,UI
+TC-162,Run Management,CRUD,List BDD runs,Paginated list of all execution runs with filters,P0,Implemented,,GET /api/bdd/runs,Functional
+TC-163,Run Management,CRUD,Get run details,Fetch run with step results / screenshots / report URLs,P0,Implemented,,GET /api/bdd/runs/:id,Functional
+TC-164,Run Management,CRUD,Delete run record,Remove completed/failed run from database,P0,Implemented,,DELETE /api/bdd/runs/:id,Functional
+TC-165,Run Management,Display,Show step results table,Display each step with status / duration / error message,P0,Implemented,TC-163,,UI
+TC-166,Run Management,Display,Show failure screenshots,Display screenshot images from failed steps,P0,Implemented,TC-163,,UI
+TC-167,Run Management,Display,View HTML report,Open Serenity report in new tab/iframe,P0,Implemented,,GET /api/bdd/runs/:id/report,UI
+TC-168,Step Library,CRUD,Create step definition,Define reusable step with regex pattern / Playwright code / keyword,P0,Implemented,,POST /api/bdd/step-library,Functional
+TC-169,Step Library,CRUD,List step definitions,Show all custom steps with usage counts,P0,Implemented,,GET /api/bdd/step-library,Functional
+TC-170,Step Library,CRUD,Update step definition,Modify pattern / code / description / keyword,P0,Implemented,,PUT /api/bdd/step-library/:id,Functional
+TC-171,Step Library,CRUD,Delete step definition,Remove custom step definition,P0,Implemented,,DELETE /api/bdd/step-library/:id,Functional
+TC-172,Step Library,Usage,Track step usage count,Increment usageCount when step is matched during execution,P1,Implemented,TC-168,,Functional
+TC-173,Scheduled Runs,CRUD,Create schedule,Define cron expression / browser / execution mode for feature,P1,Implemented,,POST /api/bdd/schedules,Functional
+TC-174,Scheduled Runs,CRUD,List schedules,Show all schedules with next run / last run timestamps,P1,Implemented,,GET /api/bdd/schedules,Functional
+TC-175,Scheduled Runs,CRUD,Update schedule,Modify cron / browser / enabled status,P1,Implemented,,PUT /api/bdd/schedules/:id,Functional
+TC-176,Scheduled Runs,CRUD,Delete schedule,Remove scheduled run,P1,Implemented,,DELETE /api/bdd/schedules/:id,Functional
+TC-177,Scheduled Runs,Execution,Enable/disable schedule,Toggle schedule without deleting,P1,Implemented,TC-175,,Functional
+TC-178,Screenplay Pattern,Actions,Create custom action,Define low-level interaction with action type / target / value / code,P1,Implemented,,POST /api/screenplay/actions,Functional
+TC-179,Screenplay Pattern,Actions,List preset actions,Show 12+ built-in actions (Navigate / Click / Fill / Select / Hover / etc.),P1,Implemented,,GET /api/screenplay/presets/actions,Functional
+TC-180,Screenplay Pattern,Questions,Create custom question,Define assertion with question type / target / expected / code,P1,Implemented,,POST /api/screenplay/questions,Functional
+TC-181,Screenplay Pattern,Questions,List preset questions,Show 8+ built-in assertions (Visibility / Text / URL / Title / etc.),P1,Implemented,,GET /api/screenplay/presets/questions,Functional
+TC-182,Screenplay Pattern,Tasks,Create composed task,Compose task from selected actions + questions,P1,Implemented,,POST /api/screenplay/tasks,Functional
+TC-183,Screenplay Pattern,Tasks,Generate task code,Auto-generate Playwright code from composed task,P1,Implemented,TC-182,,Functional
+TC-184,Screenplay Pattern,Tasks,Generate step definition,Create Cucumber step wrapping the task,P1,Implemented,TC-182,POST /api/screenplay/tasks/:id/generate,Functional
+TC-185,Screenplay Pattern,Tasks,Track task usage count,Increment usage count when task step is matched,P2,Implemented,TC-184,,Functional
+TC-186,Pipeline Orchestrator,Workflow,Start full pipeline,Trigger Jira → TestCases → Gherkin → Playwright workflow,P0,Implemented,,POST /api/epic-pipeline/run,Functional
+TC-187,Pipeline Orchestrator,Step 1,Fetch Jira data,Call Jira API to get epic/stories (progress 0-15%),P0,Implemented,TC-186,,Functional
+TC-188,Pipeline Orchestrator,Step 2,Analyze stories,Enrich stories with AC / derive missing AC (progress 15-25%),P0,Implemented,TC-187,,Functional
+TC-189,Pipeline Orchestrator,Step 3,Generate test cases,Run test case generator for each story (progress 25-60%),P0,Implemented,TC-188,,Functional
+TC-190,Pipeline Orchestrator,Step 4,Convert to Gherkin,Generate Gherkin features and save to DB (progress 60-75%),P0,Implemented,TC-189,,Functional
+TC-191,Pipeline Orchestrator,Step 5,Generate Playwright code,Create executable test scripts (progress 75-90%),P0,Implemented,TC-190,,Functional
+TC-192,Pipeline Orchestrator,Step 6,Execute tests (optional),Run generated Playwright tests if autoExecute enabled (progress 90-100%),P1,Implemented,TC-191,,Functional
+TC-193,Pipeline Orchestrator,Progress,Stream pipeline progress via SSE,Broadcast status / progress / currentStep in real-time,P0,Implemented,TC-186,GET /api/epic-pipeline/runs/:id/stream,Functional
+TC-194,Pipeline Orchestrator,Progress,Show 5-step visual indicator,Display Pick Epic → Analyze → Generate → Gherkin → Playwright progress,P0,Implemented,TC-193,,UI
+TC-195,Pipeline Orchestrator,History,List pipeline runs,Show past pipeline executions with status / story count / test count,P0,Implemented,,GET /api/epic-pipeline/runs,Functional
+TC-196,Pipeline Orchestrator,History,Get pipeline run details,Fetch run with results / category counts / timing,P0,Implemented,,GET /api/epic-pipeline/runs/:id,Functional
+TC-197,Pipeline Orchestrator,Error Handling,Handle pipeline failures,Record error message and mark status as failed,P0,Implemented,TC-186,,Functional
+TC-198,Pipeline Orchestrator,Error Handling,Preserve partial results,Keep results from completed steps even if later step fails,P1,Implemented,TC-197,,Functional
+TC-199,Frontend UI,Epic Pipeline Tab,Jira config panel,Base URL / Email / API Token / Version fields with test button,P0,Implemented,,,UI
+TC-200,Frontend UI,Epic Pipeline Tab,Manual input mode,Summary / Description / AC textarea with toggle switch,P0,Implemented,,,UI
+TC-201,Frontend UI,Epic Pipeline Tab,Project and epic selector,Dropdown for project + clickable epic cards,P0,Implemented,,,UI
+TC-202,Frontend UI,Epic Pipeline Tab,Story preview cards,Show story key / summary / status / AC for selected epic,P0,Implemented,,,UI
+TC-203,Frontend UI,Epic Pipeline Tab,Category toggle badges,Clickable positive / negative / edge / boundary / security badges,P0,Implemented,,,UI
+TC-204,Frontend UI,Epic Pipeline Tab,Generation options form,Max cases / security depth / AI provider / app context fields,P0,Implemented,,,UI
+TC-205,Frontend UI,Results Tab,Stats cards,Total cases and per-category counts,P0,Implemented,,,UI
+TC-206,Frontend UI,Results Tab,Category filter badges,Click to filter test cases by category,P0,Implemented,,,UI
+TC-207,Frontend UI,Results Tab,Test case table,Title / priority / steps / expected result columns,P0,Implemented,,,UI
+TC-208,Frontend UI,Results Tab,Gherkin preview,Syntax-highlighted Gherkin feature display,P0,Implemented,,,UI
+TC-209,Frontend UI,Results Tab,Story selector dropdown,Switch between multiple story results,P0,Implemented,,,UI
+TC-210,Frontend UI,Results Tab,Pipeline progress bar,Live progress bar with percentage and step label,P0,Implemented,,,UI
+TC-211,Frontend UI,History Tab,Pipeline run history list,Past runs with status badges and metrics,P0,Implemented,,,UI
+TC-212,Frontend UI,BDD Testing Tab,Feature editor with live preview,Write and preview Gherkin features,P0,Implemented,,,UI
+TC-213,Frontend UI,BDD Testing Tab,Feature list with filters,Browse features by status / project,P0,Implemented,,,UI
+TC-214,Frontend UI,BDD Testing Tab,Run execution panel,Browser / mode / tag / worker selection and run button,P0,Implemented,,,UI
+TC-215,Frontend UI,BDD Testing Tab,Live streaming output,Real-time step execution results via SSE,P0,Implemented,,,UI
+TC-216,Frontend UI,BDD Testing Tab,Step library manager,Create / edit / delete custom step definitions,P0,Implemented,,,UI
+TC-217,Frontend UI,BDD Testing Tab,Schedule manager,Create / edit / enable-disable cron schedules,P1,Implemented,,,UI
+TC-218,Frontend UI,BDD Testing Tab,Screenplay editor,Create tasks / actions / questions with presets,P1,Implemented,,,UI
+TC-219,Frontend UI,BDD Testing Tab,Test case converter,Upload CSV/TXT or paste content for Gherkin conversion,P0,Implemented,,,UI
+TC-220,Database,Models,JiraConfig model,Store Jira credentials per user/org with unique constraint,P0,Implemented,,,Schema
+TC-221,Database,Models,WorkflowRun model,Track pipeline execution with status / progress / results,P0,Implemented,,,Schema
+TC-222,Database,Models,BDDFeature model,Store Gherkin features with user / org / project scoping,P0,Implemented,,,Schema
+TC-223,Database,Models,BDDScenario model,Store scenarios with type / tags / examples data,P0,Implemented,,,Schema
+TC-224,Database,Models,BDDStep model,Store steps with keyword / text / data table / doc string,P0,Implemented,,,Schema
+TC-225,Database,Models,BDDRun model,Store execution results with screenshots / report URLs / retry info,P0,Implemented,,,Schema
+TC-226,Database,Models,BDDStepLibrary model,Store reusable step patterns with usage tracking,P0,Implemented,,,Schema
+TC-227,Database,Models,BDDSchedule model,Store cron schedules for automated runs,P1,Implemented,,,Schema
+TC-228,Database,Models,ScreenplayAction model,Store low-level interaction definitions,P1,Implemented,,,Schema
+TC-229,Database,Models,ScreenplayQuestion model,Store assertion/verification definitions,P1,Implemented,,,Schema
+TC-230,Database,Models,ScreenplayTask model,Store composed business-level task definitions,P1,Implemented,,,Schema
+TC-231,Multi-Tenancy,Isolation,Organization-scoped feature queries,Filter features by organizationId,P0,Implemented,,,Security
+TC-232,Multi-Tenancy,Isolation,Organization-scoped run queries,Filter runs by organizationId,P0,Implemented,,,Security
+TC-233,Multi-Tenancy,Isolation,Organization-scoped step library,Share step library within organization,P0,Implemented,,,Security
+TC-234,Multi-Tenancy,Isolation,User ownership enforcement,Users can only access their own resources,P0,Implemented,,,Security
+TC-235,Authentication,JWT,Require auth on all endpoints,All endpoints except SSE and reports require JWT token,P0,Implemented,,,Security
+TC-236,Authentication,JWT,SSE token via query parameter,Support token=jwt in SSE URL since EventSource cant send headers,P0,Implemented,,,Security

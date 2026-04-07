@@ -1,0 +1,169 @@
+{
+  "uuid": "3f1097a7-93af-4b75-9370-fd867f92ed02",
+  "historyId": "67a0a7b3-d763-4d53-9e37-872e206db488-Add multiple products and verify cart",
+  "testCaseId": "3f1097a7-93af-4b75-9370-fd867f92ed02",
+  "fullName": "Login with valid credentials > Add multiple products and verify cart",
+  "name": "Add multiple products and verify cart",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774862932393,
+  "stop": 1774862932766,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Add multiple products and verify cart"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932456,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Bike Light\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Bolt T-Shirt\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "When Click the cart icon",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "Then Verify \"3\" items are displayed in the cart",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "And Cart page shows 3 items: Sauce Labs Backpack and Sauce Labs Bike Light and Sauce Labs Bolt T-Shirt",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932766,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932724,
+      "stop": 1774862932766,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774862932745,
+      "stop": 1774862932766,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

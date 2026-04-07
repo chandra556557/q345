@@ -1,0 +1,124 @@
+{
+  "uuid": "8eaa3ad5-6847-4610-919c-74114604f4b3",
+  "historyId": "33e0f173-b8df-4138-bdec-10b97083c619-Verify re-application works after role capacity changes",
+  "testCaseId": "8eaa3ad5-6847-4610-919c-74114604f4b3",
+  "fullName": "Verify rejected role is restricted for re-application > Verify re-application works after role capacity changes",
+  "name": "Verify re-application works after role capacity changes",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774597878089,
+  "stop": 1774597878534,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify re-application works after role capacity changes"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878155,
+      "stop": 1774597878534,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878533,
+      "stop": 1774597878534,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login.\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878532,
+      "stop": 1774597878534,
+      "attachments": []
+    },
+    {
+      "name": "And User rejected for Role A.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878532,
+      "stop": 1774597878534,
+      "attachments": []
+    },
+    {
+      "name": "And Another member leaves Role A (capacity becomes available).",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878534,
+      "stop": 1774597878534,
+      "attachments": []
+    },
+    {
+      "name": "When User revisits Apply page.",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878534,
+      "stop": 1774597878534,
+      "attachments": []
+    },
+    {
+      "name": "Then Even if capacity becomes available, previously rejected role should remain restricted for that specific user unless system rules allow reset.",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878534,
+      "stop": 1774597878534,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878488,
+      "stop": 1774597878534,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774597878519,
+      "stop": 1774597878534,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

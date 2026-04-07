@@ -1,0 +1,171 @@
+{
+  "uuid": "402043a2-c0ac-40f4-9098-7a597a5ee975",
+  "historyId": "55040522-ca8a-4454-af2b-fe0faf153586-Add multiple products and verify cart",
+  "testCaseId": "402043a2-c0ac-40f4-9098-7a597a5ee975",
+  "fullName": "Login with valid credentials > Add multiple products and verify cart",
+  "name": "Add multiple products and verify cart",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774865703616,
+  "stop": 1774865708973,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Add multiple products and verify cart"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708590,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865705848,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708305,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708880,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708914,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708851,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708905,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Bike Light\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708890,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Bolt T-Shirt\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708901,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "When Click the cart icon",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708909,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "Then Verify \"3\" items are displayed in the cart",
+      "status": "failed",
+      "statusDetails": {
+        "message": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('3')\nExpected: visible\nError: strict mode violation: getByText('3') resolved to 2 elements:\n    1) <span class=\"shopping_cart_badge\" data-test=\"shopping-cart-badge\">3</span> aka locator('[data-test=\"shopping-cart-link\"]')\n    2) <div class=\"inventory_item_desc\" data-test=\"inventory-item-desc\">A red light isn't the desired state in testing bu…</div> aka getByText('A red light isn\\'t the desired')\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 10000ms\n  - waiting for getByText('3')\n\n    at Proxy.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\playwright\\lib\\matchers\\expect.js:213:24)\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1067:60)"
+      },
+      "stage": "finished",
+      "start": 1774865708652,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "And Cart page shows 3 items: Sauce Labs Backpack and Sauce Labs Bike Light and Sauce Labs Bolt T-Shirt",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708973,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708690,
+      "stop": 1774865708973,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708957,
+      "stop": 1774865708973,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

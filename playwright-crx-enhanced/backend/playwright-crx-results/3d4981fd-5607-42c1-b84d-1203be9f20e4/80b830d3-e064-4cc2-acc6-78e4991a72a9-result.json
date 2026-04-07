@@ -1,0 +1,198 @@
+{
+  "uuid": "80b830d3-e064-4cc2-acc6-78e4991a72a9",
+  "historyId": "3d4981fd-5607-42c1-b84d-1203be9f20e4-Complete checkout flow",
+  "testCaseId": "80b830d3-e064-4cc2-acc6-78e4991a72a9",
+  "fullName": "Login with valid credentials > Complete checkout flow",
+  "name": "Complete checkout flow",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774863852731,
+  "stop": 1774863855840,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Complete checkout flow"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855559,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in and has item in cart",
+      "status": "failed",
+      "statusDetails": {
+        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"networkidle\"\u001b[22m\n\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\3d4981fd-5607-42c1-b84d-1203be9f20e4\\features\\step_definitions\\steps.js:388:19)"
+      },
+      "stage": "finished",
+      "start": 1774863853207,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Click the cart icon",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Checkout\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"John\" in the First Name field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"Doe\" in the Last Name field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"12345\" in the Zip/Postal Code field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Continue\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Finish\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "Then Order confirmation page displays Thank you for your order!",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855840,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855657,
+      "stop": 1774863855840,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855828,
+      "stop": 1774863855840,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

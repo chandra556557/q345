@@ -1,0 +1,8 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"This test demonstrates adding and managing multiple todo items","3850","should handle multiple todos @regression","Edge","2026-02-11","passed","2026-02-11","Allure Reporting Example @allure","allure-example.spec.ts","",""
+"","1910","should add todo: Call mom","Edge","2026-02-11","passed","2026-02-11","Allure Parameterized Tests @allure","allure-example.spec.ts","",""
+"","1691","should add todo: Pay bills","Edge","2026-02-11","passed","2026-02-11","Allure Parameterized Tests @allure","allure-example.spec.ts","",""
+"","1708","should delete a todo @regression","Edge","2026-02-11","passed","2026-02-11","Allure Reporting Example @allure","allure-example.spec.ts","",""
+"","3847","should demonstrate Allure annotations @smoke","Edge","2026-02-11","passed","2026-02-11","Allure Reporting Example @allure","allure-example.spec.ts","",""
+"","30160","should filter todos by status @smoke","Edge","2026-02-11","broken","2026-02-11","Allure Reporting Example @allure","allure-example.spec.ts","",""
+"","1182","should add todo: Buy milk","Edge","2026-02-11","passed","2026-02-11","Allure Parameterized Tests @allure","allure-example.spec.ts","",""

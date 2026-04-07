@@ -1,0 +1,124 @@
+{
+  "uuid": "88439597-8672-4698-9b65-633d72a8a4dd",
+  "historyId": "a1e9afab-c25d-4f29-af19-751398e3a6e6-Verify page load performance",
+  "testCaseId": "88439597-8672-4698-9b65-633d72a8a4dd",
+  "fullName": "SauceDemo E-commerce Application > Verify page load performance",
+  "name": "Verify page load performance",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775545671705,
+  "stop": 1775545673642,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Verify page load performance"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545671777,
+      "stop": 1775545673642,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673642,
+      "stop": 1775545673642,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673642,
+      "stop": 1775545673642,
+      "attachments": []
+    },
+    {
+      "name": "When I navigate to \"https://saucedemo.com\"",
+      "status": "broken",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673642,
+      "stop": 1775545673642,
+      "attachments": []
+    },
+    {
+      "name": "Then the page should load within 5 seconds",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673642,
+      "stop": 1775545673642,
+      "attachments": []
+    },
+    {
+      "name": "And all images should be loaded",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673642,
+      "stop": 1775545673642,
+      "attachments": []
+    },
+    {
+      "name": "And the page should be responsive",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673642,
+      "stop": 1775545673642,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673591,
+      "stop": 1775545673642,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673621,
+      "stop": 1775545673642,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

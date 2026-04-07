@@ -1,0 +1,133 @@
+{
+  "uuid": "020b36e9-1c63-49fa-9b34-3235a813eba8",
+  "historyId": "38edd368-6a44-4c31-83c9-878487d3bda0-Logout from application",
+  "testCaseId": "020b36e9-1c63-49fa-9b34-3235a813eba8",
+  "fullName": "SauceDemo E-commerce Application > Logout from application",
+  "name": "Logout from application",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775546445483,
+  "stop": 1775546446049,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Logout from application"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546445548,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446049,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446049,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "Given I am logged in as \"standard_user\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446049,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "When I click the menu button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446049,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "And I click the logout link",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446049,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "Then I should be redirected to the login page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446049,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "And the username field should be empty",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446049,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446004,
+      "stop": 1775546446049,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446029,
+      "stop": 1775546446049,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

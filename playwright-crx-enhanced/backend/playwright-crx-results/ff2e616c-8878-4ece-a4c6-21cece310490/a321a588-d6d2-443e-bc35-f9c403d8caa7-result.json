@@ -1,0 +1,135 @@
+{
+  "uuid": "a321a588-d6d2-443e-bc35-f9c403d8caa7",
+  "historyId": "ff2e616c-8878-4ece-a4c6-21cece310490-Verify other available roles remain selectable after rejection",
+  "testCaseId": "a321a588-d6d2-443e-bc35-f9c403d8caa7",
+  "fullName": "Verify rejected role is restricted for re-application > Verify other available roles remain selectable after rejection",
+  "name": "Verify other available roles remain selectable after rejection",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774863992156,
+  "stop": 1774863992650,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify other available roles remain selectable after rejection"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992440,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "failed",
+      "statusDetails": {
+        "message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+      },
+      "stage": "finished",
+      "start": 1774863992531,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992650,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "And User is rejected for Role A",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992650,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to Apply page again",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992650,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "When Check availability of Role B or other roles",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992650,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "And Attempt to apply for another role.",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992650,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "Then Other available roles should remain selectable. User should be able to successfully apply for a different role within the same team.",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992650,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992506,
+      "stop": 1774863992650,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863992629,
+      "stop": 1774863992650,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

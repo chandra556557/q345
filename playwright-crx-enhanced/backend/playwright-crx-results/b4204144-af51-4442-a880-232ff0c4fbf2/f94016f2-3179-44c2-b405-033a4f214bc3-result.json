@@ -1,0 +1,151 @@
+{
+  "uuid": "f94016f2-3179-44c2-b405-033a4f214bc3",
+  "historyId": "b4204144-af51-4442-a880-232ff0c4fbf2-Checkout with empty cart",
+  "testCaseId": "f94016f2-3179-44c2-b405-033a4f214bc3",
+  "fullName": "Login with valid credentials > Checkout with empty cart",
+  "name": "Checkout with empty cart",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774863476330,
+  "stop": 1774863476652,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Checkout with empty cart"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476375,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in with empty cart",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476651,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476652,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476652,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476652,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476652,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "When Click the cart icon",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476652,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "Then Verify the cart is empty",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476652,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "When Verify the \"Checkout\" button is visible",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476652,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "Then Cart page shows no items and user can see Continue Shopping button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476652,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476619,
+      "stop": 1774863476652,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863476641,
+      "stop": 1774863476652,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

@@ -1,0 +1,124 @@
+{
+  "uuid": "0d999d37-e76d-4147-b242-786021a9fe74",
+  "historyId": "a1e9afab-c25d-4f29-af19-751398e3a6e6-Verify page accessibility",
+  "testCaseId": "0d999d37-e76d-4147-b242-786021a9fe74",
+  "fullName": "SauceDemo E-commerce Application > Verify page accessibility",
+  "name": "Verify page accessibility",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775545672178,
+  "stop": 1775545673655,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Verify page accessibility"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545672243,
+      "stop": 1775545673655,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673655,
+      "stop": 1775545673655,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673655,
+      "stop": 1775545673655,
+      "attachments": []
+    },
+    {
+      "name": "When I navigate to the login page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673655,
+      "stop": 1775545673655,
+      "attachments": []
+    },
+    {
+      "name": "Then all form inputs should have labels",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673655,
+      "stop": 1775545673655,
+      "attachments": []
+    },
+    {
+      "name": "And buttons should have accessible text",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673655,
+      "stop": 1775545673655,
+      "attachments": []
+    },
+    {
+      "name": "And page should have proper heading hierarchy",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673655,
+      "stop": 1775545673655,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673607,
+      "stop": 1775545673655,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545673638,
+      "stop": 1775545673655,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

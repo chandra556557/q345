@@ -1,0 +1,24 @@
+{
+  "uuid": "b54f7557-149a-453f-bfdd-e7eafb213924",
+  "historyId": "b54f7557-149a-453f-bfdd-e7eafb213924",
+  "testCaseId": "b54f7557-149a-453f-bfdd-e7eafb213924",
+  "fullName": "b54f7557-149a-453f-bfdd-e7eafb213924",
+  "name": "b54f7557-149a-453f-bfdd-e7eafb213924",
+  "status": "failed",
+  "statusDetails": {
+    "message": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"BASE_URL\", waiting until \"domcontentloaded\"\u001b[22m\n"
+  },
+  "stage": "finished",
+  "start": 1770872747956,
+  "stop": 1770872747956,
+  "steps": [
+    {
+      "name": "unknown ",
+      "status": "failed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1770872747592,
+      "stop": 1770872747892
+    }
+  ]
+}

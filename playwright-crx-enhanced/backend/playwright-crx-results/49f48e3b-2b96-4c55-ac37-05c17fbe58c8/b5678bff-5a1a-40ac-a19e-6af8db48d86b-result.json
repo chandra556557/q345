@@ -1,0 +1,124 @@
+{
+  "uuid": "b5678bff-5a1a-40ac-a19e-6af8db48d86b",
+  "historyId": "49f48e3b-2b96-4c55-ac37-05c17fbe58c8-Login with invalid password",
+  "testCaseId": "b5678bff-5a1a-40ac-a19e-6af8db48d86b",
+  "fullName": "Login with valid credentials > Login with invalid password",
+  "name": "Login with invalid password",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774861893777,
+  "stop": 1774861896582,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Login with invalid password"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896236,
+      "stop": 1774861896582,
+      "attachments": []
+    },
+    {
+      "name": "Given User is on \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861894187,
+      "stop": 1774861896582,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896581,
+      "stop": 1774861896582,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896581,
+      "stop": 1774861896582,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896581,
+      "stop": 1774861896582,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896581,
+      "stop": 1774861896582,
+      "attachments": []
+    },
+    {
+      "name": "Then Error message Epic sadface: Username and password do not match any user in this service is displayed",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896581,
+      "stop": 1774861896582,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896533,
+      "stop": 1774861896582,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774861896572,
+      "stop": 1774861896582,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

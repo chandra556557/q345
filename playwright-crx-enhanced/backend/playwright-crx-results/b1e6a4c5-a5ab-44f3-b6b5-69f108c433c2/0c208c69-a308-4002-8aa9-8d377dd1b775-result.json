@@ -1,0 +1,115 @@
+{
+  "uuid": "0c208c69-a308-4002-8aa9-8d377dd1b775",
+  "historyId": "b1e6a4c5-a5ab-44f3-b6b5-69f108c433c2-Verify rejected role displays proper validation messaging",
+  "testCaseId": "0c208c69-a308-4002-8aa9-8d377dd1b775",
+  "fullName": "Verify rejected role is restricted for re-application > Verify rejected role displays proper validation messaging",
+  "name": "Verify rejected role displays proper validation messaging",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774518925857,
+  "stop": 1774518926108,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify rejected role displays proper validation messaging"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518925903,
+      "stop": 1774518926108,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926107,
+      "stop": 1774518926108,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login.\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926107,
+      "stop": 1774518926108,
+      "attachments": []
+    },
+    {
+      "name": "When After rejection, attempt to select the same rejected role (if clickable).",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926108,
+      "stop": 1774518926108,
+      "attachments": []
+    },
+    {
+      "name": "When Attempt to submit application.",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926108,
+      "stop": 1774518926108,
+      "attachments": []
+    },
+    {
+      "name": "Then System should display validation message such as �You have already been rejected for this role� or relevant message.",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926108,
+      "stop": 1774518926108,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926088,
+      "stop": 1774518926108,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926084,
+      "stop": 1774518926108,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

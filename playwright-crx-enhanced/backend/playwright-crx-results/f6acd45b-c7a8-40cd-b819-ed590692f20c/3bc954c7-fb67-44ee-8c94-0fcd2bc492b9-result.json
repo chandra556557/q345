@@ -1,0 +1,126 @@
+{
+  "uuid": "3bc954c7-fb67-44ee-8c94-0fcd2bc492b9",
+  "historyId": "f6acd45b-c7a8-40cd-b819-ed590692f20c-Login with invalid password",
+  "testCaseId": "3bc954c7-fb67-44ee-8c94-0fcd2bc492b9",
+  "fullName": "Login with valid credentials > Login with invalid password",
+  "name": "Login with invalid password",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774864653486,
+  "stop": 1774864662428,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Login with invalid password"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662105,
+      "stop": 1774864662428,
+      "attachments": []
+    },
+    {
+      "name": "Given User is on \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864660075,
+      "stop": 1774864662428,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864661844,
+      "stop": 1774864662428,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662314,
+      "stop": 1774864662428,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"wrong_password\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662381,
+      "stop": 1774864662428,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662344,
+      "stop": 1774864662428,
+      "attachments": []
+    },
+    {
+      "name": "Then Error message Epic sadface: Username and password do not match any user in this service is displayed",
+      "status": "failed",
+      "statusDetails": {
+        "message": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('/* text */', { exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 5000ms\n  - waiting for getByText('/* text */', { exact: true })\n\n    at Proxy.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\playwright\\lib\\matchers\\expect.js:213:24)\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\f6acd45b-c7a8-40cd-b819-ed590692f20c\\features\\step_definitions\\steps.js:1005:68)"
+      },
+      "stage": "finished",
+      "start": 1774864657211,
+      "stop": 1774864662428,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662218,
+      "stop": 1774864662428,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774864662418,
+      "stop": 1774864662428,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

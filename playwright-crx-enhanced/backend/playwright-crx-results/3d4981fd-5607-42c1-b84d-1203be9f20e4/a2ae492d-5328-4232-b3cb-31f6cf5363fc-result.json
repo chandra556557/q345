@@ -1,0 +1,135 @@
+{
+  "uuid": "a2ae492d-5328-4232-b3cb-31f6cf5363fc",
+  "historyId": "3d4981fd-5607-42c1-b84d-1203be9f20e4-Verify product detail page",
+  "testCaseId": "a2ae492d-5328-4232-b3cb-31f6cf5363fc",
+  "fullName": "Login with valid credentials > Verify product detail page",
+  "name": "Verify product detail page",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774863852702,
+  "stop": 1774863855851,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Verify product detail page"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855519,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in",
+      "status": "failed",
+      "statusDetails": {
+        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/\", waiting until \"networkidle\"\u001b[22m\n\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\3d4981fd-5607-42c1-b84d-1203be9f20e4\\features\\step_definitions\\steps.js:362:19)"
+      },
+      "stage": "finished",
+      "start": 1774863853250,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855851,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855851,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855851,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855851,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "When Click on \"Sauce Labs Backpack\" product title",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855851,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "Then Product detail page shows name Sauce Labs Backpack with description and price $29.99 and Add to cart button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855851,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855645,
+      "stop": 1774863855851,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855841,
+      "stop": 1774863855851,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

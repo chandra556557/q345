@@ -1,0 +1,142 @@
+{
+  "uuid": "987176a0-4cf7-4dc8-930d-7fb902b39650",
+  "historyId": "7de9c9d6-85cd-40cd-b3ef-f69544156e6a-Login with invalid credentials",
+  "testCaseId": "987176a0-4cf7-4dc8-930d-7fb902b39650",
+  "fullName": "SauceDemo E-commerce Application > Login with invalid credentials",
+  "name": "Login with invalid credentials",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775545442518,
+  "stop": 1775545443852,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Login with invalid credentials"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545442616,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443852,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443852,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "When I navigate to the login page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443852,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "And I enter username \"invalid_user\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443852,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "And I enter password \"wrong_password\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443852,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "And I click the login button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443852,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "Then I should see an error message",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443852,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "And the error message should contain \"Username and password do not match\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443852,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443774,
+      "stop": 1775545443852,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443832,
+      "stop": 1775545443852,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

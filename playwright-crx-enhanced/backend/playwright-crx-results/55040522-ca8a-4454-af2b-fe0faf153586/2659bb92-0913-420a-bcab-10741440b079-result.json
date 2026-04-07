@@ -1,0 +1,153 @@
+{
+  "uuid": "2659bb92-0913-420a-bcab-10741440b079",
+  "historyId": "55040522-ca8a-4454-af2b-fe0faf153586-Checkout with empty cart",
+  "testCaseId": "2659bb92-0913-420a-bcab-10741440b079",
+  "fullName": "Login with valid credentials > Checkout with empty cart",
+  "name": "Checkout with empty cart",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774865703158,
+  "stop": 1774865708982,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Checkout with empty cart"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708172,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "Given User is logged in with empty cart",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865705725,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708233,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708777,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708908,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708855,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "When Click the cart icon",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708914,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "Then Verify the cart is empty",
+      "status": "failed",
+      "statusDetails": {
+        "message": "Error: Assertion not implemented: Then Verify the cart is empty\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1084:7)"
+      },
+      "stage": "finished",
+      "start": 1774865708735,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "When Verify the \"Checkout\" button is visible",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708982,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "Then Cart page shows no items and user can see Continue Shopping button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708982,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708706,
+      "stop": 1774865708982,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708971,
+      "stop": 1774865708982,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

@@ -4409,18 +4409,84 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
         script_code = request.script_code
         test_types = request.test_types
         count = request.count_per_type
-        
-        # Step 1: Analyze the script
-        analysis = script_analyzer.analyze(script_code)
-        
+
+        # Step 1: Analyze the script (wrapped with explicit error handling)
+        try:
+            analysis = script_analyzer.analyze(script_code)
+        except Exception as ae:
+            raise HTTPException(status_code=422, detail=f"Script analysis failed: {str(ae)}")
+
+        # Warn early if no input fields detected
+        if not analysis.input_fields:
+            return {
+                "success": False,
+                "data": {
+                    "analysis": analysis.to_dict(),
+                    "security_tests": [],
+                    "boundary_tests": [],
+                    "equivalence_tests": [],
+                    "positive_tests": [],
+                    "negative_tests": [],
+                    "complete_test_files": {}
+                },
+                "message": "No input fields detected in script. Ensure the script contains Playwright locators (getByLabel, getByRole, locator, fill, etc.)"
+            }
+
         # Step 2: Generate test data based on detected fields
         generated_tests = {
             "security_tests": [],
             "boundary_tests": [],
             "equivalence_tests": [],
+            "positive_tests": [],
+            "negative_tests": [],
             "complete_test_files": {}
         }
         
+        # Positive Tests
+        if 'positive' in test_types:
+            positive_values = {
+                'text': 'valid_input', 'email': 'user@example.com', 'password': 'Password123!',
+                'number': 100, 'tel': '1234567890', 'url': 'https://example.com',
+                'date': '2025-01-15', 'search': 'search term', 'textarea': 'Sample text content.',
+                'select': 'option1', 'checkbox': True, 'radio': True
+            }
+            for field in analysis.input_fields[:count]:
+                ft = field.field_type.value
+                generated_tests['positive_tests'].append({
+                    "field": field.selector,
+                    "field_name": field.field_name,
+                    "field_type": ft,
+                    "value": positive_values.get(ft, 'valid_value'),
+                    "description": f"Valid {ft} input for {field.field_name}"
+                })
+
+        # Negative Tests
+        if 'negative' in test_types:
+            negative_values = {
+                'text': ['', '   ', '\x00null'],
+                'email': ['not-an-email', '@missing.com', 'user@', ''],
+                'password': ['123', 'password', '', 'a'],
+                'number': ['abc', '', -9999999999, 'NaN'],
+                'tel': ['abc', '', '12', '+++'],
+                'url': ['htp://bad', 'not-a-url', '', 'ftp://'],
+                'date': ['2025-13-01', 'not-a-date', '', '00-00-0000'],
+                'search': ['', '\x00'],
+                'textarea': ['', '\x00'],
+                'select': ['', 'invalid_option', None],
+                'checkbox': [None],
+                'radio': [None]
+            }
+            for field in analysis.input_fields[:count]:
+                ft = field.field_type.value
+                for val in (negative_values.get(ft, ['']) or [''])[:3]:
+                    generated_tests['negative_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": ft,
+                        "value": val,
+                        "description": f"Invalid {ft} input: {repr(val)}"
+                    })
+
         # Security Tests
         if 'security' in test_types:
             for field in analysis.input_fields:
@@ -4486,7 +4552,7 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
         
         # Boundary Tests
         if 'boundary' in test_types:
-            for field in analysis.input_fields:
+            for field in analysis.input_fields[:count]:
                 ft = field.field_type.value
 
                 if ft == 'number':
@@ -4588,10 +4654,25 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
                             {"value": False, "type": "unchecked", "isValid": True}
                         ]
                     })
-        
+
+                elif ft == 'date':
+                    generated_tests['boundary_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "field_type": "date",
+                        "test_cases": [
+                            {"value": "1970-01-01", "type": "epoch_min", "isValid": True},
+                            {"value": "2099-12-31", "type": "far_future", "isValid": True},
+                            {"value": "2000-02-29", "type": "leap_day", "isValid": True},
+                            {"value": "2025-02-30", "type": "invalid_day", "isValid": False},
+                            {"value": "2025-13-01", "type": "invalid_month", "isValid": False},
+                            {"value": "", "type": "empty", "isValid": False}
+                        ]
+                    })
+
         # Equivalence Tests
         if 'equivalence' in test_types:
-            for field in analysis.input_fields:
+            for field in analysis.input_fields[:count]:
                 field_name_lower = field.field_name.lower()
                 ft = field.field_type.value
 
@@ -4740,6 +4821,23 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
                             {"value": "   ", "description": "Whitespace only", "errorCode": "BLANK_INPUT"}
                         ]
                     })
+
+                elif ft == 'date':
+                    generated_tests['equivalence_tests'].append({
+                        "field": field.selector,
+                        "field_name": field.field_name,
+                        "partition_type": "date",
+                        "valid_partitions": [
+                            {"example": "2025-06-15", "description": "Present date"},
+                            {"example": "2000-01-01", "description": "Past date"},
+                            {"example": "2099-12-31", "description": "Far future date"}
+                        ],
+                        "invalid_partitions": [
+                            {"value": "not-a-date", "description": "Non-date string", "errorCode": "INVALID_DATE_FORMAT"},
+                            {"value": "2025-13-01", "description": "Invalid month", "errorCode": "INVALID_MONTH"},
+                            {"value": "", "description": "Empty", "errorCode": "REQUIRED"}
+                        ]
+                    })
         
         # Generate complete Playwright test files
         if analysis.input_fields:
@@ -4749,7 +4847,7 @@ async def generate_tests_from_script(request: GenerateTestsFromScriptRequest):
 
 test.describe('Security Tests - Auto-generated', () => {{
 """
-                for sec_test in generated_tests['security_tests'][:5]:  # Limit to 5 tests
+                for sec_test in generated_tests['security_tests']:
                     security_test_file += f"""
   test('{sec_test['attack_type']} - {sec_test['field_name']}', async ({{ page }}) => {{
     await page.goto('{analysis.navigation_url or 'https://example.com'}');
@@ -4758,15 +4856,15 @@ test.describe('Security Tests - Auto-generated', () => {{
 """
                 security_test_file += "});\n"
                 generated_tests['complete_test_files']['security.spec.ts'] = security_test_file
-            
+
             # Boundary test file
             if 'boundary' in test_types and generated_tests['boundary_tests']:
                 boundary_test_file = f"""import {{ test, expect }} from '@playwright/test';
 
 test.describe('Boundary Value Tests - Auto-generated', () => {{
 """
-                for bound_test in generated_tests['boundary_tests'][:3]:  # Limit to 3 fields
-                    for test_case in bound_test['test_cases'][:4]:  # Limit to 4 tests per field
+                for bound_test in generated_tests['boundary_tests']:
+                    for test_case in bound_test['test_cases']:
                         if 'test_code' in test_case:
                             expected = "toBeVisible" if test_case['isValid'] else "not.toBeVisible"
                             boundary_test_file += f"""
@@ -4779,22 +4877,36 @@ test.describe('Boundary Value Tests - Auto-generated', () => {{
 """
                 boundary_test_file += "});\n"
                 generated_tests['complete_test_files']['boundary.spec.ts'] = boundary_test_file
-        
+
+        # Build flat response matching what the Node.js caller expects:
+        # data.analysis.input_fields, data.boundary_tests, data.security_tests, data.equivalence_tests
+        analysis_dict = analysis.to_dict()
         return {
             "success": True,
             "data": {
-                "script_analysis": analysis.to_dict(),
-                "generated_tests": generated_tests,
+                "analysis": analysis_dict,
+                "input_fields": analysis_dict['input_fields'],
+                "security_tests": generated_tests['security_tests'],
+                "boundary_tests": generated_tests['boundary_tests'],
+                "equivalence_tests": generated_tests['equivalence_tests'],
+                "positive_tests": generated_tests['positive_tests'],
+                "negative_tests": generated_tests['negative_tests'],
+                "complete_test_files": generated_tests['complete_test_files'],
                 "summary": {
+                    "total_fields": len(analysis.input_fields),
                     "total_security_tests": len(generated_tests['security_tests']),
-                    "total_boundary_tests": sum(len(bt['test_cases']) for bt in generated_tests['boundary_tests']),
+                    "total_boundary_tests": sum(len(bt.get('test_cases', [])) for bt in generated_tests['boundary_tests']),
                     "total_equivalence_tests": sum(len(et.get('valid_partitions', [])) + len(et.get('invalid_partitions', [])) for et in generated_tests['equivalence_tests']),
+                    "total_positive_tests": len(generated_tests['positive_tests']),
+                    "total_negative_tests": len(generated_tests['negative_tests']),
                     "test_files_generated": len(generated_tests['complete_test_files']),
                     "input_fields_analyzed": len(analysis.input_fields)
                 }
             },
             "message": "Tests generated successfully from script analysis"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Test generation failed: {str(e)}")
 

@@ -1,0 +1,119 @@
+[
+  {
+    "description": "  As a user\n  I want to be able to login\n  So that I can access my account",
+    "elements": [
+      {
+        "description": "",
+        "id": "login-functionality;successful-login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 7,
+        "name": "Successful login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 575832400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "I navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:251"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2376781798
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 9,
+            "name": "I fill \"Username\" with \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:382"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 110927499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 10,
+            "name": "I fill \"Password\" with \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:382"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 38921398
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 11,
+            "name": "I click \"Login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:418"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 105951697
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 12,
+            "name": "I should see \"Welcome\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:638"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 10242542699,
+              "error_message": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('Welcome', { exact: true }).first()\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 10000ms\n  - waiting for getByText('Welcome', { exact: true }).first()\n\n    at Proxy.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\playwright\\lib\\matchers\\expect.js:213:24)\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\c77c2888-6ca3-4ecc-91a1-c1858c9901c5\\features\\step_definitions\\steps.js:639:68)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 163465100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 13192099
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@smoke",
+            "line": 6
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "login-functionality",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Login functionality",
+    "tags": [],
+    "uri": "features\\test.feature"
+  }
+]

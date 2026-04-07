@@ -1,0 +1,126 @@
+{
+  "uuid": "a704ad4b-6b2a-47d9-bc96-89c255d3b399",
+  "historyId": "3d4981fd-5607-42c1-b84d-1203be9f20e4-Login with valid credentials",
+  "testCaseId": "a704ad4b-6b2a-47d9-bc96-89c255d3b399",
+  "fullName": "Login with valid credentials > Login with valid credentials",
+  "name": "Login with valid credentials",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774863851104,
+  "stop": 1774863855826,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855504,
+      "stop": 1774863855826,
+      "attachments": []
+    },
+    {
+      "name": "Given User is on \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863853454,
+      "stop": 1774863855826,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855245,
+      "stop": 1774863855826,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855617,
+      "stop": 1774863855826,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855764,
+      "stop": 1774863855826,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855652,
+      "stop": 1774863855826,
+      "attachments": []
+    },
+    {
+      "name": "Then User is redirected to the inventory page and products are displayed",
+      "status": "failed",
+      "statusDetails": {
+        "message": "ReferenceError: page is not defined\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\3d4981fd-5607-42c1-b84d-1203be9f20e4\\features\\step_definitions\\steps.js:954:1)"
+      },
+      "stage": "finished",
+      "start": 1774863855184,
+      "stop": 1774863855826,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855481,
+      "stop": 1774863855826,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774863855811,
+      "stop": 1774863855826,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

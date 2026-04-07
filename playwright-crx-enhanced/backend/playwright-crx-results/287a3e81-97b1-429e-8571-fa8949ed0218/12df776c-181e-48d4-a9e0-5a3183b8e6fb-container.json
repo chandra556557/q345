@@ -1,0 +1,24 @@
+{
+  "uuid": "12df776c-181e-48d4-a9e0-5a3183b8e6fb",
+  "name": "SauceDemo E-commerce Application",
+  "children": [
+    "a7069507-7b89-4521-8634-eea42c277731",
+    "4def2143-534b-4774-8a44-1e60156dda25",
+    "6abf82ff-c7d7-4dcb-8ec3-2e21fda58e3c",
+    "3aa23d3e-39f9-4b38-82a2-7eb341ad45cf",
+    "ab433215-2d7a-4e76-91a6-873c03046a30",
+    "d25d4bf8-5207-482e-b6cf-f63d5c8341f6",
+    "cb3050db-12a4-4d00-b66e-a3c2f17daf33",
+    "899432b7-a78e-4a3e-a4ad-f7829259cdcb",
+    "48294dbb-56f1-41c0-a6f9-a4c7775127db",
+    "c474459b-1676-47b5-ad7f-64e9fc4a2af4",
+    "be517c06-1628-4e07-802e-a2a6adbc143a",
+    "1d507a1e-865f-4690-88b8-9bc9864e2038",
+    "a080b311-a2f2-4bcf-bc4d-12467a6012ee",
+    "eda760b8-7216-4533-bec4-75489a24f2ce"
+  ],
+  "befores": [],
+  "afters": [],
+  "start": 1775546675272,
+  "stop": 1775546679338
+}

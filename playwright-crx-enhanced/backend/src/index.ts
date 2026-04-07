@@ -47,9 +47,16 @@ import { bddService } from './services/bdd/bdd.service';
 // Middleware
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
+import { loadProjectEnvironmentWithFallback } from './utils/projectManager';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from project-specific .env file
+// Priority: ACTIVE_PROJECT env var > .env.{projectName} > .env
+const projectName = process.env.ACTIVE_PROJECT || process.argv[2] || 'default';
+if (projectName !== 'default') {
+  loadProjectEnvironmentWithFallback(projectName, path.resolve(__dirname, '../'));
+} else {
+  dotenv.config();
+}
 
 const app: Application = express();
 const httpServer = createServer(app);

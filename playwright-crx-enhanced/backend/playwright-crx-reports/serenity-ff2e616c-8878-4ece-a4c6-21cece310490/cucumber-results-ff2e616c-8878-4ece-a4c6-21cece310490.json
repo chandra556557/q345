@@ -1,0 +1,958 @@
+[
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-rejected-role-is-restricted-for-re-application",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "Verify rejected role is restricted for re-application",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 337674299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:952"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 240837398,
+              "error_message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login,1.\" User applies for Role A in a team",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:958"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 7,
+            "name": "Team leader rejects the request",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:963"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 8,
+            "name": "User navigates again to Apply/Join page for the same team",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:969"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 9,
+            "name": "Check availability of Role A.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:974"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 10,
+            "name": "Rejected Role A should be disabled or restricted for that user. User should not be able to reapply for the same rejected role.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:979"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 129476999
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 17381699
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-other-available-roles-remain-selectable-after-rejection",
+        "keyword": "Scenario",
+        "line": 12,
+        "name": "Verify other available roles remain selectable after rejection",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 210239400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 13,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:952"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 119238097,
+              "error_message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 14,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:287"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 15,
+            "name": "User is rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:984"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "Navigate to Apply page again",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:990"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 17,
+            "name": "Check availability of Role B or other roles",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:995"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 18,
+            "name": "Attempt to apply for another role.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1000"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 19,
+            "name": "Other available roles should remain selectable. User should be able to successfully apply for a different role within the same team.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1006"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 143998400
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 21183500
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-rejected-role-displays-proper-validation-messaging",
+        "keyword": "Scenario",
+        "line": 21,
+        "name": "Verify rejected role displays proper validation messaging",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 193023499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 22,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:952"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 132727097,
+              "error_message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 23,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:287"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 24,
+            "name": "After rejection, attempt to select the same rejected role (if clickable)",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 25,
+            "name": "Attempt to submit application.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1017"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 26,
+            "name": "System should display validation message such as �You have already been rejected for this role� or relevant message.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1023"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 129427799
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 11569199
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-restriction-applies-only-to-the-specific-rejected-role",
+        "keyword": "Scenario",
+        "line": 28,
+        "name": "Verify restriction applies only to the specific rejected role",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 295412700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 29,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:952"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 153386899,
+              "error_message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 30,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:287"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 31,
+            "name": "User gets rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1029"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 32,
+            "name": "Check availability of other roles",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1035"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 33,
+            "name": "Attempt to apply for another role",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1040"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 34,
+            "name": "Verify team access.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1046"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 35,
+            "name": "Only Role A should be restricted. Other roles should function normally without blocking team application.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1052"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 198445699
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 13679099
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-behavior-when-multiple-roles-are-rejected-separately",
+        "keyword": "Scenario",
+        "line": 37,
+        "name": "Verify behavior when multiple roles are rejected separately",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 289318999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 38,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:952"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 173917899,
+              "error_message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 39,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:287"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 40,
+            "name": "Apply and get rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1058"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 41,
+            "name": "Apply and get rejected for Role B",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1064"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 42,
+            "name": "Navigate to Apply page again",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:990"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 43,
+            "name": "Check role availability.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1070"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 44,
+            "name": "Roles A and B should be restricted. Any remaining available roles should remain selectable.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1075"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 181760500
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 23747799
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-re-application-works-after-role-capacity-changes",
+        "keyword": "Scenario",
+        "line": 46,
+        "name": "Verify re-application works after role capacity changes",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 250646099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 47,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:952"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 200428498,
+              "error_message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 48,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:287"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 49,
+            "name": "User rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1081"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 50,
+            "name": "Another member leaves Role A (capacity becomes available)",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 51,
+            "name": "User revisits Apply page.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1093"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 52,
+            "name": "Even if capacity becomes available, previously rejected role should remain restricted for that specific user unless system rules allow reset.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1099"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 200374200
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 21862800
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-role-restriction-persists-across-sessions",
+        "keyword": "Scenario",
+        "line": 54,
+        "name": "Verify role restriction persists across sessions",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 253346999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 55,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:952"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 199312299,
+              "error_message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 56,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:287"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 57,
+            "name": "User is rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:984"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 58,
+            "name": "Logout",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1105"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 59,
+            "name": "Login again",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1111"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 60,
+            "name": "Navigate to Apply page.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1117"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 61,
+            "name": "Rejected role should remain restricted across sessions. System should maintain rejection history.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1122"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 190594799
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 19870200
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-backend-validation-prevents-bypassing-rejected-role-restriction",
+        "keyword": "Scenario",
+        "line": 63,
+        "name": "Verify backend validation prevents bypassing rejected role restriction",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 260230199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 64,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:952"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 181260998,
+              "error_message": "Error: Step not implemented: Given User should launch the Application\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\ff2e616c-8878-4ece-a4c6-21cece310490\\features\\step_definitions\\steps.js:955:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 65,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:287"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 66,
+            "name": "Inspect rejected role element via browser DevTools",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1128"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 67,
+            "name": "Attempt to enable and submit application manually",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1134"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 68,
+            "name": "Observe system response.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1140"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 69,
+            "name": "Backend validation should prevent application for rejected role even if UI is manipulated. Application should not be accepted.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1146"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 200314000
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 10414399
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "verify-rejected-role-is-restricted-for-re-application",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Verify rejected role is restricted for re-application",
+    "tags": [],
+    "uri": "features\\test.feature"
+  }
+]

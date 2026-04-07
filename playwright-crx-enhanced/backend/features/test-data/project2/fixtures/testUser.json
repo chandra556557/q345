@@ -1,0 +1,26 @@
+{
+  "id": "user-002",
+  "email": "testuser@project2.staging.com",
+  "username": "project2_testuser",
+  "password": "StagingPass456!",
+  "firstName": "Project2",
+  "lastName": "StagingUser",
+  "role": "admin",
+  "status": "active",
+  "createdAt": "2024-02-01T10:00:00Z",
+  "updatedAt": "2024-02-01T10:00:00Z",
+  "organization": "project2-staging",
+  "permissions": [
+    "read:tests",
+    "write:tests",
+    "read:reports",
+    "admin:users",
+    "admin:organization"
+  ],
+  "preferences": {
+    "theme": "dark",
+    "notifications": true,
+    "language": "en"
+  },
+  "environment": "staging"
+}

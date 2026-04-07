@@ -170,12 +170,34 @@ class ScriptAnalysis:
     recommendations: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self):
+        def _serialize(obj):
+            """Recursively convert enums to their .value strings in dicts/lists."""
+            if isinstance(obj, dict):
+                return {k: _serialize(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_serialize(i) for i in obj]
+            if hasattr(obj, 'value') and hasattr(obj, '__class__') and issubclass(obj.__class__, str):
+                return obj.value
+            return obj
+
+        def _field_to_dict(f):
+            d = asdict(f)
+            d['field_type'] = f.field_type.value
+            d['action'] = f.action.value
+            return d
+
+        def _action_to_dict(a):
+            d = asdict(a)
+            d['action_type'] = a.action_type.value
+            d['quality'] = a.quality.value
+            return d
+
         return {
-            'input_fields': [asdict(f) for f in self.input_fields],
-            'actions': [asdict(a) for a in self.actions],
+            'input_fields': [_field_to_dict(f) for f in self.input_fields],
+            'actions': [_action_to_dict(a) for a in self.actions],
             'navigation_url': self.navigation_url,
             'assertions': self.assertions,
-            'summary': self.summary,
+            'summary': _serialize(self.summary),
             'xpath_analysis': [asdict(x) for x in self.xpath_analysis],
             'external_data_sources': [asdict(d) for d in self.external_data_sources],
             'test_context': asdict(self.test_context) if self.test_context else None,
@@ -250,6 +272,13 @@ class PlaywrightScriptAnalyzer:
         'last': r'\.last\(\)',
         'nth': r'\.nth\((\d+)\)',
         'filter': r'\.filter\(\{[^}]*hasText:\s*[\'"]([^\'"]+)[\'"]',
+        # nth/filter chained with fill/select/check — Group 1=quote, Group 2=selector
+        'locator_nth_fill': r"\.locator\((['\"`])(.*?)\1\)(?:\.nth\(\d+\)|\.first\(\)|\.last\(\))*\.(?:fill|type|pressSequentially)\(",
+        'locator_nth_select': r"\.locator\((['\"`])(.*?)\1\)(?:\.nth\(\d+\)|\.first\(\)|\.last\(\))*\.selectOption\(",
+        'locator_nth_check': r"\.locator\((['\"`])(.*?)\1\)(?:\.nth\(\d+\)|\.first\(\)|\.last\(\))*\.(?:check|uncheck)\(",
+        'locator_filter_fill': r"\.locator\((['\"`])(.*?)\1\)\.filter\([^)]*\)\.(?:fill|type|pressSequentially)\(",
+        'locator_filter_select': r"\.locator\((['\"`])(.*?)\1\)\.filter\([^)]*\)\.selectOption\(",
+        'locator_filter_check': r"\.locator\((['\"`])(.*?)\1\)\.filter\([^)]*\)\.(?:check|uncheck)\(",
         'and': r'\.and\(',
         'or': r'\.or\(',
         'not': r'\.not\(',
@@ -462,7 +491,22 @@ class PlaywrightScriptAnalyzer:
         has_api_hybrid = False
         has_component = False
         
-        lines = script_code.split('\n')
+        # === PRE-PROCESS: join multiline chained calls into single logical lines ===
+        # e.g. page\n  .getByLabel('Email')\n  .fill('val')  →  page.getByLabel('Email').fill('val')
+        raw_lines = script_code.split('\n')
+        joined_lines: list[str] = []
+        buffer = ''
+        for raw in raw_lines:
+            stripped = raw.strip()
+            if stripped.startswith('.') and buffer:
+                buffer = buffer.rstrip() + stripped
+            else:
+                if buffer:
+                    joined_lines.append(buffer)
+                buffer = raw
+        if buffer:
+            joined_lines.append(buffer)
+        lines = joined_lines
 
         for line_num, line in enumerate(lines, start=1):
             line_stripped = line.strip()
@@ -712,6 +756,52 @@ class PlaywrightScriptAnalyzer:
                     quality=LocatorQuality.GOOD
                 ))
 
+            # getByAltText — Group 1=quote, Group 2=alt text (updated pattern below)
+            alttext_match = re.search(self.PATTERNS['getByAltText'], line_stripped)
+            if alttext_match:
+                alt_text = alttext_match.group(1)
+                selector = f"getByAltText('{alt_text}')"
+                action_type = self._detect_action_from_line(line_stripped)
+                if action_type in [ActionType.FILL, ActionType.TYPE, ActionType.CHECK, ActionType.SELECT_OPTION]:
+                    field_type, field_name, constraints = self._detect_field_info(alt_text, '')
+                    input_fields.append(InputField(
+                        selector=selector,
+                        field_type=field_type,
+                        field_name=field_name or alt_text,
+                        action=action_type,
+                        line_number=line_num,
+                        constraints=constraints
+                    ))
+                actions.append(ScriptAction(
+                    action_type=action_type or ActionType.CLICK,
+                    target=selector,
+                    line_number=line_num,
+                    quality=LocatorQuality.GOOD
+                ))
+
+            # getByTitle — Group 1=title text
+            title_match = re.search(self.PATTERNS['getByTitle'], line_stripped)
+            if title_match:
+                title_text = title_match.group(1)
+                selector = f"getByTitle('{title_text}')"
+                action_type = self._detect_action_from_line(line_stripped)
+                if action_type in [ActionType.FILL, ActionType.TYPE, ActionType.CHECK, ActionType.SELECT_OPTION]:
+                    field_type, field_name, constraints = self._detect_field_info(title_text, '')
+                    input_fields.append(InputField(
+                        selector=selector,
+                        field_type=field_type,
+                        field_name=field_name or title_text,
+                        action=action_type,
+                        line_number=line_num,
+                        constraints=constraints
+                    ))
+                actions.append(ScriptAction(
+                    action_type=action_type or ActionType.CLICK,
+                    target=selector,
+                    line_number=line_num,
+                    quality=LocatorQuality.GOOD
+                ))
+
             # ===== LEGACY LOCATOR METHODS =====
             # Patterns now use group(1)=quote, group(2)=selector via backreference
 
@@ -855,6 +945,37 @@ class PlaywrightScriptAnalyzer:
                     quality=self._assess_locator_quality(selector)
                 ))
 
+            # Extract nth()/filter() chained fill/select/check
+            for pat, ftype, atype in [
+                ('locator_nth_fill',    None,              ActionType.FILL),
+                ('locator_nth_select',  FieldType.SELECT,  ActionType.SELECT_OPTION),
+                ('locator_nth_check',   FieldType.CHECKBOX,ActionType.CHECK),
+                ('locator_filter_fill', None,              ActionType.FILL),
+                ('locator_filter_select',FieldType.SELECT, ActionType.SELECT_OPTION),
+                ('locator_filter_check',FieldType.CHECKBOX,ActionType.CHECK),
+            ]:
+                m = re.search(self.PATTERNS[pat], line_stripped)
+                if m:
+                    selector = m.group(2)
+                    if ftype is None:
+                        ft, fn, constraints = self._detect_field_info(selector, '')
+                    else:
+                        ft, fn, constraints = ftype, self._extract_field_name(selector), {}
+                    input_fields.append(InputField(
+                        selector=selector,
+                        field_type=ft,
+                        field_name=fn,
+                        action=atype,
+                        line_number=line_num,
+                        constraints=constraints
+                    ))
+                    actions.append(ScriptAction(
+                        action_type=atype,
+                        target=selector,
+                        line_number=line_num,
+                        quality=self._assess_locator_quality(selector)
+                    ))
+
             # Extract assertions
             expect_match = re.search(self.PATTERNS['expect'], line_stripped)
             if expect_match:
@@ -930,6 +1051,16 @@ class PlaywrightScriptAnalyzer:
             }
         }
         
+        # === DEDUPLICATE input_fields (same selector+type+action) ===
+        seen_fields: Set[tuple] = set()
+        unique_fields = []
+        for f in input_fields:
+            key = (f.selector, f.field_type, f.action)
+            if key not in seen_fields:
+                seen_fields.add(key)
+                unique_fields.append(f)
+        input_fields = unique_fields
+
         # === CREATE ANALYSIS OBJECT ===
         analysis = ScriptAnalysis(
             input_fields=input_fields,
@@ -1111,14 +1242,31 @@ class PlaywrightScriptAnalyzer:
             }
             return FieldType.TEXT, field_name, constraints
 
+        # ============ CVV / OTP / PIN / MFA PATTERNS ============
+        cvv_keywords = ['cvv', 'cvc', 'cvv2', 'csc', 'security code']
+        if any(keyword in lower_selector for keyword in cvv_keywords):
+            constraints = {'min_length': 3, 'max_length': 4, 'pattern': r'^\d{3,4}$', 'masked': True, 'sensitive': True}
+            return FieldType.NUMBER, field_name, constraints
+
+        otp_keywords = ['otp', '2fa', 'mfa', 'totp', 'verification code', 'verificationcode', 'one-time', 'onetime']
+        if any(keyword in lower_selector for keyword in otp_keywords):
+            constraints = {'min_length': 4, 'max_length': 8, 'pattern': r'^\d{4,8}$', 'sensitive': True}
+            return FieldType.NUMBER, field_name, constraints
+
+        pin_keywords = ['pin', 'passcode', 'access code', 'accesscode']
+        if any(keyword in lower_selector for keyword in pin_keywords):
+            constraints = {'min_length': 4, 'max_length': 8, 'pattern': r'^\d{4,8}$', 'masked': True, 'sensitive': True}
+            return FieldType.NUMBER, field_name, constraints
+
         # ============ CREDIT CARD PATTERNS ============
+        # Relaxed: any card keyword alone is enough (e.g. #cardField, #creditCardNumber)
         card_keywords = ['card', 'credit', 'debit', 'payment', 'tarjeta', 'credito']
-        if any(keyword in lower_selector for keyword in card_keywords) and 'number' in lower_selector:
+        if any(keyword in lower_selector for keyword in card_keywords):
             constraints = {
                 'min_length': 13,
                 'max_length': 19,
                 'pattern': r'^\d{13,19}$',
-                'validation': 'luhn_algorithm',  # Credit card validation
+                'validation': 'luhn_algorithm',
                 'masked': True
             }
             return FieldType.NUMBER, field_name, constraints
@@ -1220,12 +1368,16 @@ class PlaywrightScriptAnalyzer:
         """
         # Remove common prefixes and clean up
         name = selector
-        name = re.sub(r'^[#.\[]', '', name)  # Remove leading #, ., [
-        name = re.sub(r'[\'"\]].*$', '', name)  # Remove trailing quotes and brackets
-        name = re.sub(r'name=', '', name)
-        name = re.sub(r'id=', '', name)
-        name = re.sub(r'data-testid=', '', name)
-        name = re.sub(r'[-_]', ' ', name)  # Replace - and _ with space
+        # Extract value from attribute selectors like [name="email"] or [data-testid="transfer-amount"]
+        attr_match = re.search(r'\[(?:name|id|data-testid|data-test-id|aria-label)=[\'"]?([^\'">\]]+)[\'"]?\]', name)
+        if attr_match:
+            name = attr_match.group(1)
+        else:
+            name = re.sub(r'^[#.\[]', '', name)          # Remove leading #, ., [
+            name = re.sub(r'[\[\'"\]].*$', '', name)     # Remove trailing brackets/quotes and everything after
+            name = re.sub(r'(?:name|id|data-testid)=', '', name)  # Remove attribute prefixes
+        name = re.sub(r'[-_]', ' ', name)                # Replace - and _ with space
+        name = re.sub(r'[^a-zA-Z0-9 ]', '', name)       # Strip any remaining special chars
         name = name.strip()
 
         # Capitalize words

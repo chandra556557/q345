@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Playwright CRX</title>
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="stylesheet" type="text/css" href="plugin/screen-diff/styles.css">
+
+<style>
+/* Replace Allure logo with Playwright CRX logo */
+.side-nav__brand {
+  background-image: url('playwright-crx-logo.png') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  width: 200px !important;
+  height: 60px !important;
+}
+.side-nav__brand svg,
+.side-nav__brand img {
+  display: none !important;
+}
+/* Hide Allure text in sidebar */
+.side-nav__brand::after {
+  content: '' !important;
+}
+</style>
+<script>
+// Replace Allure branding after page loads
+(function() {
+  function replaceAllureBranding() {
+    // Replace ALL text nodes containing 'Allure' with 'Playwright CRX'
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    const nodesToReplace = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (node.nodeValue && node.nodeValue.includes('Allure')) {
+        nodesToReplace.push(node);
+      }
+    }
+    
+    nodesToReplace.forEach(node => {
+      node.nodeValue = node.nodeValue.replace(/Allure/g, 'Playwright CRX');
+    });
+    
+    // Replace logo in sidebar
+    const brand = document.querySelector('.side-nav__brand');
+    if (brand) {
+      brand.innerHTML = '<img src="playwright-crx-logo.png" alt="Playwright CRX" style="max-width: 100%; max-height: 100%; object-fit: contain;" />';
+    }
+    
+    // Specifically target the brand text span
+    const brandText = document.querySelector('.side-nav__brand-text');
+    if (brandText) {
+      brandText.textContent = 'Playwright CRX';
+    }
+    
+    // Replace in attributes (like titles, aria-labels, etc.)
+    document.querySelectorAll('[title*="Allure"]').forEach(el => {
+      el.setAttribute('title', el.getAttribute('title').replace(/Allure/g, 'Playwright CRX'));
+    });
+    document.querySelectorAll('[aria-label*="Allure"]').forEach(el => {
+      el.setAttribute('aria-label', el.getAttribute('aria-label').replace(/Allure/g, 'Playwright CRX'));
+    });
+  }
+  
+  // Run immediately
+  replaceAllureBranding();
+  
+  // Run after DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', replaceAllureBranding);
+  }
+  
+  // Run after delays to catch dynamically rendered content
+  setTimeout(replaceAllureBranding, 100);
+  setTimeout(replaceAllureBranding, 500);
+  setTimeout(replaceAllureBranding, 1000);
+  setTimeout(replaceAllureBranding, 2000);
+  
+  // Use MutationObserver to catch any future changes
+  const observer = new MutationObserver(() => {
+    replaceAllureBranding();
+  });
+  
+  // Start observing after a brief delay
+  setTimeout(() => {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+  }, 100);
+})();
+</script>
+</head>
+<body>
+    <div id="alert"></div>
+    <div id="content">
+        <span class="spinner">
+            <span class="spinner__circle"></span>
+        </span>
+    </div>
+    <div id="popup"></div>
+    <script src="app.js"></script>
+    <script src="plugin/behaviors/index.js"></script>
+    <script src="plugin/packages/index.js"></script>
+    <script src="plugin/screen-diff/index.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FVWC4GKEYS"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-FVWC4GKEYS', {
+          'allureVersion': '2.34.1',
+          'reportUuid': 'c6f3559a-479b-4c8e-be89-51a72a6f5c38',
+          'single_file': false
+        });
+    </script>
+</body>
+</html>

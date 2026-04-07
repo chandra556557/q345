@@ -1,0 +1,124 @@
+{
+  "uuid": "b3787400-e1ae-49dc-9193-8d26d9133348",
+  "historyId": "55040522-ca8a-4454-af2b-fe0faf153586-Login with valid credentials",
+  "testCaseId": "b3787400-e1ae-49dc-9193-8d26d9133348",
+  "fullName": "Login with valid credentials > Login with valid credentials",
+  "name": "Login with valid credentials",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774865703864,
+  "stop": 1774865708937,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "story",
+      "value": "Login with valid credentials"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708314,
+      "stop": 1774865708937,
+      "attachments": []
+    },
+    {
+      "name": "Given User is on \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865705793,
+      "stop": 1774865708937,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://saucedemo.com\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708231,
+      "stop": 1774865708937,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"standard_user\" in the Username field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708748,
+      "stop": 1774865708937,
+      "attachments": []
+    },
+    {
+      "name": "When Enter \"secret_sauce\" in the Password field",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708873,
+      "stop": 1774865708937,
+      "attachments": []
+    },
+    {
+      "name": "When Click the \"Login\" button",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708727,
+      "stop": 1774865708937,
+      "attachments": []
+    },
+    {
+      "name": "Then User is redirected to the inventory page and products are displayed",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708904,
+      "stop": 1774865708937,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708849,
+      "stop": 1774865708937,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774865708921,
+      "stop": 1774865708937,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

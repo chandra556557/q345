@@ -1,0 +1,950 @@
+[
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-rejected-role-is-restricted-for-re-application",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "Verify rejected role is restricted for re-application",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 296509200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:813"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3932398
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login,1.\" User applies for Role A in a team",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:818"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2932097
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 7,
+            "name": "Team leader rejects the request",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:823"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2374898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 8,
+            "name": "User navigates again to Apply/Join page for the same team",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:828"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1376599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 9,
+            "name": "Check availability of Role A.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:833"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1459899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 10,
+            "name": "Rejected Role A should be disabled or restricted for that user. User should not be able to reapply for the same rejected role.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:838"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1102598
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 26779199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12882699
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-other-available-roles-remain-selectable-after-rejection",
+        "keyword": "Scenario",
+        "line": 12,
+        "name": "Verify other available roles remain selectable after rejection",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 221986200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 13,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:813"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 774499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 14,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:843"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 955198
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 15,
+            "name": "User is rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:848"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 839599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "Navigate to Apply page again",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:853"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 803898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 17,
+            "name": "Check availability of Role B or other roles",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:858"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1127298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 18,
+            "name": "Attempt to apply for another role.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:863"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 571297
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 19,
+            "name": "Other available roles should remain selectable. User should be able to successfully apply for a different role within the same team.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:868"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 822198
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 17317100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12624700
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-rejected-role-displays-proper-validation-messaging",
+        "keyword": "Scenario",
+        "line": 21,
+        "name": "Verify rejected role displays proper validation messaging",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 222509900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 22,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:813"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 632999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 23,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:843"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 839697
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 24,
+            "name": "After rejection, attempt to select the same rejected role (if clickable)",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 25,
+            "name": "Attempt to submit application.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:878"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 26,
+            "name": "System should display validation message such as �You have already been rejected for this role� or relevant message.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:883"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 23956699
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12181199
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-restriction-applies-only-to-the-specific-rejected-role",
+        "keyword": "Scenario",
+        "line": 28,
+        "name": "Verify restriction applies only to the specific rejected role",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 227194899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 29,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:813"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1522797
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 30,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:843"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1198098
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 31,
+            "name": "User gets rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:888"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 815498
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 32,
+            "name": "Check availability of other roles",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:893"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 626699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 33,
+            "name": "Attempt to apply for another role",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:898"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 544898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 34,
+            "name": "Verify team access.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:903"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1273298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 35,
+            "name": "Only Role A should be restricted. Other roles should function normally without blocking team application.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:908"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 880599
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 23354299
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16711299
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-behavior-when-multiple-roles-are-rejected-separately",
+        "keyword": "Scenario",
+        "line": 37,
+        "name": "Verify behavior when multiple roles are rejected separately",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 312997599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 38,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:813"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 546899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 39,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:843"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1392498
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 40,
+            "name": "Apply and get rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:913"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1851597
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 41,
+            "name": "Apply and get rejected for Role B",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:918"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 743699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 42,
+            "name": "Navigate to Apply page again",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:853"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 527499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 43,
+            "name": "Check role availability.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:923"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 672099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 44,
+            "name": "Roles A and B should be restricted. Any remaining available roles should remain selectable.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:928"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1041299
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 36358700
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16474200
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-re-application-works-after-role-capacity-changes",
+        "keyword": "Scenario",
+        "line": 46,
+        "name": "Verify re-application works after role capacity changes",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 237622899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 47,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:813"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 426597
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 48,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:843"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 541998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 49,
+            "name": "User rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:933"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 471298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 50,
+            "name": "Another member leaves Role A (capacity becomes available)",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 51,
+            "name": "User revisits Apply page.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:943"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 52,
+            "name": "Even if capacity becomes available, previously rejected role should remain restricted for that specific user unless system rules allow reset.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:948"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 26717899
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20467799
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-role-restriction-persists-across-sessions",
+        "keyword": "Scenario",
+        "line": 54,
+        "name": "Verify role restriction persists across sessions",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 216618299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 55,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:813"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 315998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 56,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:843"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 383099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 57,
+            "name": "User is rejected for Role A",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:848"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 992897
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 58,
+            "name": "Logout",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:953"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 435797
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 59,
+            "name": "Login again",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:958"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 456498
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 60,
+            "name": "Navigate to Apply page.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:963"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 442398
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 61,
+            "name": "Rejected role should remain restricted across sessions. System should maintain rejection history.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:968"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 538699
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 28942199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20561799
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "verify-rejected-role-is-restricted-for-re-application;verify-backend-validation-prevents-bypassing-rejected-role-restriction",
+        "keyword": "Scenario",
+        "line": 63,
+        "name": "Verify backend validation prevents bypassing rejected role restriction",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 268136199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 64,
+            "name": "User should launch the Application",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:813"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2088898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 65,
+            "name": "Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:843"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 785199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 66,
+            "name": "Inspect rejected role element via browser DevTools",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:973"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1205998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 67,
+            "name": "Attempt to enable and submit application manually",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:978"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1085497
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 68,
+            "name": "Observe system response.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:983"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1093100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 69,
+            "name": "Backend validation should prevent application for rejected role even if UI is manipulated. Application should not be accepted.",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:988"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1066399
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 35328799
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16118600
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "verify-rejected-role-is-restricted-for-re-application",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Verify rejected role is restricted for re-application",
+    "tags": [],
+    "uri": "features\\test.feature"
+  }
+]

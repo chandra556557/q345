@@ -1,0 +1,32 @@
+{
+  "uuid": "d1566b33-2e17-41ee-b33e-d62e702fd132",
+  "historyId": "d1566b33-2e17-41ee-b33e-d62e702fd132",
+  "testCaseId": "d1566b33-2e17-41ee-b33e-d62e702fd132",
+  "fullName": "tigo",
+  "name": "tigo",
+  "status": "failed",
+  "statusDetails": {
+    "message": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/* URL */\", waiting until \"domcontentloaded\"\u001b[22m\n"
+  },
+  "stage": "finished",
+  "start": 1774513404652,
+  "stop": 1774513410082,
+  "steps": [
+    {
+      "name": "navigate https://frontend-qa-849641690736.asia-south1.run.app/login,",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774513409340,
+      "stop": 1774513409640
+    },
+    {
+      "name": "unknown ",
+      "status": "failed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774513409756,
+      "stop": 1774513410056
+    }
+  ]
+}

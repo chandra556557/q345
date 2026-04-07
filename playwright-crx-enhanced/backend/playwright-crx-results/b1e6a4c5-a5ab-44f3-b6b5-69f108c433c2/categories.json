@@ -1,0 +1,51 @@
+[
+  {
+    "name": "Product Defects",
+    "description": "Tests that found real application bugs",
+    "matchedStatuses": [
+      "failed"
+    ],
+    "messageRegex": "(?!.*timeout)(?!.*element not found).*"
+  },
+  {
+    "name": "Element Not Found",
+    "description": "UI elements could not be located — possible locator drift",
+    "matchedStatuses": [
+      "failed",
+      "broken"
+    ],
+    "messageRegex": ".*(element not found|locator|selector|not visible|no such element).*"
+  },
+  {
+    "name": "Timeouts",
+    "description": "Operations exceeded allowed time",
+    "matchedStatuses": [
+      "broken",
+      "failed"
+    ],
+    "messageRegex": ".*(timeout|timed out|Timeout|TIMEOUT).*"
+  },
+  {
+    "name": "Network / API Errors",
+    "description": "Network failures or unexpected HTTP status codes",
+    "matchedStatuses": [
+      "broken"
+    ],
+    "messageRegex": ".*(net::ERR|ECONNREFUSED|ECONNRESET|fetch failed|status 5\\d{2}).*"
+  },
+  {
+    "name": "Test Infrastructure",
+    "description": "Browser or environment setup failures",
+    "matchedStatuses": [
+      "broken"
+    ],
+    "messageRegex": ".*(browser|launch|context|crash|EPERM).*"
+  },
+  {
+    "name": "Skipped Tests",
+    "description": "Intentionally skipped",
+    "matchedStatuses": [
+      "skipped"
+    ]
+  }
+]

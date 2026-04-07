@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BDD Test Report - 336fdde8</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+    .header { background: linear-gradient(135deg, #1a237e, #283593); color: white; padding: 24px 32px; }
+    .header h1 { font-size: 22px; margin-bottom: 4px; }
+    .header .subtitle { opacity: 0.8; font-size: 13px; }
+    .container { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+    .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .card { background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+    .card .value { font-size: 28px; font-weight: 700; }
+    .card .label { font-size: 12px; color: #666; margin-top: 4px; }
+    .progress-bar { height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: #e0e0e0; margin-bottom: 24px; }
+    .progress-bar .passed { background: #4caf50; }
+    .progress-bar .failed { background: #f44336; }
+    .progress-bar .skipped { background: #bdbdbd; }
+    .section { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; overflow: hidden; }
+    .section h2 { padding: 16px 20px; border-bottom: 1px solid #eee; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    pre.feature { background: #fafafa; padding: 16px 20px; font-size: 13px; overflow-x: auto; white-space: pre-wrap; line-height: 1.6; }
+    .footer { text-align: center; padding: 16px; color: #999; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>&#10008; BDD Test Report</h1>
+    <div class="subtitle">Run ID: 336fdde8-ca87-4085-8856-1f132022f12e &bull; 6/3/2026, 4:21:16 pm</div>
+  </div>
+  <div class="container">
+    <div class="summary-cards">
+      <div class="card"><div class="value" style="color:#c62828">FAILED</div><div class="label">Status</div></div>
+      <div class="card"><div class="value">28</div><div class="label">Total Steps</div></div>
+      <div class="card"><div class="value" style="color:#2e7d32">12</div><div class="label">Passed</div></div>
+      <div class="card"><div class="value" style="color:#c62828">4</div><div class="label">Failed</div></div>
+      <div class="card"><div class="value" style="color:#999">12</div><div class="label">Skipped</div></div>
+      <div class="card"><div class="value">39.4s</div><div class="label">Duration</div></div>
+      <div class="card"><div class="value">43%</div><div class="label">Pass Rate</div></div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="passed" style="width:42.857142857142854%"></div>
+      <div class="failed" style="width:14.285714285714285%"></div>
+      <div class="skipped" style="width:42.857142857142854%"></div>
+    </div>
+
+    
+
+    <div class="section">
+      <h2>Step Results</h2>
+      <table>
+        <thead><tr style="background:#fafafa">
+          <th style="padding:8px;text-align:left;width:40px">#</th>
+          <th style="padding:8px;text-align:left">Step</th>
+          <th style="padding:8px;text-align:left;width:100px">Status</th>
+          <th style="padding:8px;text-align:left;width:80px">Duration</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">1</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Before</strong> </td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">496ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">2</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Given</strong> I navigate to &quot;https://example.com/login&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">3738ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">3</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>When</strong> I fill &quot;Username&quot; with &quot;testuser&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#c62828;font-weight:600">&#10008; FAILED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">5005ms</td>
+          </tr>
+          <tr><td></td><td colspan="3" style="padding:4px 8px 12px;"><pre style="background:#fff5f5;color:#c62828;padding:8px;border-radius:4px;font-size:12px;overflow-x:auto;margin:0">Error: function timed out, ensure the promise resolves within 5000 milliseconds
+    at Timeout.&lt;anonymous&gt; (C:\Users\CHANDR~1\AppData\Local\Temp\bdd-shared-env\node_modules\@cucumber\cucumber\lib\time.js:54:20)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)</pre></td></tr>
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">4</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>And</strong> I fill &quot;Password&quot; with &quot;password123&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">5</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>And</strong> I click &quot;Login&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">6</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Then</strong> I should see &quot;Welcome&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">7</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>After</strong> </td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">195ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">8</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Before</strong> </td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">261ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">9</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Given</strong> I navigate to &quot;https://example.com/login&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">655ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">10</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>When</strong> I fill &quot;Username&quot; with &quot;testuser&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#c62828;font-weight:600">&#10008; FAILED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">5008ms</td>
+          </tr>
+          <tr><td></td><td colspan="3" style="padding:4px 8px 12px;"><pre style="background:#fff5f5;color:#c62828;padding:8px;border-radius:4px;font-size:12px;overflow-x:auto;margin:0">Error: function timed out, ensure the promise resolves within 5000 milliseconds
+    at Timeout.&lt;anonymous&gt; (C:\Users\CHANDR~1\AppData\Local\Temp\bdd-shared-env\node_modules\@cucumber\cucumber\lib\time.js:54:20)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)</pre></td></tr>
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">11</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>And</strong> I fill &quot;Password&quot; with &quot;wrongpassword&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">12</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>And</strong> I click &quot;Login&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">13</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Then</strong> I should see &quot;Invalid credentials&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">14</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>After</strong> </td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">110ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">15</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Before</strong> </td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">216ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">16</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Given</strong> I navigate to &quot;https://example.com/login&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">639ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">17</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>When</strong> I fill &quot;Username&quot; with &quot;admin&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#c62828;font-weight:600">&#10008; FAILED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">5015ms</td>
+          </tr>
+          <tr><td></td><td colspan="3" style="padding:4px 8px 12px;"><pre style="background:#fff5f5;color:#c62828;padding:8px;border-radius:4px;font-size:12px;overflow-x:auto;margin:0">Error: function timed out, ensure the promise resolves within 5000 milliseconds
+    at Timeout.&lt;anonymous&gt; (C:\Users\CHANDR~1\AppData\Local\Temp\bdd-shared-env\node_modules\@cucumber\cucumber\lib\time.js:54:20)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)</pre></td></tr>
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">18</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>And</strong> I fill &quot;Password&quot; with &quot;admin123&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">19</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>And</strong> I click &quot;Login&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">20</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Then</strong> I should see &quot;Dashboard&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">21</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>After</strong> </td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">128ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">22</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Before</strong> </td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">232ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">23</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Given</strong> I navigate to &quot;https://example.com/login&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">562ms</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">24</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>When</strong> I fill &quot;Username&quot; with &quot;user1&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#c62828;font-weight:600">&#10008; FAILED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">5012ms</td>
+          </tr>
+          <tr><td></td><td colspan="3" style="padding:4px 8px 12px;"><pre style="background:#fff5f5;color:#c62828;padding:8px;border-radius:4px;font-size:12px;overflow-x:auto;margin:0">Error: function timed out, ensure the promise resolves within 5000 milliseconds
+    at Timeout.&lt;anonymous&gt; (C:\Users\CHANDR~1\AppData\Local\Temp\bdd-shared-env\node_modules\@cucumber\cucumber\lib\time.js:54:20)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)</pre></td></tr>
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">25</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>And</strong> I fill &quot;Password&quot; with &quot;pass1&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">26</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>And</strong> I click &quot;Login&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">27</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>Then</strong> I should see &quot;Welcome&quot;</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#999;font-weight:600">&#9679; SKIPPED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">-</td>
+          </tr>
+          
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">28</td>
+            <td style="padding:8px;border-bottom:1px solid #eee"><strong>After</strong> </td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#2e7d32;font-weight:600">&#10004; PASSED</td>
+            <td style="padding:8px;border-bottom:1px solid #eee;color:#666">109ms</td>
+          </tr>
+          </tbody>
+      </table>
+      
+    </div>
+
+    
+    <div class="section">
+      <h2>Failure Screenshots (4)</h2>
+      <div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:12px">
+        
+          <div style="flex:0 0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden">
+            <a href="http://localhost:3001/playwright-crx-reports/bdd-artifacts/336fdde8-ca87-4085-8856-1f132022f12e/failure-1-1772794257966.png" target="_blank">
+              <img src="http://localhost:3001/playwright-crx-reports/bdd-artifacts/336fdde8-ca87-4085-8856-1f132022f12e/failure-1-1772794257966.png" alt="Screenshot 1" style="max-width:400px;max-height:300px;display:block" />
+            </a>
+            <div style="padding:4px 8px;font-size:11px;color:#666;background:#fafafa">Screenshot 1</div>
+          </div>
+        
+          <div style="flex:0 0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden">
+            <a href="http://localhost:3001/playwright-crx-reports/bdd-artifacts/336fdde8-ca87-4085-8856-1f132022f12e/failure-2-1772794264090.png" target="_blank">
+              <img src="http://localhost:3001/playwright-crx-reports/bdd-artifacts/336fdde8-ca87-4085-8856-1f132022f12e/failure-2-1772794264090.png" alt="Screenshot 2" style="max-width:400px;max-height:300px;display:block" />
+            </a>
+            <div style="padding:4px 8px;font-size:11px;color:#666;background:#fafafa">Screenshot 2</div>
+          </div>
+        
+          <div style="flex:0 0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden">
+            <a href="http://localhost:3001/playwright-crx-reports/bdd-artifacts/336fdde8-ca87-4085-8856-1f132022f12e/failure-3-1772794270074.png" target="_blank">
+              <img src="http://localhost:3001/playwright-crx-reports/bdd-artifacts/336fdde8-ca87-4085-8856-1f132022f12e/failure-3-1772794270074.png" alt="Screenshot 3" style="max-width:400px;max-height:300px;display:block" />
+            </a>
+            <div style="padding:4px 8px;font-size:11px;color:#666;background:#fafafa">Screenshot 3</div>
+          </div>
+        
+          <div style="flex:0 0 auto;border:1px solid #eee;border-radius:8px;overflow:hidden">
+            <a href="http://localhost:3001/playwright-crx-reports/bdd-artifacts/336fdde8-ca87-4085-8856-1f132022f12e/failure-4-1772794276011.png" target="_blank">
+              <img src="http://localhost:3001/playwright-crx-reports/bdd-artifacts/336fdde8-ca87-4085-8856-1f132022f12e/failure-4-1772794276011.png" alt="Screenshot 4" style="max-width:400px;max-height:300px;display:block" />
+            </a>
+            <div style="padding:4px 8px;font-size:11px;color:#666;background:#fafafa">Screenshot 4</div>
+          </div>
+        
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Feature Content</h2>
+      <pre class="feature">Feature: Login functionality
+  As a user
+  I want to be able to login
+  So that I can access my account
+
+  @smoke
+  Scenario: Successful login with valid credentials
+    Given I navigate to &quot;https://example.com/login&quot;
+    When I fill &quot;Username&quot; with &quot;testuser&quot;
+    And I fill &quot;Password&quot; with &quot;password123&quot;
+    And I click &quot;Login&quot;
+    Then I should see &quot;Welcome&quot;
+
+  @negative
+  Scenario: Failed login with invalid password
+    Given I navigate to &quot;https://example.com/login&quot;
+    When I fill &quot;Username&quot; with &quot;testuser&quot;
+    And I fill &quot;Password&quot; with &quot;wrongpassword&quot;
+    And I click &quot;Login&quot;
+    Then I should see &quot;Invalid credentials&quot;
+
+  Scenario Outline: Login with multiple users
+    Given I navigate to &quot;https://example.com/login&quot;
+    When I fill &quot;Username&quot; with &quot;&lt;username&gt;&quot;
+    And I fill &quot;Password&quot; with &quot;&lt;password&gt;&quot;
+    And I click &quot;Login&quot;
+    Then I should see &quot;&lt;result&gt;&quot;
+
+    Examples:
+      | username | password    | result  |
+      | admin    | admin123    | Dashboard |
+      | user1    | pass1       | Welcome   |
+</pre>
+    </div>
+  </div>
+  <div class="footer">Generated by Playwright CRX BDD Testing</div>
+</body>
+</html>

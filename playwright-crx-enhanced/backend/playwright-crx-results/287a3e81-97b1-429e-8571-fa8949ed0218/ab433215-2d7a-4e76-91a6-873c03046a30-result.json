@@ -1,0 +1,142 @@
+{
+  "uuid": "ab433215-2d7a-4e76-91a6-873c03046a30",
+  "historyId": "287a3e81-97b1-429e-8571-fa8949ed0218-Remove product from cart",
+  "testCaseId": "ab433215-2d7a-4e76-91a6-873c03046a30",
+  "fullName": "SauceDemo E-commerce Application > Remove product from cart",
+  "name": "Remove product from cart",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775546679068,
+  "stop": 1775546679310,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Remove product from cart"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679100,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679310,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679310,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "Given I am logged in as \"standard_user\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679310,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "And I have added 2 products to cart",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679310,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "When I navigate to the cart page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679310,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "And I remove the first product from cart",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679310,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "Then I should see 1 item in the cart",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679310,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "And the cart counter should show \"1\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679310,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679290,
+      "stop": 1775546679310,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546679298,
+      "stop": 1775546679310,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

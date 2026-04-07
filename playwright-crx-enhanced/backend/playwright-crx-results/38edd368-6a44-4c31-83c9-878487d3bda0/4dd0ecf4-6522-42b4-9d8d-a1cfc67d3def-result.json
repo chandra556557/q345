@@ -1,0 +1,142 @@
+{
+  "uuid": "4dd0ecf4-6522-42b4-9d8d-a1cfc67d3def",
+  "historyId": "38edd368-6a44-4c31-83c9-878487d3bda0-Filter to view single product",
+  "testCaseId": "4dd0ecf4-6522-42b4-9d8d-a1cfc67d3def",
+  "fullName": "SauceDemo E-commerce Application > Filter to view single product",
+  "name": "Filter to view single product",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775546445474,
+  "stop": 1775546446045,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Filter to view single product"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546445550,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446045,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446045,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "Given I am logged in as \"standard_user\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446045,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "When I click on \"Sauce Labs Backpack\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446045,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "Then I should see the product detail page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446045,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "And I should see the product name \"Sauce Labs Backpack\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446045,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "And I should see the product price",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446045,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "And I should see the product description",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446045,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546445990,
+      "stop": 1775546446045,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775546446024,
+      "stop": 1775546446045,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

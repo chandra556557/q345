@@ -153,6 +153,77 @@ const swaggerDefinition = {
           nextRunAt: { type: 'string', format: 'date-time' },
           createdAt: { type: 'string', format: 'date-time' }
         }
+      },
+      CsvFieldBinding: {
+        type: 'object',
+        properties: {
+          csvHeader: { type: 'string', description: 'Column header from CSV' },
+          placeholder: { type: 'string', description: 'Placeholder name from Playwright script' },
+          confidence: { type: 'string', enum: ['exact', 'fuzzy', 'none'], description: 'Match confidence level' }
+        }
+      },
+      CsvDataRow: {
+        type: 'object',
+        properties: {
+          index: { type: 'integer', description: 'Row index in CSV' },
+          values: {
+            type: 'object',
+            additionalProperties: { type: 'string' },
+            description: 'Column values mapped to placeholders'
+          }
+        }
+      },
+      CsvUploadResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          status: { type: 'string', example: 'upload_complete' },
+          message: { type: 'string' },
+          csv: {
+            type: 'object',
+            properties: {
+              headers: { type: 'array', items: { type: 'string' }, description: 'CSV column headers' },
+              rowCount: { type: 'integer', description: 'Number of data rows' },
+              rows: { type: 'array', items: { $ref: '#/components/schemas/CsvDataRow' } }
+            }
+          },
+          analysis: {
+            type: 'object',
+            properties: {
+              fieldBindings: {
+                type: 'object',
+                properties: {
+                  mapped: { type: 'array', items: { $ref: '#/components/schemas/CsvFieldBinding' }, description: 'Bindings with exact or fuzzy confidence' },
+                  unmapped: {
+                    type: 'object',
+                    properties: {
+                      columns: { type: 'array', items: { type: 'string' }, description: 'CSV columns not bound to placeholders' },
+                      placeholders: { type: 'array', items: { type: 'string' }, description: 'Script placeholders not found in CSV' }
+                    }
+                  }
+                }
+              },
+              summary: {
+                type: 'object',
+                properties: {
+                  totalBindings: { type: 'integer' },
+                  exactMatches: { type: 'integer' },
+                  fuzzyMatches: { type: 'integer' },
+                  unmappedCount: { type: 'integer' }
+                }
+              }
+            }
+          },
+          persistence: {
+            type: 'object',
+            properties: {
+              suiteId: { type: 'string', description: 'Created/used test suite ID (if save=true)' },
+              savedCount: { type: 'integer', description: 'Number of rows persisted (if save=true)' },
+              message: { type: 'string' }
+            },
+            description: 'Only present if save=true'
+          }
+        }
       }
     }
   },
@@ -168,7 +239,8 @@ const swaggerDefinition = {
     { name: 'BDD Step Library', description: 'Reusable BDD step definitions' },
     { name: 'BDD Schedules', description: 'Scheduled BDD test runs' },
     { name: 'Epic Pipeline', description: 'Jira Epic to Playwright test pipeline' },
-    { name: 'Field Bindings', description: 'Field binding analysis and test data generation with placeholder substitution' }
+    { name: 'Field Bindings', description: 'Field binding analysis and test data generation with placeholder substitution' },
+    { name: 'CSV Data-Driven Testing', description: 'CSV upload and field binding for data-driven test execution' }
   ],
   paths: {
     '/auth/login': {
@@ -1607,6 +1679,400 @@ const swaggerDefinition = {
         },
         responses: {
           '200': { description: 'Generated data with field bindings', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, scriptName: { type: 'string' }, placeholders: { type: 'array', items: { type: 'object' } }, detectedFields: { type: 'array', items: { type: 'object' } }, fieldBindings: { type: 'object' }, strategies: { type: 'array', items: { type: 'string' } }, dataRows: { type: 'array', items: { type: 'object', properties: { strategy: { type: 'string' }, row: { type: 'object' } } } }, totalRows: { type: 'integer' } } } } } }
+        }
+      }
+    },
+
+    '/testdata/csv/upload-and-bind': {
+      post: {
+        tags: ['CSV Data-Driven Testing'],
+        summary: 'Upload CSV file and auto-bind columns to script placeholders',
+        description: 'Upload a CSV file and automatically map its columns to {{placeholder}} tokens in a Playwright script. Returns field bindings with confidence scores (exact/fuzzy/none) and analysis summary.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  file: { type: 'string', format: 'binary', description: 'CSV file to upload (max 5MB)' },
+                  scriptId: { type: 'string', description: 'Playwright script ID to extract {{placeholder}} tokens from' },
+                  suiteName: { type: 'string', description: 'Name for created test suite (auto-generated if not provided)' },
+                  suiteId: { type: 'string', description: 'Existing test suite ID to append data to' },
+                  environment: { type: 'string', default: 'dev', enum: ['dev', 'staging', 'prod'], description: 'Test environment' },
+                  save: { type: 'boolean', default: false, description: 'Persist CSV rows as TestData in database' }
+                },
+                required: ['file', 'scriptId']
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'CSV parsed and field bindings generated successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CsvUploadResponse' },
+                example: {
+                  success: true,
+                  status: 'upload_complete',
+                  message: 'Successfully uploaded CSV with 3 rows and 2 columns',
+                  csv: {
+                    headers: ['email', 'password'],
+                    rowCount: 3,
+                    rows: [
+                      { index: 0, values: { email: 'alice@example.com', password: 'SecurePass123!' } },
+                      { index: 1, values: { email: 'bob@example.com', password: 'AnotherPass456@' } },
+                      { index: 2, values: { email: 'john@example.com', password: 'TestPass789#' } }
+                    ]
+                  },
+                  analysis: {
+                    fieldBindings: {
+                      mapped: [
+                        { csvHeader: 'email', placeholder: 'email', confidence: 'exact' },
+                        { csvHeader: 'password', placeholder: 'password', confidence: 'exact' }
+                      ],
+                      unmapped: {
+                        columns: [],
+                        placeholders: []
+                      }
+                    },
+                    summary: {
+                      totalBindings: 2,
+                      exactMatches: 2,
+                      fuzzyMatches: 0,
+                      unmappedCount: 0
+                    }
+                  },
+                  persistence: {
+                    suiteId: '550e8400-e29b-41d4-a716-446655440000',
+                    savedCount: 3,
+                    message: 'Successfully persisted 3 rows to suite'
+                  }
+                }
+              }
+            }
+          },
+          '400': { description: 'Invalid CSV, missing file/scriptId, or CSV parsing error' },
+          '401': { description: 'Unauthorized - invalid or missing JWT token' },
+          '404': { description: 'Script not found for the given scriptId' }
+        }
+      }
+    },
+
+    '/testdata/csv/parse': {
+      post: {
+        tags: ['CSV Data-Driven Testing'],
+        summary: 'Parse raw CSV content with optional binding analysis and validation',
+        description: 'Parse CSV text content and optionally analyze field bindings to script placeholders, detect field types, and validate data. Progressive enhancement: start simple, add analysis as needed.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  csvContent: { type: 'string', description: 'Raw CSV content as string with headers and rows' },
+                  delimiter: { type: 'string', default: ',', description: 'CSV delimiter character (default: comma)' },
+                  scriptId: { type: 'string', description: 'Optional: Playwright script ID to analyze field bindings against' },
+                  analyzeBindings: { type: 'boolean', default: false, description: 'Optional: Enable field binding analysis (requires scriptId)' },
+                  validateData: { type: 'boolean', default: false, description: 'Optional: Validate data formats (email, URL, phone, etc.)' },
+                  detectFieldTypes: { type: 'boolean', default: false, description: 'Optional: Auto-detect field types (email, password, URL, etc.)' }
+                },
+                required: ['csvContent']
+              },
+              example: {
+                csvContent: 'email,password,role\nalice@example.com,SecurePass123!,admin\nbob@example.com,AnotherPass456@,user\njohn@example.com,TestPass789#,viewer',
+                delimiter: ',',
+                scriptId: 'script-123',
+                analyzeBindings: true,
+                validateData: true,
+                detectFieldTypes: true
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'CSV parsed successfully with optional analysis',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    status: { type: 'string', example: 'parse_complete' },
+                    message: { type: 'string' },
+                    csv: {
+                      type: 'object',
+                      properties: {
+                        headers: { type: 'array', items: { type: 'string' } },
+                        rowCount: { type: 'integer' },
+                        rows: { type: 'array', items: { $ref: '#/components/schemas/CsvDataRow' } }
+                      }
+                    },
+                    analysis: {
+                      type: 'object',
+                      description: 'Only present if analyzeBindings=true',
+                      properties: {
+                        fieldBindings: {
+                          type: 'object',
+                          properties: {
+                            mapped: { type: 'array', items: { $ref: '#/components/schemas/CsvFieldBinding' } },
+                            unmapped: {
+                              type: 'object',
+                              properties: {
+                                columns: { type: 'array', items: { type: 'string' } },
+                                placeholders: { type: 'array', items: { type: 'string' } }
+                              }
+                            }
+                          }
+                        },
+                        summary: {
+                          type: 'object',
+                          properties: {
+                            totalBindings: { type: 'integer' },
+                            exactMatches: { type: 'integer' },
+                            fuzzyMatches: { type: 'integer' },
+                            unmappedCount: { type: 'integer' }
+                          }
+                        }
+                      }
+                    },
+                    fieldTypes: {
+                      type: 'object',
+                      description: 'Only present if detectFieldTypes=true. Maps column headers to detected types (email_address, password, url, phone_number, number, boolean, date, text)',
+                      example: {
+                        email: 'email_address',
+                        password: 'password',
+                        role: 'text'
+                      }
+                    },
+                    validation: {
+                      type: 'object',
+                      description: 'Only present if validateData=true',
+                      properties: {
+                        valid: { type: 'boolean' },
+                        errorCount: { type: 'integer' },
+                        warningCount: { type: 'integer' },
+                        issues: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              row: { type: 'integer' },
+                              column: { type: 'string' },
+                              issue: { type: 'string' },
+                              value: { type: 'string' },
+                              severity: { type: 'string', enum: ['error', 'warning'] }
+                            }
+                          }
+                        },
+                        warnings: { type: 'array', items: { type: 'object' } }
+                      }
+                    }
+                  }
+                },
+                example: {
+                  success: true,
+                  status: 'parse_complete',
+                  message: 'Successfully parsed CSV with 3 rows and 3 columns',
+                  csv: {
+                    headers: ['email', 'password', 'role'],
+                    rowCount: 3,
+                    rows: [
+                      {
+                        index: 0,
+                        values: {
+                          email: 'alice@example.com',
+                          password: 'SecurePass123!',
+                          role: 'admin'
+                        }
+                      },
+                      {
+                        index: 1,
+                        values: {
+                          email: 'bob@example.com',
+                          password: 'AnotherPass456@',
+                          role: 'user'
+                        }
+                      },
+                      {
+                        index: 2,
+                        values: {
+                          email: 'john@example.com',
+                          password: 'TestPass789#',
+                          role: 'viewer'
+                        }
+                      }
+                    ]
+                  },
+                  analysis: {
+                    fieldBindings: {
+                      mapped: [
+                        { csvHeader: 'email', placeholder: 'email', confidence: 'exact' },
+                        { csvHeader: 'password', placeholder: 'password', confidence: 'exact' },
+                        { csvHeader: 'role', placeholder: 'userRole', confidence: 'fuzzy' }
+                      ],
+                      unmapped: { columns: [], placeholders: [] }
+                    },
+                    summary: {
+                      totalBindings: 3,
+                      exactMatches: 2,
+                      fuzzyMatches: 1,
+                      unmappedCount: 0
+                    }
+                  },
+                  fieldTypes: {
+                    email: 'email_address',
+                    password: 'password',
+                    role: 'text'
+                  },
+                  validation: {
+                    valid: true,
+                    errorCount: 0,
+                    warningCount: 1,
+                    issues: [],
+                    warnings: [
+                      {
+                        row: 3,
+                        column: 'password',
+                        issue: 'Weak password (less than 8 characters)',
+                        severity: 'warning'
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          '400': { description: 'Invalid CSV content or missing csvContent parameter' },
+          '401': { description: 'Unauthorized (required if analyzeBindings=true)' },
+          '404': { description: 'Script not found (if analyzeBindings=true and scriptId is invalid)' }
+        }
+      }
+    },
+
+    '/testdata/csv/preview-binding': {
+      post: {
+        tags: ['CSV Data-Driven Testing'],
+        summary: 'Preview CSV row substitution into script placeholders',
+        description: 'Show how a specific CSV row will be substituted into a Playwright script with {{placeholders}}. Helps verify field bindings before execution.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  csvContent: { type: 'string', description: 'Raw CSV content (alternative to csvRows)' },
+                  csvRows: { type: 'array', items: { type: 'object' }, description: 'Parsed CSV rows' },
+                  fieldBindings: {
+                    type: 'object',
+                    description: 'Map of placeholder name to CSV column header (e.g., {email: "email", password: "password"})'
+                  },
+                  scriptCode: { type: 'string', description: 'Playwright script code containing {{placeholders}}' },
+                  previewRowIndex: { type: 'integer', default: 0, description: 'Which CSV row to preview (0-based)' }
+                },
+                required: ['fieldBindings', 'scriptCode']
+              },
+              example: {
+                scriptCode: "await page.getByLabel('Email').fill('{{email}}');\nawait page.getByLabel('Password').fill('{{password}}');\nawait page.getByRole('button', { name: 'Login' }).click();",
+                fieldBindings: {
+                  email: 'email',
+                  password: 'password'
+                },
+                csvRows: [
+                  { email: 'alice@example.com', password: 'SecurePass123!' },
+                  { email: 'bob@example.com', password: 'AnotherPass456@' }
+                ],
+                previewRowIndex: 0
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Substitution preview generated',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    status: { type: 'string', example: 'preview_generated' },
+                    message: { type: 'string' },
+                    preview: {
+                      type: 'object',
+                      properties: {
+                        rowIndex: { type: 'integer', description: 'Index of previewed row' },
+                        totalRows: { type: 'integer' },
+                        code: {
+                          type: 'object',
+                          properties: {
+                            original: { type: 'string', description: 'Original script code' },
+                            substituted: { type: 'string', description: 'Script with placeholders replaced by CSV values' }
+                          }
+                        },
+                        appliedValues: { type: 'object', description: 'Actual substitution values used' },
+                        substitutionCount: { type: 'integer', description: 'Number of substitutions made' }
+                      }
+                    }
+                  }
+                },
+                example: {
+                  success: true,
+                  status: 'preview_generated',
+                  message: 'Preview generated for row 1 of 2',
+                  preview: {
+                    rowIndex: 0,
+                    totalRows: 2,
+                    code: {
+                      original: "await page.getByLabel('Email').fill('{{email}}');\nawait page.getByLabel('Password').fill('{{password}}');\nawait page.getByRole('button', { name: 'Login' }).click();",
+                      substituted: "await page.getByLabel('Email').fill('alice@example.com');\nawait page.getByLabel('Password').fill('SecurePass123!');\nawait page.getByRole('button', { name: 'Login' }).click();"
+                    },
+                    appliedValues: {
+                      email: 'alice@example.com',
+                      password: 'SecurePass123!'
+                    },
+                    substitutionCount: 2
+                  }
+                }
+              }
+            }
+          },
+          '400': { description: 'Invalid parameters or row index out of bounds' }
+        }
+      }
+    },
+
+    '/testdata/csv/export/{suiteId}': {
+      get: {
+        tags: ['CSV Data-Driven Testing'],
+        summary: 'Export test suite data as CSV file',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'suiteId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Test suite ID to export'
+          }
+        ],
+        responses: {
+          '200': {
+            description: 'CSV file downloaded',
+            content: {
+              'text/csv': {
+                schema: { type: 'string', format: 'binary' }
+              }
+            }
+          },
+          '403': { description: 'Test suite not found or unauthorized' }
         }
       }
     }

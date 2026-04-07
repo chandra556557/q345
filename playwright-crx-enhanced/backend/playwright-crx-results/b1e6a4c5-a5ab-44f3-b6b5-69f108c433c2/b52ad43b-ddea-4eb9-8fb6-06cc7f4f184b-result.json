@@ -1,0 +1,133 @@
+{
+  "uuid": "b52ad43b-ddea-4eb9-8fb6-06cc7f4f184b",
+  "historyId": "b1e6a4c5-a5ab-44f3-b6b5-69f108c433c2-Verify other available roles remain selectable after rejection",
+  "testCaseId": "b52ad43b-ddea-4eb9-8fb6-06cc7f4f184b",
+  "fullName": "Verify rejected role is restricted for re-application > Verify other available roles remain selectable after rejection",
+  "name": "Verify other available roles remain selectable after rejection",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774518925841,
+  "stop": 1774518926104,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify other available roles remain selectable after rejection"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518925898,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926103,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login.\"",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926104,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "And User is rejected for Role A.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926103,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to Apply page again.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926103,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "When Check availability of Role B or other roles.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926103,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "And Attempt to apply for another role.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926103,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "Then Other available roles should remain selectable. User should be able to successfully apply for a different role within the same team.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926103,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926077,
+      "stop": 1774518926104,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774518926080,
+      "stop": 1774518926104,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

@@ -783,6 +783,8 @@ export const generateFromScriptTestData = async (req: Request, res: Response) =>
       const boundaryTests = data.boundary_tests || [];
       const equivalenceTests = data.equivalence_tests || [];
       const securityTests = data.security_tests || [];
+      const positiveTests = data.positive_tests || [];
+      const negativeTests = data.negative_tests || [];
 
       for (const bt of boundaryTests) {
         const key = bt.field || bt.field_name || bt.selector || 'field';
@@ -792,13 +794,15 @@ export const generateFromScriptTestData = async (req: Request, res: Response) =>
       for (const et of equivalenceTests) {
         const key = et.field || et.field_name || et.selector || 'field';
         if (!bundles.equivalence[key]) bundles.equivalence[key] = [];
-        (et.test_cases || et.values || []).forEach((v: any) => bundles.equivalence[key].push(v));
+        (et.valid_partitions || et.test_cases || et.values || []).forEach((v: any) => bundles.equivalence[key].push(v));
       }
       for (const st of securityTests) {
         const key = st.field || st.field_name || st.selector || 'field';
         if (!bundles.security[key]) bundles.security[key] = [];
         (st.payloads || []).forEach((p: any) => bundles.security[key].push(p));
       }
+      if (positiveTests.length > 0) bundles.positive.push(...positiveTests);
+      if (negativeTests.length > 0) bundles.negative.push(...negativeTests);
     } catch (_err) {
       // Fallback to Node extractor/generator
       const extracted = extractFieldsFromScript(scriptCode);
@@ -898,7 +902,7 @@ export const generateFromScriptTestData = async (req: Request, res: Response) =>
 export const extractPlaceholders = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.userId;
-    const { scriptId, scriptCode } = req.body;
+    const { scriptId, scriptCode, makeDynamic = false } = req.body;
 
     let code: string;
 
@@ -917,7 +921,34 @@ export const extractPlaceholders = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Either scriptId or scriptCode is required' });
     }
 
+    // If makeDynamic=true: rewrite script replacing all hardcoded values with {{tokens}}
+    if (makeDynamic) {
+      const { dynamicScript, placeholders: detected } = makeDynamicScript(code);
+      const finalPlaceholders = extractPlaceholdersFromCode(dynamicScript);
+      return res.json({
+        success: true,
+        dynamicScript,
+        placeholders: finalPlaceholders,
+        detected,
+        totalReplaced: detected.length
+      });
+    }
+
     const placeholders = extractPlaceholdersFromCode(code);
+
+    // If no {{placeholder}} tokens exist, auto-detect parameterizable values
+    // from click/navigation actions and return them as suggestions
+    if (placeholders.length === 0) {
+      const suggested = extractSuggestedPlaceholders(code);
+      return res.json({
+        success: true,
+        placeholders: [],
+        suggested,
+        hint: suggested.length > 0
+          ? 'No {{placeholder}} tokens found. The suggested list shows values that could be parameterized.'
+          : 'No parameterizable values detected. Add {{placeholder}} tokens to your script or include fill() / type() actions.'
+      });
+    }
 
     return res.json({ success: true, placeholders });
   } catch (error: any) {
@@ -1198,6 +1229,336 @@ const extractPlaceholdersFromCode = (scriptCode: string): { name: string; line: 
   }
 
   return placeholders;
+};
+
+/**
+ * Convert a human-readable string to a snake_case placeholder name.
+ * Guarantees the result starts with a letter (never a digit).
+ */
+const toPlaceholderName = (text: string): string => {
+  let name = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .substring(0, 40);
+  // Ensure starts with letter
+  if (/^\d/.test(name)) name = 'field_' + name;
+  return name || 'value';
+};
+
+/**
+ * Detect parameterizable string values from a Playwright script.
+ *
+ * Strategy (priority order):
+ *  1. Chained locator+fill patterns — use locator NAME as placeholder name, not fill value.
+ *     e.g. getByRole('textbox',{name:'Username'}).fill('pulse') → {{username}}
+ *     This handles identical fill values for different fields correctly.
+ *  2. Standalone action values (goto URL, filter hasText, getByText, etc.)
+ *  3. Remaining bare .fill/.type/.selectOption values not covered above.
+ *
+ * Works on the full script string to handle multiline locators.
+ */
+const extractSuggestedPlaceholders = (
+  scriptCode: string
+): { name: string; value: string; type: string; line: number; context: string; locatorName?: string }[] => {
+  type Entry = { name: string; value: string; type: string; line: number; context: string; locatorName?: string };
+  const results: Entry[] = [];
+
+  // Track which character ranges (fill value positions) have already been claimed
+  // by a chained detection so we don't double-count them in the bare fill scan.
+  const claimedRanges: Array<[number, number]> = [];
+  // Deduplicate standalone values by value string
+  const seenValues = new Set<string>();
+  // Deduplicate chained fills by locator name (so Username & Password are both kept even with same value)
+  const seenLocatorNames = new Set<string>();
+
+  const lines = scriptCode.split('\n');
+  const getLineCtx = (idx: number) => {
+    const lineIdx = scriptCode.substring(0, idx).split('\n').length - 1;
+    return { line: lineIdx + 1, context: lines[lineIdx]?.trim().substring(0, 100) || '' };
+  };
+
+  let m: RegExpExecArray | null;
+
+  // ── 1. Chained locator + fill/type/pressSequentially/selectOption ────────────
+  // Pattern: getByRole('role', { name: 'LocatorName' }).fill('value')
+  // Also handles multiline options objects and intermediate .click() chains
+  const chainedRoleRe = /getByRole\(\s*(['"`])(\w+)\1\s*,\s*\{[\s\S]*?name:\s*(['"`])(.*?)\3[\s\S]*?\}\s*\)\s*\.(?:fill|type|pressSequentially|selectOption)\(\s*(['"`])(.*?)\5/g;
+  while ((m = chainedRoleRe.exec(scriptCode))) {
+    const locatorName = m[4];   // e.g. "Username"
+    const fillValue   = m[6];   // e.g. "pulse"
+    if (!locatorName || fillValue.startsWith('{{')) continue;
+    const key = locatorName.toLowerCase();
+    if (seenLocatorNames.has(key)) continue;
+    seenLocatorNames.add(key);
+    claimedRanges.push([m.index, m.index + m[0].length]);
+    const { line, context } = getLineCtx(m.index);
+    results.push({ name: toPlaceholderName(locatorName), value: fillValue, type: 'chained_role_fill', line, context, locatorName });
+  }
+
+  // Pattern: getByLabel('LabelName').fill('value')
+  const chainedLabelRe = /getByLabel\(\s*(['"`])(.*?)\1\s*\)\s*\.(?:fill|type|pressSequentially|selectOption)\(\s*(['"`])(.*?)\3/g;
+  while ((m = chainedLabelRe.exec(scriptCode))) {
+    const locatorName = m[2];
+    const fillValue   = m[4];
+    if (!locatorName || fillValue.startsWith('{{')) continue;
+    const key = locatorName.toLowerCase();
+    if (seenLocatorNames.has(key)) continue;
+    seenLocatorNames.add(key);
+    claimedRanges.push([m.index, m.index + m[0].length]);
+    const { line, context } = getLineCtx(m.index);
+    results.push({ name: toPlaceholderName(locatorName), value: fillValue, type: 'chained_label_fill', line, context, locatorName });
+  }
+
+  // Pattern: getByPlaceholder('PlaceholderText').fill('value')
+  const chainedPlaceholderRe = /getByPlaceholder\(\s*(['"`])(.*?)\1\s*\)\s*\.(?:fill|type|pressSequentially|selectOption)\(\s*(['"`])(.*?)\3/g;
+  while ((m = chainedPlaceholderRe.exec(scriptCode))) {
+    const locatorName = m[2];
+    const fillValue   = m[4];
+    if (!locatorName || fillValue.startsWith('{{')) continue;
+    const key = `ph_${locatorName.toLowerCase()}`;
+    if (seenLocatorNames.has(key)) continue;
+    seenLocatorNames.add(key);
+    claimedRanges.push([m.index, m.index + m[0].length]);
+    const { line, context } = getLineCtx(m.index);
+    results.push({ name: toPlaceholderName(locatorName), value: fillValue, type: 'chained_placeholder_fill', line, context, locatorName });
+  }
+
+  // Pattern: getByTestId('testId').fill('value')
+  const chainedTestIdRe = /getByTestId\(\s*(['"`])(.*?)\1\s*\)\s*\.(?:fill|type|pressSequentially|selectOption)\(\s*(['"`])(.*?)\3/g;
+  while ((m = chainedTestIdRe.exec(scriptCode))) {
+    const locatorName = m[2];
+    const fillValue   = m[4];
+    if (!locatorName || fillValue.startsWith('{{')) continue;
+    const key = `tid_${locatorName.toLowerCase()}`;
+    if (seenLocatorNames.has(key)) continue;
+    seenLocatorNames.add(key);
+    claimedRanges.push([m.index, m.index + m[0].length]);
+    const { line, context } = getLineCtx(m.index);
+    results.push({ name: toPlaceholderName(`testid_${locatorName}`), value: fillValue, type: 'chained_testid_fill', line, context, locatorName });
+  }
+
+  // ── 2. Standalone parameterizable values ─────────────────────────────────────
+  const addStandalone = (name: string, value: string, type: string, idx: number) => {
+    if (!value || seenValues.has(value)) return;
+    seenValues.add(value);
+    const { line, context } = getLineCtx(idx);
+    results.push({ name, value, type, line, context });
+  };
+
+  // ANY_VAR.goto('URL') — handles page.goto, page1.goto, frame.goto, etc.
+  const gotoRe = /\b\w+\.goto\(\s*(['"`])(.*?)\1/g;
+  while ((m = gotoRe.exec(scriptCode))) addStandalone('url', m[2], 'url', m.index);
+
+  // getByRole('role', { name: 'VALUE' }) — standalone click targets (no fill chained)
+  const byRoleClickRe = /getByRole\(\s*(['"`])(\w+)\1\s*,\s*\{[\s\S]*?name:\s*(['"`])(.*?)\3/g;
+  while ((m = byRoleClickRe.exec(scriptCode))) {
+    const role  = m[2];
+    const value = m[4];
+    // Skip if this position was claimed by chained detection
+    const isClaimed = claimedRanges.some(([s, e]) => m!.index >= s && m!.index < e);
+    if (isClaimed) continue;
+    addStandalone(toPlaceholderName(`${role}_${value}`), value, 'click_target', m.index);
+  }
+
+  // filter({ hasText: 'VALUE' })
+  const filterStrRe = /filter\(\s*\{[\s\S]*?hasText:\s*(['"`])(.*?)\1/g;
+  while ((m = filterStrRe.exec(scriptCode))) addStandalone(toPlaceholderName(m[2]), m[2], 'text_filter', m.index);
+
+  // filter({ hasText: /^VALUE$/ })
+  const filterReRe = /filter\(\s*\{[\s\S]*?hasText:\s*\/\^?(.*?)\$?\//g;
+  while ((m = filterReRe.exec(scriptCode))) addStandalone(toPlaceholderName(m[1]), m[1], 'text_filter', m.index);
+
+  // getByText('VALUE')
+  const byTextRe = /getByText\(\s*(['"`])(.*?)\1/g;
+  while ((m = byTextRe.exec(scriptCode))) addStandalone(toPlaceholderName(m[2]), m[2], 'text', m.index);
+
+  // getByAltText('VALUE')
+  const byAltRe = /getByAltText\(\s*(['"`])(.*?)\1/g;
+  while ((m = byAltRe.exec(scriptCode))) addStandalone(toPlaceholderName(`alt_${m[2]}`), m[2], 'alt_text', m.index);
+
+  // getByTitle('VALUE')
+  const byTitleRe = /getByTitle\(\s*(['"`])(.*?)\1/g;
+  while ((m = byTitleRe.exec(scriptCode))) addStandalone(toPlaceholderName(`title_${m[2]}`), m[2], 'title', m.index);
+
+  // ANY_VAR.selectOption('selector', 'VALUE') — 2nd arg
+  const pageSelectRe = /\b\w+\.selectOption\(\s*(['"`]).*?\1\s*,\s*(['"`])(.*?)\2/g;
+  while ((m = pageSelectRe.exec(scriptCode))) addStandalone(toPlaceholderName(m[3]), m[3], 'select_value', m.index);
+
+  // ── 3. Bare .fill/.type/.pressSequentially values NOT already claimed ─────────
+  const fillRe = /\.(?:fill|type|pressSequentially|selectOption)\(\s*(['"`])(.*?)\1/g;
+  while ((m = fillRe.exec(scriptCode))) {
+    const value = m[2];
+    if (!value || value.startsWith('{{')) continue;
+    const isClaimed = claimedRanges.some(([s, e]) => m!.index >= s && m!.index < e);
+    if (isClaimed) continue;
+    if (seenValues.has(value)) continue;
+    seenValues.add(value);
+    const { line, context } = getLineCtx(m.index);
+    results.push({ name: toPlaceholderName(value) || 'input_value', value, type: 'fill_value', line, context });
+  }
+
+  return results;
+};
+
+/**
+ * Rewrite a Playwright script replacing all detected hardcoded values with {{placeholder}} tokens.
+ */
+const makeDynamicScript = (
+  scriptCode: string
+): { dynamicScript: string; placeholders: { name: string; value: string; type: string; line: number; context: string }[] } => {
+  const allSuggestions = extractSuggestedPlaceholders(scriptCode);
+
+  if (allSuggestions.length === 0) {
+    return { dynamicScript: scriptCode, placeholders: [] };
+  }
+
+  // Ensure unique placeholder names across all suggestions
+  const uniqueSuggestions: typeof allSuggestions = [];
+  const usedNames = new Set<string>();
+  for (const s of allSuggestions) {
+    let finalName = s.name;
+    let counter = 2;
+    while (usedNames.has(finalName)) finalName = `${s.name}_${counter++}`;
+    usedNames.add(finalName);
+    uniqueSuggestions.push({ ...s, name: finalName });
+  }
+
+  let dynamic = scriptCode;
+
+  for (const s of uniqueSuggestions) {
+    const token = `{{${s.name}}}`;
+    const val   = escapeRegex(s.value);
+    const ln    = s.locatorName ? escapeRegex(s.locatorName) : '';
+
+    switch (s.type) {
+      // ── Chained locator+fill: anchor replacement to locator name so identical
+      //    fill values for different fields (e.g. 'pulse') are replaced correctly.
+      case 'chained_role_fill':
+        dynamic = dynamic.replace(
+          new RegExp(
+            `(getByRole\\(\\s*(['"\`])\\w+\\2\\s*,\\s*\\{[\\s\\S]*?name:\\s*(['"\`])${ln}\\3[\\s\\S]*?\\}\\s*\\)\\.(?:fill|type|pressSequentially|selectOption)\\(\\s*(['"\`]))${val}\\4`,
+            'g'
+          ),
+          `$1${token}$4`
+        );
+        break;
+
+      case 'chained_label_fill':
+        dynamic = dynamic.replace(
+          new RegExp(
+            `(getByLabel\\(\\s*(['"\`])${ln}\\2\\s*\\)\\.(?:fill|type|pressSequentially|selectOption)\\(\\s*(['"\`]))${val}\\3`,
+            'g'
+          ),
+          `$1${token}$3`
+        );
+        break;
+
+      case 'chained_placeholder_fill':
+        dynamic = dynamic.replace(
+          new RegExp(
+            `(getByPlaceholder\\(\\s*(['"\`])${ln}\\2\\s*\\)\\.(?:fill|type|pressSequentially|selectOption)\\(\\s*(['"\`]))${val}\\3`,
+            'g'
+          ),
+          `$1${token}$3`
+        );
+        break;
+
+      case 'chained_testid_fill':
+        dynamic = dynamic.replace(
+          new RegExp(
+            `(getByTestId\\(\\s*(['"\`])${ln}\\2\\s*\\)\\.(?:fill|type|pressSequentially|selectOption)\\(\\s*(['"\`]))${val}\\3`,
+            'g'
+          ),
+          `$1${token}$3`
+        );
+        break;
+
+      case 'fill_value':
+        dynamic = dynamic.replace(
+          new RegExp(`(\\.(?:fill|type|pressSequentially|selectOption)\\(\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'select_value':
+        dynamic = dynamic.replace(
+          new RegExp(`(\\b\\w+\\.selectOption\\(\\s*['"\`].*?['"\`]\\s*,\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'url':
+        dynamic = dynamic.replace(
+          new RegExp(`(\\b\\w+\\.goto\\(\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'click_target':
+        dynamic = dynamic.replace(
+          new RegExp(`(getByRole\\([\\s\\S]*?name:\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'text_filter':
+        dynamic = dynamic.replace(
+          new RegExp(`(filter\\([\\s\\S]*?hasText:\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        dynamic = dynamic.replace(
+          new RegExp(`(filter\\([\\s\\S]*?hasText:\\s*\\/\\^?)${val}(\\$?\\/)`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'text':
+        dynamic = dynamic.replace(
+          new RegExp(`(getByText\\(\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'alt_text':
+        dynamic = dynamic.replace(
+          new RegExp(`(getByAltText\\(\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'title':
+        dynamic = dynamic.replace(
+          new RegExp(`(getByTitle\\(\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'label':
+        dynamic = dynamic.replace(
+          new RegExp(`(getByLabel\\(\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'placeholder_attr':
+        dynamic = dynamic.replace(
+          new RegExp(`(getByPlaceholder\\(\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+
+      case 'test_id':
+        dynamic = dynamic.replace(
+          new RegExp(`(getByTestId\\(\\s*(['"\`]))${val}\\2`, 'g'),
+          `$1${token}$2`
+        );
+        break;
+    }
+  }
+
+  return { dynamicScript: dynamic, placeholders: uniqueSuggestions };
 };
 
 /**

@@ -1,0 +1,124 @@
+{
+  "uuid": "95fdf0f9-9bfe-477c-b83d-c7e84bf153e7",
+  "historyId": "059d8344-4f5d-4332-b2e6-cbd76f7616e8-Verify rejected role is restricted for re-application",
+  "testCaseId": "95fdf0f9-9bfe-477c-b83d-c7e84bf153e7",
+  "fullName": "Verify rejected role is restricted for re-application > Verify rejected role is restricted for re-application",
+  "name": "Verify rejected role is restricted for re-application",
+  "status": "passed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1774860984900,
+  "stop": 1774860985249,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "story",
+      "value": "Verify rejected role is restricted for re-application"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860984952,
+      "stop": 1774860985249,
+      "attachments": []
+    },
+    {
+      "name": "Given User should launch the Application",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985245,
+      "stop": 1774860985249,
+      "attachments": []
+    },
+    {
+      "name": "When Navigate to \"https://frontend-qa-849641690736.asia-south1.run.app/login,1.\" User applies for Role A in a team",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985246,
+      "stop": 1774860985249,
+      "attachments": []
+    },
+    {
+      "name": "And Team leader rejects the request",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985247,
+      "stop": 1774860985249,
+      "attachments": []
+    },
+    {
+      "name": "When User navigates again to Apply/Join page for the same team",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985248,
+      "stop": 1774860985249,
+      "attachments": []
+    },
+    {
+      "name": "When Check availability of Role A.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985248,
+      "stop": 1774860985249,
+      "attachments": []
+    },
+    {
+      "name": "Then Rejected Role A should be disabled or restricted for that user. User should not be able to reapply for the same rejected role.",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985248,
+      "stop": 1774860985249,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985222,
+      "stop": 1774860985249,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1774860985236,
+      "stop": 1774860985249,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

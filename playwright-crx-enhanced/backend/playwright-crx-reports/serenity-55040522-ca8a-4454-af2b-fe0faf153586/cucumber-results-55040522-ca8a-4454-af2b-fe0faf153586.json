@@ -1,0 +1,1586 @@
+[
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "Login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 623185499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "User is on \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:279"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3144072698
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 705653900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 7,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 189484397
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 8,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 63710099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 9,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 210375099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 10,
+            "name": "User is redirected to the inventory page and products are displayed",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1014"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 33362997
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 87607100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16038100
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;login-with-invalid-password",
+        "keyword": "Scenario",
+        "line": 12,
+        "name": "Login with invalid password",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 564008099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 13,
+            "name": "User is on \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:279"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3208533999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 14,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 667721399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 15,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 142293098
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "Enter \"wrong_password\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 51454199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 17,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 121799899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 18,
+            "name": "Error message Epic sadface: Username and password do not match any user in this service is displayed",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1019"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 18168098
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 51315999
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20993299
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;add-product-to-cart",
+        "keyword": "Scenario",
+        "line": 20,
+        "name": "Add product to cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 451517299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 21,
+            "name": "User is logged in with standard_user",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:426"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3273115599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 22,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 664752698
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 23,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 94669798
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 24,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 54595898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 25,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 124937097
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 26,
+            "name": "Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:504"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 71582099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 27,
+            "name": "Verify the cart badge shows \"1\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1024"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 672483999,
+              "error_message": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('1')\nExpected: visible\nError: strict mode violation: getByText('1') resolved to 5 elements:\n    1) <span class=\"shopping_cart_badge\" data-test=\"shopping-cart-badge\">1</span> aka locator('[data-test=\"shopping-cart-link\"]')\n    2) <div class=\"inventory_item_desc\" data-test=\"inventory-item-desc\">A red light isn't the desired state in testing bu…</div> aka getByText('A red light isn\\'t the desired')\n    3) <div class=\"inventory_item_desc\" data-test=\"inventory-item-desc\">Get your testing superhero on with the Sauce Labs…</div> aka getByText('Get your testing superhero on')\n    4) <div class=\"inventory_item_price\" data-test=\"inventory-item-price\">$15.99</div> aka locator('[data-test=\"inventory-item-price\"]').nth(2)\n    5) <div class=\"inventory_item_price\" data-test=\"inventory-item-price\">$15.99</div> aka locator('[data-test=\"inventory-item-price\"]').nth(5)\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 10000ms\n  - waiting for getByText('1')\n\n    at Proxy.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\playwright\\lib\\matchers\\expect.js:213:24)\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1026:42)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 28,
+            "name": "Cart badge displays 1 and the button changes to Remove",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1029"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 352411100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12945999
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;remove-product-from-cart",
+        "keyword": "Scenario",
+        "line": 30,
+        "name": "Remove product from cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 458145400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 31,
+            "name": "User is logged in and has item in cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:442"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3526757399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 32,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 694951599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 33,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 105809799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 34,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 53191600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 35,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 134924798
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 36,
+            "name": "Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:504"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 107890997
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 37,
+            "name": "Click the \"Remove\" button on \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:504"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 78603298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 38,
+            "name": "Cart badge disappears and the button changes back to Add to cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1035"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 407765299,
+              "error_message": "Error: Assertion not implemented: Then Cart badge disappears and the button changes back to Add to cart\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1038:7)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 359553200
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18142199
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;complete-checkout-flow",
+        "keyword": "Scenario",
+        "line": 40,
+        "name": "Complete checkout flow",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 415873700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 41,
+            "name": "User is logged in and has item in cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:442"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3383936897
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 42,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 671427399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 43,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 98193898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 44,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 50756798
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 45,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 119336599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 46,
+            "name": "Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:504"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 66743599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 47,
+            "name": "Click the cart icon",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:510"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 88706598
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 48,
+            "name": "Click the \"Checkout\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 74966899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 49,
+            "name": "Enter \"John\" in the First Name field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:486"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 62380300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 50,
+            "name": "Enter \"Doe\" in the Last Name field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:490"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 59448899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 51,
+            "name": "Enter \"12345\" in the Zip/Postal Code field",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 52,
+            "name": "Click the \"Continue\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 53,
+            "name": "Click the \"Finish\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 54,
+            "name": "Order confirmation page displays Thank you for your order!",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1041"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 54289299
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16407200
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;sort-products-by-price-low-to-high",
+        "keyword": "Scenario",
+        "line": 56,
+        "name": "Sort products by price low to high",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 527437200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 57,
+            "name": "User is logged in",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:394"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3302629497
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 58,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 657052897
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 59,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 91134497
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 60,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 56595899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 61,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 128828899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 62,
+            "name": "Select \"Price (low to high)\" from the sort dropdown",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:519"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 32489898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 63,
+            "name": "Products are sorted by price in ascending order with cheapest item first",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1047"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 406665398,
+              "error_message": "Error: Assertion not implemented: Then Products are sorted by price in ascending order with cheapest item first\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1050:7)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 375892899
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18257099
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;sort-products-by-name-z-to-a",
+        "keyword": "Scenario",
+        "line": 65,
+        "name": "Sort products by name Z to A",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 425413000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 66,
+            "name": "User is logged in",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:394"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3401436399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 67,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 714329398
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 68,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 103514298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 69,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 76054299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 70,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 115218498
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 71,
+            "name": "Select \"Name (Z to A)\" from the sort dropdown",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:519"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 36808298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 72,
+            "name": "Products are sorted alphabetically in descending order",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1053"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 449673397,
+              "error_message": "Error: Assertion not implemented: Then Products are sorted alphabetically in descending order\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1056:7)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 382175199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 21108200
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;verify-product-detail-page",
+        "keyword": "Scenario",
+        "line": 74,
+        "name": "Verify product detail page",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 445608400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 75,
+            "name": "User is logged in",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:394"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3428759098
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 76,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 664038898
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 77,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 92673100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 78,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 61977298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 79,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 122993899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 80,
+            "name": "Click on \"Sauce Labs Backpack\" product title",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:516"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 93759799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 81,
+            "name": "Product detail page shows name Sauce Labs Backpack with description and price $29.99 and Add to cart button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1059"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 379676098,
+              "error_message": "Error: Assertion not implemented: Then Product detail page shows name Sauce Labs Backpack with description and price $29.99 and Add to cart button\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1062:7)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 301042200
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16257100
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;add-multiple-products-and-verify-cart",
+        "keyword": "Scenario",
+        "line": 83,
+        "name": "Add multiple products and verify cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 383151299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 84,
+            "name": "User is logged in",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:394"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3124843800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 85,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 668305599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 86,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 92742598
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 87,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 58747300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 88,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 121737899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 89,
+            "name": "Click the \"Add to cart\" button on \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:504"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 68468599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 90,
+            "name": "Click the \"Add to cart\" button on \"Sauce Labs Bike Light\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:504"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 82864698
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 91,
+            "name": "Click the \"Add to cart\" button on \"Sauce Labs Bolt T-Shirt\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:504"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 72072899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 92,
+            "name": "Click the cart icon",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:510"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 64453697
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 93,
+            "name": "Verify \"3\" items are displayed in the cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1065"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 321256097,
+              "error_message": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByText('3')\nExpected: visible\nError: strict mode violation: getByText('3') resolved to 2 elements:\n    1) <span class=\"shopping_cart_badge\" data-test=\"shopping-cart-badge\">3</span> aka locator('[data-test=\"shopping-cart-link\"]')\n    2) <div class=\"inventory_item_desc\" data-test=\"inventory-item-desc\">A red light isn't the desired state in testing bu…</div> aka getByText('A red light isn\\'t the desired')\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 10000ms\n  - waiting for getByText('3')\n\n    at Proxy.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\node_modules\\playwright\\lib\\matchers\\expect.js:213:24)\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1067:60)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 94,
+            "name": "Cart page shows 3 items: Sauce Labs Backpack and Sauce Labs Bike Light and Sauce Labs Bolt T-Shirt",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1070"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 283449100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16385399
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;logout-from-application",
+        "keyword": "Scenario",
+        "line": 96,
+        "name": "Logout from application",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 377588700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 97,
+            "name": "User is logged in",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:394"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3102330398
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 98,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 672268098
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 99,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 87293897
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 100,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 53120499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 101,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 119017899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 102,
+            "name": "Click the hamburger menu icon",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:513"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 56672198
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 103,
+            "name": "Click the \"Logout\" link",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:501"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1031369199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 104,
+            "name": "User is redirected back to the login page at \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1076"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 60282052799,
+              "error_message": "page.waitForURL: Timeout 60000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation until \"load\"\n============================================================\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1078:19)"
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 303944399
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 12813199
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "login-with-valid-credentials;checkout-with-empty-cart",
+        "keyword": "Scenario",
+        "line": 106,
+        "name": "Checkout with empty cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 809638000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 107,
+            "name": "User is logged in with empty cart",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:458"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3256777998
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 108,
+            "name": "Navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:315"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 749185199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 109,
+            "name": "Enter \"standard_user\" in the Username field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:478"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 204712897
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 110,
+            "name": "Enter \"secret_sauce\" in the Password field",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:482"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 74341798
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 111,
+            "name": "Click the \"Login\" button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:498"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 126535298
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 112,
+            "name": "Click the cart icon",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:510"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 68430999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 113,
+            "name": "Verify the cart is empty",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1081"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 246791999,
+              "error_message": "Error: Assertion not implemented: Then Verify the cart is empty\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\55040522-ca8a-4454-af2b-fe0faf153586\\features\\step_definitions\\steps.js:1084:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 114,
+            "name": "Verify the \"Checkout\" button is visible",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:522"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 115,
+            "name": "Cart page shows no items and user can see Continue Shopping button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1087"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 275801800
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 11494599
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "login-with-valid-credentials",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Login with valid credentials",
+    "tags": [],
+    "uri": "features\\test.feature"
+  }
+]

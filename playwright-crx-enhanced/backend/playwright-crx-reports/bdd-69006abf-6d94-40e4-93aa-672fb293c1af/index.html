@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serenity BDD Report - User Login</title>
+  <style>
+    :root {
+      --passed: #2e7d32;
+      --failed: #c62828;
+      --compromised: #e65100;
+      --skipped: #757575;
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --border: #e8eaed;
+      --text: #202124;
+      --text-secondary: #5f6368;
+      --accent: #1a73e8;
+      --accent-dark: #1557b0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+      --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+
+    /* Header */
+    .report-header { background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%); color: white; padding: 32px 40px; position: relative; overflow: hidden; }
+    .report-header::after { content: ''; position: absolute; top: 0; right: 0; width: 300px; height: 100%; background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.05) 100%); }
+    .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .header-brand { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; margin-bottom: 8px; }
+    .header-title { font-size: 26px; font-weight: 600; margin-bottom: 4px; }
+    .header-subtitle { font-size: 14px; opacity: 0.8; }
+    .header-status { padding: 8px 20px; border-radius: 20px; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+    .header-status.passed { background: rgba(46,125,50,0.3); border: 1px solid rgba(46,125,50,0.5); }
+    .header-status.failed { background: rgba(198,40,40,0.3); border: 1px solid rgba(198,40,40,0.5); }
+
+    /* Narrative */
+    .narrative { background: var(--card); border-left: 4px solid var(--accent); margin: 24px 40px; padding: 20px 24px; border-radius: 0 8px 8px 0; box-shadow: var(--shadow); }
+    .narrative-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 12px; font-weight: 600; }
+    .narrative-line { font-size: 15px; color: var(--text); padding: 4px 0; }
+    .narrative-line strong { color: var(--accent-dark); }
+
+    /* Container */
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+    /* Summary Grid */
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+    .summary-donut-card { background: var(--card); border-radius: 12px; padding: 24px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 24px; }
+    .donut-container { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+    .donut-container svg { transform: rotate(-90deg); }
+    .donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+    .donut-center .pct { font-size: 28px; font-weight: 700; color: var(--text); }
+    .donut-center .label { font-size: 11px; color: var(--text-secondary); }
+    .donut-legend { flex: 1; }
+    .legend-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .legend-row:last-child { border-bottom: none; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    .legend-label { font-size: 13px; color: var(--text-secondary); }
+    .legend-value { font-size: 14px; font-weight: 600; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .stat-card { background: var(--card); border-radius: 12px; padding: 20px; text-align: center; box-shadow: var(--shadow); transition: transform 0.15s; }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Timeline */
+    .section { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 24px; overflow: hidden; }
+    .section-title { padding: 18px 24px; border-bottom: 1px solid var(--border); font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .section-icon { font-size: 18px; }
+    .timeline-row { display: flex; align-items: center; padding: 10px 24px; border-bottom: 1px solid var(--border); }
+    .timeline-row:last-child { border-bottom: none; }
+    .timeline-label { flex: 0 0 200px; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .timeline-bar-container { flex: 1; height: 8px; background: #e8eaed; border-radius: 4px; margin: 0 16px; overflow: hidden; }
+    .timeline-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .timeline-duration { flex: 0 0 60px; text-align: right; font-size: 12px; color: var(--text-secondary); }
+
+    /* Scenario Cards */
+    .scenario-card { border-bottom: 1px solid var(--border); }
+    .scenario-card:last-child { border-bottom: none; }
+    .scenario-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; cursor: pointer; transition: background 0.15s; }
+    .scenario-header:hover { background: #f1f3f4; }
+    .scenario-title { display: flex; align-items: center; gap: 10px; flex: 1; }
+    .scenario-icon { font-size: 16px; }
+    .scenario-type { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; background: #f1f3f4; padding: 2px 8px; border-radius: 4px; }
+    .scenario-name { font-size: 14px; font-weight: 500; }
+    .scenario-meta { display: flex; align-items: center; gap: 16px; font-size: 12px; }
+    .scenario-status { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .scenario-duration { color: var(--text-secondary); }
+    .scenario-step-count { color: var(--text-secondary); }
+    .expand-icon { font-size: 10px; color: var(--text-secondary); transition: transform 0.2s; }
+    .scenario-card.expanded .expand-icon { transform: rotate(180deg); }
+    .scenario-body { display: none; padding: 0 24px 16px; }
+    .scenario-card.expanded .scenario-body { display: block; }
+    .tag { display: inline-block; background: #e8f0fe; color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 12px; }
+
+    /* Steps */
+    .step-row { display: flex; align-items: flex-start; flex-wrap: wrap; padding: 8px 12px; border-radius: 6px; margin-bottom: 4px; font-size: 13px; transition: background 0.15s; }
+    .step-row:hover { background: #f8f9fa; }
+    .step-row.failed { background: #fef2f2; }
+    .step-row.failed:hover { background: #fee2e2; }
+    .step-number { flex: 0 0 24px; color: var(--text-secondary); font-size: 11px; padding-top: 1px; }
+    .step-icon { flex: 0 0 20px; font-size: 13px; }
+    .step-keyword { flex: 0 0 auto; font-weight: 600; color: #5c6bc0; margin-right: 6px; }
+    .step-text { flex: 1; color: var(--text); }
+    .step-duration { flex: 0 0 60px; text-align: right; color: var(--text-secondary); font-size: 11px; }
+    .step-error { width: 100%; margin-top: 8px; padding-left: 44px; }
+    .step-error pre { background: #fff5f5; color: #c62828; padding: 10px 14px; border-radius: 6px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; border-left: 3px solid #c62828; }
+    .step-screenshot { width: 100%; margin-top: 8px; padding-left: 44px; }
+    .step-screenshot img { max-width: 400px; max-height: 250px; border-radius: 6px; border: 1px solid var(--border); }
+    .task-badge { background: #f3e8ff; color: #7c3aed; font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+    .action-badge { background: #ecfdf5; color: #059669; font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-left: 4px; }
+
+    /* Screenplay Tasks */
+    .screenplay-tasks { padding: 16px 24px; }
+    .task-card { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+    .task-card.passed { border-left: 3px solid var(--passed); }
+    .task-card.failed { border-left: 3px solid var(--failed); }
+    .task-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #fafbfc; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .task-icon { font-size: 14px; }
+    .task-actor { font-weight: 600; color: var(--accent); }
+    .task-performs { color: var(--text-secondary); font-size: 13px; }
+    .task-name { font-weight: 500; }
+    .task-actions { padding: 8px 16px; }
+    .action-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #f1f3f4; }
+    .action-row:last-child { border-bottom: none; }
+    .action-icon { font-size: 12px; }
+    .action-name { flex: 1; }
+    .action-duration { color: var(--text-secondary); font-size: 11px; }
+
+    /* Screenshots */
+    .screenshots-grid { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px 24px; }
+    .screenshot-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: transform 0.15s; }
+    .screenshot-card:hover { transform: scale(1.02); box-shadow: var(--shadow-hover); }
+    .screenshot-card img { max-width: 350px; max-height: 250px; display: block; }
+    .screenshot-label { padding: 6px 12px; font-size: 11px; color: var(--text-secondary); background: #fafbfc; }
+
+    /* Feature Content */
+    .feature-content { padding: 20px 24px; }
+    .feature-content pre { background: #1e1e2e; color: #cdd6f4; padding: 20px; border-radius: 8px; font-size: 13px; line-height: 1.8; overflow-x: auto; white-space: pre-wrap; }
+    .feature-content pre .keyword { color: #89b4fa; font-weight: 600; }
+    .feature-content pre .tag { color: #94e2d5; }
+    .feature-content pre .string { color: #a6e3a1; }
+    .feature-content pre .comment { color: #6c7086; font-style: italic; }
+
+    /* Footer */
+    .report-footer { text-align: center; padding: 24px; color: var(--text-secondary); font-size: 12px; border-top: 1px solid var(--border); margin-top: 16px; }
+    .report-footer a { color: var(--accent); text-decoration: none; }
+
+    /* Print */
+    @media print {
+      .report-header { break-after: avoid; }
+      .scenario-card { break-inside: avoid; }
+      .scenario-body { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <div class="header-brand">Serenity BDD Report</div>
+    <div class="header-top">
+      <div>
+        <div class="header-title">User Login</div>
+        <div class="header-subtitle">
+          Run ID: 69006abf &bull;
+          Thursday, April 2, 2026 &bull;
+          7.4s
+        </div>
+      </div>
+      <div class="header-status failed">FAILED</div>
+    </div>
+    
+  </div>
+
+  
+  <div class="narrative">
+    <div class="narrative-title">User Story</div>
+    <div class="narrative-line"><strong>As a</strong> registered user</div>
+    <div class="narrative-line"><strong>I want to</strong> login to the application</div>
+    <div class="narrative-line"><strong>So that</strong> I can access my dashboard</div>
+  </div>
+
+  
+  <div class="narrative" style="border-left-color: #5c6bc0;">
+    <div class="narrative-title">Description</div>
+    <div class="narrative-line">As a registered user
+I want to login to the application
+So that I can access my dashboard</div>
+  </div>
+
+  <div class="container">
+    <!-- Summary -->
+    <div class="summary-grid">
+      <div class="summary-donut-card">
+        <div class="donut-container">
+          <svg viewBox="0 0 36 36" width="120" height="120">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e8eaed" stroke-width="3"/>
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--passed)" stroke-width="3"
+              stroke-dasharray="35.294117647058826 64.70588235294117" stroke-dashoffset="0"/>
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--failed)" stroke-width="3"
+              stroke-dasharray="11.76470588235294 88.23529411764706" stroke-dashoffset="-35.294117647058826"/>
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--skipped)" stroke-width="3"
+              stroke-dasharray="52.94117647058824 47.05882352941176" stroke-dashoffset="-47.05882352941177"/>
+          </svg>
+          <div class="donut-center">
+            <div class="pct">35%</div>
+            <div class="label">Pass Rate</div>
+          </div>
+        </div>
+        <div class="donut-legend">
+          <div class="legend-row"><span><span class="legend-dot" style="background:var(--passed)"></span><span class="legend-label">Passed</span></span><span class="legend-value" style="color:var(--passed)">6</span></div>
+          <div class="legend-row"><span><span class="legend-dot" style="background:var(--failed)"></span><span class="legend-label">Failed</span></span><span class="legend-value" style="color:var(--failed)">2</span></div>
+          <div class="legend-row"><span><span class="legend-dot" style="background:var(--skipped)"></span><span class="legend-label">Skipped</span></span><span class="legend-value" style="color:var(--skipped)">9</span></div>
+          <div class="legend-row"><span><span class="legend-dot" style="background:var(--text)"></span><span class="legend-label">Total</span></span><span class="legend-value">17</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-value" style="color:var(--passed)">0</div><div class="stat-label">Scenarios Passed</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:var(--failed)">2</div><div class="stat-label">Scenarios Failed</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:var(--compromised)">0</div><div class="stat-label">Compromised</div></div>
+          <div class="stat-card"><div class="stat-value">7.4s</div><div class="stat-label">Duration</div></div>
+        </div>
+      </div>
+    </div>
+
+    
+
+    <!-- Scenario Timeline -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="section-icon">&#9202;</span>
+        Execution Timeline
+      </h2>
+      
+        <div class="timeline-row">
+          <div class="timeline-label">Successful login with valid credentials</div>
+          <div class="timeline-bar-container">
+            <div class="timeline-bar" style="width:17%;background:#c62828"></div>
+          </div>
+          <div class="timeline-duration">1.2s</div>
+        </div>
+        <div class="timeline-row">
+          <div class="timeline-label">Failed login with invalid password</div>
+          <div class="timeline-bar-container">
+            <div class="timeline-bar" style="width:5%;background:#c62828"></div>
+          </div>
+          <div class="timeline-duration">248ms</div>
+        </div>
+    </div>
+
+    <!-- Scenario Details -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="section-icon">&#128203;</span>
+        Scenarios (2)
+      </h2>
+      
+        <div class="scenario-card">
+          <div class="scenario-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="scenario-title">
+              <span class="scenario-icon" style="color:#c62828">&#10008;</span>
+              <span class="scenario-type">Scenario</span>
+              <span class="scenario-name">Successful login with valid credentials</span>
+              <span class="tag">@smoke</span>
+            </div>
+            <div class="scenario-meta">
+              <span class="scenario-status" style="color:#c62828">FAILED</span>
+              <span class="scenario-duration">1.2s</span>
+              <span class="scenario-step-count">10 steps</span>
+              <span class="expand-icon">&#9660;</span>
+            </div>
+          </div>
+          <div class="scenario-body">
+            
+          <div class="step-row passed">
+            <span class="step-number">1</span>
+            <span class="step-icon" style="color:#2e7d32">&#10004;</span>
+            <span class="step-keyword">Before</span>
+            <span class="step-text"></span>
+            
+            <span class="step-duration">498ms</span>
+            
+            
+          </div>
+          <div class="step-row failed">
+            <span class="step-number">2</span>
+            <span class="step-icon" style="color:#c62828">&#10008;</span>
+            <span class="step-keyword">Given</span>
+            <span class="step-text">I am on the login page</span>
+            
+            <span class="step-duration">383ms</span>
+            <div class="step-error"><pre>Error: Step not implemented: Given I am on the login page
+    at PlaywrightWorld.&lt;anonymous&gt; (C:\Users\CHANDR~1\AppData\Local\Temp\bdd-shared-env\runs\69006abf-6d94-40e4-93aa-672fb293c1af\features\step_definitions\steps.js:1002:7)</pre></div>
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">3</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">When</span>
+            <span class="step-text">I enter &quot;admin@test.com&quot; in the email field</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">4</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">And</span>
+            <span class="step-text">I enter &quot;password123&quot; in the password field</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">5</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">And</span>
+            <span class="step-text">I click the &quot;Login&quot; button</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">6</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">Then</span>
+            <span class="step-text">I should see the dashboard page</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">7</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">And</span>
+            <span class="step-text">I should see a welcome message</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row passed">
+            <span class="step-number">8</span>
+            <span class="step-icon" style="color:#2e7d32">&#10004;</span>
+            <span class="step-keyword">After</span>
+            <span class="step-text"></span>
+            
+            <span class="step-duration">130ms</span>
+            
+            
+          </div>
+          <div class="step-row passed">
+            <span class="step-number">9</span>
+            <span class="step-icon" style="color:#2e7d32">&#10004;</span>
+            <span class="step-keyword">After</span>
+            <span class="step-text"></span>
+            
+            <span class="step-duration">13ms</span>
+            
+            
+          </div>
+          <div class="step-row passed">
+            <span class="step-number">10</span>
+            <span class="step-icon" style="color:#2e7d32">&#10004;</span>
+            <span class="step-keyword">Before</span>
+            <span class="step-text"></span>
+            
+            <span class="step-duration">220ms</span>
+            
+            
+          </div>
+          </div>
+        </div>
+        <div class="scenario-card">
+          <div class="scenario-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="scenario-title">
+              <span class="scenario-icon" style="color:#c62828">&#10008;</span>
+              <span class="scenario-type">Scenario</span>
+              <span class="scenario-name">Failed login with invalid password</span>
+              <span class="tag">@regression</span>
+            </div>
+            <div class="scenario-meta">
+              <span class="scenario-status" style="color:#c62828">FAILED</span>
+              <span class="scenario-duration">248ms</span>
+              <span class="scenario-step-count">7 steps</span>
+              <span class="expand-icon">&#9660;</span>
+            </div>
+          </div>
+          <div class="scenario-body">
+            
+          <div class="step-row failed">
+            <span class="step-number">1</span>
+            <span class="step-icon" style="color:#c62828">&#10008;</span>
+            <span class="step-keyword">Given</span>
+            <span class="step-text">I am on the login page</span>
+            
+            <span class="step-duration">123ms</span>
+            <div class="step-error"><pre>Error: Step not implemented: Given I am on the login page
+    at PlaywrightWorld.&lt;anonymous&gt; (C:\Users\CHANDR~1\AppData\Local\Temp\bdd-shared-env\runs\69006abf-6d94-40e4-93aa-672fb293c1af\features\step_definitions\steps.js:1002:7)</pre></div>
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">2</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">When</span>
+            <span class="step-text">I enter &quot;admin@test.com&quot; in the email field</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">3</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">And</span>
+            <span class="step-text">I enter &quot;wrongpassword&quot; in the password field</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">4</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">And</span>
+            <span class="step-text">I click the &quot;Login&quot; button</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row skipped">
+            <span class="step-number">5</span>
+            <span class="step-icon" style="color:#757575">&#9679;</span>
+            <span class="step-keyword">Then</span>
+            <span class="step-text">I should see an error message &quot;Invalid credentials&quot;</span>
+            
+            <span class="step-duration">-</span>
+            
+            
+          </div>
+          <div class="step-row passed">
+            <span class="step-number">6</span>
+            <span class="step-icon" style="color:#2e7d32">&#10004;</span>
+            <span class="step-keyword">After</span>
+            <span class="step-text"></span>
+            
+            <span class="step-duration">112ms</span>
+            
+            
+          </div>
+          <div class="step-row passed">
+            <span class="step-number">7</span>
+            <span class="step-icon" style="color:#2e7d32">&#10004;</span>
+            <span class="step-keyword">After</span>
+            <span class="step-text"></span>
+            
+            <span class="step-duration">13ms</span>
+            
+            
+          </div>
+          </div>
+        </div>
+    </div>
+
+    
+
+    
+      <div class="section">
+        <h2 class="section-title">
+          <span class="section-icon">&#128247;</span>
+          Failure Screenshots (4)
+        </h2>
+        <div class="screenshots-grid">
+          
+            <div class="screenshot-card">
+              <a href="/playwright-crx-reports/bdd-artifacts/69006abf-6d94-40e4-93aa-672fb293c1af/failure-scenario-1-1775118454483.png" target="_blank">
+                <img src="/playwright-crx-reports/bdd-artifacts/69006abf-6d94-40e4-93aa-672fb293c1af/failure-scenario-1-1775118454483.png" alt="Screenshot 1" />
+              </a>
+              <div class="screenshot-label">Capture 1</div>
+            </div>
+          
+            <div class="screenshot-card">
+              <a href="/playwright-crx-reports/bdd-artifacts/69006abf-6d94-40e4-93aa-672fb293c1af/failure-scenario-2-1775118454977.png" target="_blank">
+                <img src="/playwright-crx-reports/bdd-artifacts/69006abf-6d94-40e4-93aa-672fb293c1af/failure-scenario-2-1775118454977.png" alt="Screenshot 2" />
+              </a>
+              <div class="screenshot-label">Capture 2</div>
+            </div>
+          
+            <div class="screenshot-card">
+              <a href="/playwright-crx-reports/bdd-artifacts/69006abf-6d94-40e4-93aa-672fb293c1af/step-fail-1-1775118454095.png" target="_blank">
+                <img src="/playwright-crx-reports/bdd-artifacts/69006abf-6d94-40e4-93aa-672fb293c1af/step-fail-1-1775118454095.png" alt="Screenshot 3" />
+              </a>
+              <div class="screenshot-label">Capture 3</div>
+            </div>
+          
+            <div class="screenshot-card">
+              <a href="/playwright-crx-reports/bdd-artifacts/69006abf-6d94-40e4-93aa-672fb293c1af/step-fail-1-1775118454853.png" target="_blank">
+                <img src="/playwright-crx-reports/bdd-artifacts/69006abf-6d94-40e4-93aa-672fb293c1af/step-fail-1-1775118454853.png" alt="Screenshot 4" />
+              </a>
+              <div class="screenshot-label">Capture 4</div>
+            </div>
+          
+        </div>
+      </div>
+
+    <!-- Feature Content -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="section-icon">&#128196;</span>
+        Feature File
+      </h2>
+      <div class="feature-content">
+        <pre><span class="keyword">Feature:</span> User Login
+  As a registered user
+  I want to login to the application
+  So that I can access my dashboard
+
+  <span class="tag">@smoke</span>
+  <span class="keyword">Scenario:</span> Successful login with valid credentials
+    <span class="keyword">Given</span> I am on the login page
+    <span class="keyword">When</span> I enter <span class="string">&quot;admin<span class="tag">@test</span>.com&quot;</span> in the email field
+    <span class="keyword">And</span> I enter <span class="string">&quot;password123&quot;</span> in the password field
+    <span class="keyword">And</span> I click the <span class="string">&quot;Login&quot;</span> button
+    <span class="keyword">Then</span> I should see the dashboard page
+    <span class="keyword">And</span> I should see a welcome message
+
+  <span class="tag">@regression</span>
+  <span class="keyword">Scenario:</span> Failed login with invalid password
+    <span class="keyword">Given</span> I am on the login page
+    <span class="keyword">When</span> I enter <span class="string">&quot;admin<span class="tag">@test</span>.com&quot;</span> in the email field
+    <span class="keyword">And</span> I enter <span class="string">&quot;wrongpassword&quot;</span> in the password field
+    <span class="keyword">And</span> I click the <span class="string">&quot;Login&quot;</span> button
+    <span class="keyword">Then</span> I should see an error message <span class="string">&quot;Invalid credentials&quot;</span>
+</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-footer">
+    Generated by <strong>Playwright CRX</strong> &bull; Serenity-style BDD Report &bull; 2026-04-02T08:27:49.381Z
+  </div>
+
+  <script>
+    // Auto-expand failed scenarios
+    document.querySelectorAll('.scenario-card').forEach(card => {
+      const status = card.querySelector('.scenario-status');
+      if (status && status.textContent.trim() === 'FAILED') {
+        card.classList.add('expanded');
+      }
+    });
+  </script>
+</body>
+</html>

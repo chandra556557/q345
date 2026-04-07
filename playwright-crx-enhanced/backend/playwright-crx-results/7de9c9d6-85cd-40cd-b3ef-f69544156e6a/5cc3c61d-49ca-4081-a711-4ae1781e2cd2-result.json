@@ -1,0 +1,160 @@
+{
+  "uuid": "5cc3c61d-49ca-4081-a711-4ae1781e2cd2",
+  "historyId": "7de9c9d6-85cd-40cd-b3ef-f69544156e6a-Complete checkout process",
+  "testCaseId": "5cc3c61d-49ca-4081-a711-4ae1781e2cd2",
+  "fullName": "SauceDemo E-commerce Application > Complete checkout process",
+  "name": "Complete checkout process",
+  "status": "skipped",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775545442373,
+  "stop": 1775545443770,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E-commerce Application"
+    },
+    {
+      "name": "story",
+      "value": "Complete checkout process"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545442452,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "Given the application URL is set to \"https://saucedemo.com\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "And the browser is opened",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "Given I am logged in as \"standard_user\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "And I have added products to cart:",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "When I navigate to the cart page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "And I click the checkout button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "And I fill in checkout information:",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "And I click continue",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "Then I should see the order summary",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "And I should see the total price",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443770,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443707,
+      "stop": 1775545443770,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775545443754,
+      "stop": 1775545443770,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

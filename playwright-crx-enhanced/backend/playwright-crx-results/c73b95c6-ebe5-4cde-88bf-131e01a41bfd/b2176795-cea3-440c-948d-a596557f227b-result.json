@@ -1,0 +1,117 @@
+{
+  "uuid": "b2176795-cea3-440c-948d-a596557f227b",
+  "historyId": "c73b95c6-ebe5-4cde-88bf-131e01a41bfd-Failed login with invalid password",
+  "testCaseId": "b2176795-cea3-440c-948d-a596557f227b",
+  "fullName": "User Login > Failed login with invalid password",
+  "name": "Failed login with invalid password",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775118639315,
+  "stop": 1775118640005,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "User Login"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "User Login"
+    },
+    {
+      "name": "story",
+      "value": "Failed login with invalid password"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775118639606,
+      "stop": 1775118640005,
+      "attachments": []
+    },
+    {
+      "name": "Given I am on the login page",
+      "status": "failed",
+      "statusDetails": {
+        "message": "Error: Step not implemented: Given I am on the login page\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\c73b95c6-ebe5-4cde-88bf-131e01a41bfd\\features\\step_definitions\\steps.js:1002:7)"
+      },
+      "stage": "finished",
+      "start": 1775118639872,
+      "stop": 1775118640005,
+      "attachments": []
+    },
+    {
+      "name": "When I enter \"admin@test.com\" in the email field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775118640005,
+      "stop": 1775118640005,
+      "attachments": []
+    },
+    {
+      "name": "And I enter \"wrongpassword\" in the password field",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775118640005,
+      "stop": 1775118640005,
+      "attachments": []
+    },
+    {
+      "name": "And I click the \"Login\" button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775118640005,
+      "stop": 1775118640005,
+      "attachments": []
+    },
+    {
+      "name": "Then I should see an error message \"Invalid credentials\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775118640005,
+      "stop": 1775118640005,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775118639866,
+      "stop": 1775118640005,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775118639986,
+      "stop": 1775118640005,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}
