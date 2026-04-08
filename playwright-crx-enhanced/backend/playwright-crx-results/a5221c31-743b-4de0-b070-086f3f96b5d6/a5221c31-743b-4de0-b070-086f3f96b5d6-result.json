@@ -1,0 +1,56 @@
+{
+  "uuid": "a5221c31-743b-4de0-b070-086f3f96b5d6",
+  "historyId": "a5221c31-743b-4de0-b070-086f3f96b5d6",
+  "testCaseId": "a5221c31-743b-4de0-b070-086f3f96b5d6",
+  "fullName": "tigo",
+  "name": "tigo",
+  "description": "",
+  "stage": "finished",
+  "start": 1775558328478,
+  "statusDetails": {
+    "message": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"BASE_URL\", waiting until \"domcontentloaded\"\u001b[22m\n",
+    "trace": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"BASE_URL\", waiting until \"domcontentloaded\"\u001b[22m\n"
+  },
+  "labels": [
+    {
+      "name": "suite",
+      "value": "Playwright CRX Tests"
+    },
+    {
+      "name": "parentSuite",
+      "value": "Playwright CRX"
+    },
+    {
+      "name": "host",
+      "value": "BT-PG04LNSX"
+    },
+    {
+      "name": "thread",
+      "value": "thread-a5221c31"
+    },
+    {
+      "name": "framework",
+      "value": "Playwright CRX"
+    },
+    {
+      "name": "language",
+      "value": "typescript"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "unknown ",
+      "status": "failed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775558330467,
+      "stop": 1775558330767,
+      "attachments": []
+    }
+  ],
+  "attachments": [],
+  "status": "failed",
+  "stop": 1775558330806
+}

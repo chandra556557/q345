@@ -5,24 +5,32 @@
 
 import { Given, When, Then, Before, After, World } from '@cucumber/cucumber';
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
+import { resolveStepParameter } from '../support/dynamicFeatures';
 
 interface SauceDemoWorld extends World {
   browser?: Browser;
   context?: BrowserContext;
   page?: Page;
-  appUrl: string;
+  appUrl?: string;
   lastError?: string;
 }
 
 let browser: Browser;
 
-// Initialize browser once
-Before(async function(this: SauceDemoWorld) {
-  browser = await chromium.launch({ headless: true });
-  this.context = await browser.newContext();
-  this.page = await this.context.newPage();
-  this.appUrl = 'https://saucedemo.com';
-  console.log(`✓ Browser launched for testing`);
+// Initialize browser once - Use specific tags to target SauceDemo scenarios
+Before({ tags: '@login or @products or @logout or @saucedemo' }, async function(this: any) {
+  try {
+    browser = await chromium.launch({ headless: true });
+    this.context = await browser.newContext();
+    this.page = await this.context.newPage();
+    // Always set default URL for SauceDemo
+    this.appUrl = this.appUrl || 'https://saucedemo.com';
+    console.log(`✓ Browser launched for testing`);
+    console.log(`✓ App URL: ${this.appUrl}`);
+  } catch (error: any) {
+    console.error(`✗ Failed to launch browser: ${error.message}`);
+    throw error;
+  }
 });
 
 // Close browser after tests
@@ -36,8 +44,9 @@ After(async function(this: SauceDemoWorld) {
  * Given the application URL is set to "{url}"
  */
 Given('the application URL is set to {string}', async function(this: SauceDemoWorld, url: string) {
-  this.appUrl = url;
-  console.log(`✓ Application URL set to: ${url}`);
+  // Resolve dynamic variables: ${API_BASE_URL} → http://localhost:3001
+  this.appUrl = resolveStepParameter(url, this) || url;
+  console.log(`✓ Application URL set to: ${this.appUrl}`);
 });
 
 /**
@@ -51,15 +60,40 @@ Given('the browser is opened', async function(this: SauceDemoWorld) {
 });
 
 /**
+ * Given the application is loaded
+ */
+Given('the application is loaded', async function(this: SauceDemoWorld) {
+  if (!this.page) {
+    throw new Error('Browser page not initialized');
+  }
+  console.log(`✓ Application is loaded`);
+});
+
+/**
  * When I navigate to the login page
  */
 When('I navigate to the login page', async function(this: SauceDemoWorld) {
-  await this.page!.goto(this.appUrl);
+  // Use appUrl directly - it's already set in Before hook
+  const url = this.appUrl || 'https://saucedemo.com';
+
+  if (!url || url.includes('/*')) {
+    throw new Error(`Invalid URL: ${url}`);
+  }
+
+  try {
+    await this.page!.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 });
+    console.log(`✓ Navigated to: ${url}`);
+  } catch (error: any) {
+    throw new Error(`Failed to navigate to ${url}: ${error.message}`);
+  }
 
   // Wait for login page to load
-  await this.page!.waitForSelector('input[placeholder*="Username"]', { timeout: 5000 });
-
-  console.log(`✓ Navigated to login page`);
+  try {
+    await this.page!.waitForSelector('input[placeholder*="Username"]', { timeout: 8000 });
+    console.log(`✓ Login page loaded successfully`);
+  } catch (error: any) {
+    throw new Error(`Username field not found on login page: ${error.message}`);
+  }
 });
 
 /**
@@ -92,9 +126,9 @@ When('I enter password {string}', async function(this: SauceDemoWorld, password:
  * And I click the login button
  */
 When('I click the login button', async function(this: SauceDemoWorld) {
-  const loginButton = await this.page!.$('input[value*="LOGIN"]');
+  const loginButton = await this.page!.$('#login-button');
   if (!loginButton) {
-    throw new Error('Login button not found');
+    throw new Error('Login button not found - tried selector: #login-button');
   }
 
   await loginButton.click();
@@ -144,7 +178,7 @@ Then('the page title should contain {string}', async function(this: SauceDemoWor
  */
 Given('I am logged in as {string}', async function(this: SauceDemoWorld, username: string) {
   // Navigate to login page
-  await this.page!.goto(this.appUrl);
+  await this.page!.goto(this.appUrl || 'https://saucedemo.com');
   await this.page!.waitForSelector('input[placeholder*="Username"]');
 
   // Enter credentials
@@ -152,7 +186,7 @@ Given('I am logged in as {string}', async function(this: SauceDemoWorld, usernam
   await this.page!.fill('input[placeholder*="Password"]', 'secret_sauce');
 
   // Click login
-  await this.page!.click('input[value*="LOGIN"]');
+  await this.page!.click('#login-button');
 
   // Wait for products page
   await this.page!.waitForSelector('.inventory_list', { timeout: 5000 });
@@ -304,10 +338,10 @@ Then('I should see {int} items in the cart', async function(this: SauceDemoWorld
  */
 Given('I have added {int} products to cart', async function(this: SauceDemoWorld, count: number) {
   // First log in
-  await this.page!.goto(this.appUrl);
+  await this.page!.goto(this.appUrl || 'https://saucedemo.com');
   await this.page!.fill('input[placeholder*="Username"]', 'standard_user');
   await this.page!.fill('input[placeholder*="Password"]', 'secret_sauce');
-  await this.page!.click('input[value*="LOGIN"]');
+  await this.page!.click('#login-button');
   await this.page!.waitForSelector('.inventory_list');
 
   // Add products to cart

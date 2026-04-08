@@ -42,6 +42,16 @@ Before(async function(scenario) {
   console.log(`\n🎯 Scenario: ${scenario.pickle.name}`);
   console.log(`📍 Project: ${projectName}`);
 
+  // Skip database config for SauceDemo UI tests
+  const isSaucedemoTest = scenario.pickle.tags.some(tag => tag.name === '@saucedemo' || tag.name === '@login' || tag.name === '@logout' || tag.name === '@shopping-cart' || tag.name === '@checkout');
+
+  if (isSaucedemoTest) {
+    console.log(`✓ SauceDemo test detected - skipping database config`);
+    this.projectName = 'saucedemo';
+    this.apiBaseUrl = 'https://saucedemo.com';
+    return;
+  }
+
   // Load project environment
   try {
     if (projectName !== 'default') {

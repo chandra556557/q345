@@ -1,0 +1,132 @@
+[
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "saucedemo-e2e-testing;successful-login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "Successful login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 635245500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 5,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1014"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 493997498,
+              "error_message": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/* URL */\", waiting until \"load\"\u001b[22m\n\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\f1f378cb-dc41-46f4-aacb-35a32031b550\\features\\step_definitions\\steps.js:1016:19)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 6,
+            "name": "I enter username \"standard_user\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:548"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 7,
+            "name": "I enter password \"secret_sauce\"",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:553"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 8,
+            "name": "I click the login button",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:563"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 9,
+            "name": "I should see the products page",
+            "match": {
+              "location": "features\\step_definitions\\steps.js:1019"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 202736399
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20193200
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@smoke",
+            "line": 1
+          },
+          {
+            "name": "@login",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "saucedemo-e2e-testing",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "SauceDemo E2E Testing",
+    "tags": [
+      {
+        "name": "@smoke",
+        "line": 1
+      },
+      {
+        "name": "@login",
+        "line": 1
+      }
+    ],
+    "uri": "features\\test.feature"
+  }
+]

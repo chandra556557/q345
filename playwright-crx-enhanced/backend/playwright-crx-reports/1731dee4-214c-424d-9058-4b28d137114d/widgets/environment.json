@@ -1,0 +1,1 @@
+[{"values":["chromium"],"name":"Browser"},{"values":["default"],"name":"Environment"},{"values":["SauceDemo E2E Testing"],"name":"Feature"},{"values":["Cucumber BDD"],"name":"Framework"},{"values":["win32"],"name":"Platform"},{"values":["Version=v22.14.0"],"name":"Node"},{"values":["2026-04-07T10:06:54.299Z"],"name":"Timestamp"}]

@@ -1,0 +1,2 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","1770","Successful login with valid credentials","BDD / Cucumber","Tue Apr 07 15:50:39 IST 2026","failed","Tue Apr 07 15:50:41 IST 2026","","SauceDemo E2E Testing","",""

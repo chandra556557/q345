@@ -1,1945 +1,5 @@
 [
   {
-    "description": "  As an API consumer\n  I want to test API endpoints\n  So that I can verify the API works correctly",
-    "elements": [
-      {
-        "description": "",
-        "id": "rest-api-testing;get-list-of-all-users",
-        "keyword": "Scenario",
-        "line": 18,
-        "name": "Get list of all users",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 12913300
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 691409600
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the API is running on \"http://localhost:3001\"",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 12,
-            "name": "I have a valid authentication token",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 13,
-            "name": "the database is seeded with test data",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 19,
-            "name": "I send a GET request to \"/api/users\"",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 20,
-            "name": "the response status should be 200",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 21,
-            "name": "the response should contain a JSON array",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 22,
-            "name": "the array should have at least 3 users",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "id"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "email"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "name"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "role"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "And ",
-            "line": 23,
-            "name": "each user should have the following fields:",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 28,
-            "name": "the response time should be less than 500ms",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 31523199
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 453099
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@rest-api",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 17
-          },
-          {
-            "name": "@get",
-            "line": 17
-          },
-          {
-            "name": "@positive",
-            "line": 17
-          },
-          {
-            "name": "@smoke",
-            "line": 17
-          }
-        ],
-        "type": "scenario"
-      }
-    ],
-    "id": "rest-api-testing",
-    "line": 5,
-    "keyword": "Feature",
-    "name": "REST API Testing",
-    "tags": [
-      {
-        "name": "@bdd",
-        "line": 4
-      },
-      {
-        "name": "@api",
-        "line": 4
-      },
-      {
-        "name": "@rest-api",
-        "line": 4
-      }
-    ],
-    "uri": "features\\api-testing.feature"
-  },
-  {
-    "description": "  As a developer\n  I want to test database operations\n  So that I can ensure data integrity and consistency",
-    "elements": [
-      {
-        "description": "",
-        "id": "database-crud-operations;retrieve-record-by-primary-key",
-        "keyword": "Scenario",
-        "line": 57,
-        "name": "Retrieve record by primary key",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 10225699
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 674056899
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the database is connected",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 12,
-            "name": "the database tables are clean",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 13,
-            "name": "test data fixtures are available",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 58,
-            "name": "a user with ID \"1\" exists",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 59,
-            "name": "I query the user by ID \"1\"",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 60,
-            "name": "the query should return exactly 1 record",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 61,
-            "name": "the record should contain all expected fields",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 62,
-            "name": "the query should execute in less than 100ms",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 37610099
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 430799
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@database",
-            "line": 4
-          },
-          {
-            "name": "@data-operations",
-            "line": 4
-          },
-          {
-            "name": "@database",
-            "line": 56
-          },
-          {
-            "name": "@read",
-            "line": 56
-          },
-          {
-            "name": "@positive",
-            "line": 56
-          },
-          {
-            "name": "@smoke",
-            "line": 56
-          }
-        ],
-        "type": "scenario"
-      }
-    ],
-    "id": "database-crud-operations",
-    "line": 5,
-    "keyword": "Feature",
-    "name": "Database CRUD Operations",
-    "tags": [
-      {
-        "name": "@bdd",
-        "line": 4
-      },
-      {
-        "name": "@database",
-        "line": 4
-      },
-      {
-        "name": "@data-operations",
-        "line": 4
-      }
-    ],
-    "uri": "features\\database-operations.feature"
-  },
-  {
-    "description": "  As a QA Engineer\n  I want to run tests against multiple projects with different configurations\n  So that I can verify each project works independently",
-    "elements": [
-      {
-        "description": "",
-        "id": "dynamic-project-management;switch-to-project-1",
-        "keyword": "Scenario",
-        "line": 16,
-        "name": "Switch to project 1",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 5050699
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 738434199
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 18314000
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 17,
-            "name": "I use project \"project1\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:16"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 19275399
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 18,
-            "name": "I should be using project \"project1\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:254"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 5982600
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 19,
-            "name": "the project should have database \"playwright_project1\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:270"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 5076900
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 20,
-            "name": "the project should use port 3001",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:289"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 3165899
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 21636099
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 495499
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 15
-          },
-          {
-            "name": "@project1",
-            "line": 15
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;switch-to-project-2",
-        "keyword": "Scenario",
-        "line": 23,
-        "name": "Switch to project 2",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 4111800
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 763090700
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 11733100
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 24,
-            "name": "I use project \"project2\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:16"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 14338700
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 25,
-            "name": "I should be using project \"project2\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:254"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 5898200
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 26,
-            "name": "the project should have database \"playwright_project2\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:270"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 4997899
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 27,
-            "name": "the project should use port 3002",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:289"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 3280200
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 18200800
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 291899
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 22
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;health-check-for-project-1",
-        "keyword": "Scenario",
-        "line": 30,
-        "name": "Health check for project 1",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 5516999
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 620525400
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 992999
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 31,
-            "name": "I use project \"project1\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:16"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 5410200
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 32,
-            "name": "I call the health check endpoint",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:105"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 46507999
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 33,
-            "name": "the API should return status 200",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:184"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 2216699
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 34,
-            "name": "the health check status should be \"ok\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:216"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 2912900
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 35,
-            "name": "the environment should be \"development\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:235"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 2589299
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 12102799
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 168499
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 29
-          },
-          {
-            "name": "@health",
-            "line": 29
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;health-check-for-project-2",
-        "keyword": "Scenario",
-        "line": 38,
-        "name": "Health check for project 2",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 5689599
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 633180900
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 1250900
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 39,
-            "name": "I use project \"project2\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:16"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 4970300
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 40,
-            "name": "I call the health check endpoint",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:105"
-            },
-            "result": {
-              "status": "failed",
-              "duration": 62747499,
-              "error_message": "Error: Health check failed: Error\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\projectSteps.ts:120:11)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 41,
-            "name": "the API should return status 200",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:184"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 42,
-            "name": "the health check status should be \"ok\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:216"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 43,
-            "name": "the environment should be \"staging\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:235"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 21068999
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 1538100
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 37
-          },
-          {
-            "name": "@health",
-            "line": 37
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;database-connection-for-project-1",
-        "keyword": "Scenario",
-        "line": 46,
-        "name": "Database connection for project 1",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 4955899
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 697048799
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 1372100
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 47,
-            "name": "I use project \"project1\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:16"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 11981600
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 48,
-            "name": "I call the database health check endpoint",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:130"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 10366799
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 49,
-            "name": "the API should return status 200",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:184"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 457899
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 50,
-            "name": "the health check status should be \"ok\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:216"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 380099
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 13084500
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 190499
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 45
-          },
-          {
-            "name": "@database",
-            "line": 45
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;database-connection-for-project-2",
-        "keyword": "Scenario",
-        "line": 53,
-        "name": "Database connection for project 2",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 4606700
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 712118399
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 1822199
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 54,
-            "name": "I use project \"project2\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:16"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 5281100
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 55,
-            "name": "I call the database health check endpoint",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:130"
-            },
-            "result": {
-              "status": "failed",
-              "duration": 5504100,
-              "error_message": "Error: Database health check failed: Error\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\projectSteps.ts:145:11)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 56,
-            "name": "the API should return status 200",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:184"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 57,
-            "name": "the health check status should be \"ok\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:216"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 12960100
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 204600
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 52
-          },
-          {
-            "name": "@database",
-            "line": 52
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;verify-project-1-configuration",
-        "keyword": "Scenario",
-        "line": 60,
-        "name": "Verify project 1 configuration",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 4464899
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 726032599
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 1023800
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 61,
-            "name": "I have project \"project1\" with database name \"playwright_project1\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:72"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 10051800
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 62,
-            "name": "I call the health check endpoint",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:105"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 9421599
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 63,
-            "name": "the API should return status 200",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:184"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 322799
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 14750700
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 176400
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@parallel",
-            "line": 59
-          },
-          {
-            "name": "@project1",
-            "line": 59
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;verify-project-2-configuration",
-        "keyword": "Scenario",
-        "line": 66,
-        "name": "Verify project 2 configuration",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 6342999
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 696472299
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 1035899
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 67,
-            "name": "I have project \"project2\" with database name \"playwright_project2\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:72"
-            },
-            "result": {
-              "status": "passed",
-              "duration": 9448800
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 68,
-            "name": "I call the health check endpoint",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:105"
-            },
-            "result": {
-              "status": "failed",
-              "duration": 7569099,
-              "error_message": "Error: Health check failed: Error\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\projectSteps.ts:120:11)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)"
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 69,
-            "name": "the API should return status 200",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:184"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 18379499
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 306900
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@parallel",
-            "line": 65
-          },
-          {
-            "name": "@project2",
-            "line": 65
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;access-api-endpoints-for-project-1",
-        "keyword": "Scenario",
-        "line": 72,
-        "name": "Access API endpoints for project 1",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 4964400
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "failed",
-              "duration": 844592600,
-              "error_message": "browserContext.newPage: Target page, context or browser has been closed\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:23:34)"
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 73,
-            "name": "I use project \"project1\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:16"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 74,
-            "name": "I make a request to \"/api\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:155"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 75,
-            "name": "the API should return status 200",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:184"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 76,
-            "name": "the response should contain \"playwright-crx-backend\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:200"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 230199
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 103499
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 71
-          },
-          {
-            "name": "@endpoints",
-            "line": 71
-          }
-        ],
-        "type": "scenario"
-      },
-      {
-        "description": "",
-        "id": "dynamic-project-management;access-api-endpoints-for-project-2",
-        "keyword": "Scenario",
-        "line": 79,
-        "name": "Access API endpoints for project 2",
-        "steps": [
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 5363900
-            }
-          },
-          {
-            "keyword": "Before",
-            "hidden": true,
-            "result": {
-              "status": "failed",
-              "duration": 853567300,
-              "error_message": "browserContext.newPage: Target page, context or browser has been closed\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:23:34)"
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "project1"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "project2"
-                    ]
-                  }
-                ]
-              }
-            ],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the following projects are available:",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:50"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 80,
-            "name": "I use project \"project2\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:16"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "When ",
-            "line": 81,
-            "name": "I make a request to \"/api\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:155"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Then ",
-            "line": 82,
-            "name": "the API should return status 200",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:184"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 83,
-            "name": "the response should contain \"playwright-crx-backend\"",
-            "match": {
-              "location": "features\\step-definitions\\projectSteps.ts:200"
-            },
-            "result": {
-              "status": "skipped",
-              "duration": 0
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 247199
-            }
-          },
-          {
-            "keyword": "After",
-            "hidden": true,
-            "result": {
-              "status": "passed",
-              "duration": 96900
-            }
-          }
-        ],
-        "tags": [
-          {
-            "name": "@bdd",
-            "line": 4
-          },
-          {
-            "name": "@project-management",
-            "line": 4
-          },
-          {
-            "name": "@smoke",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 4
-          },
-          {
-            "name": "@health",
-            "line": 4
-          },
-          {
-            "name": "@api",
-            "line": 78
-          },
-          {
-            "name": "@endpoints",
-            "line": 78
-          }
-        ],
-        "type": "scenario"
-      }
-    ],
-    "id": "dynamic-project-management",
-    "line": 5,
-    "keyword": "Feature",
-    "name": "Dynamic Project Management",
-    "tags": [
-      {
-        "name": "@bdd",
-        "line": 4
-      },
-      {
-        "name": "@project-management",
-        "line": 4
-      },
-      {
-        "name": "@smoke",
-        "line": 4
-      },
-      {
-        "name": "@api",
-        "line": 4
-      },
-      {
-        "name": "@health",
-        "line": 4
-      }
-    ],
-    "uri": "features\\project-management.feature"
-  },
-  {
     "description": "  As a QA Engineer\n  I want to test the Sauce Demo e-commerce website\n  So that I can verify shopping functionality",
     "elements": [
       {
@@ -1954,16 +14,23 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 7679899
+              "duration": 8862399
             }
           },
           {
             "keyword": "Before",
             "hidden": true,
             "result": {
-              "status": "failed",
-              "duration": 130324200,
-              "error_message": "browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-9ovve9 --remote-debugging-pipe --no-startup-window\n<launched> pid=57456\nCall log:\n\u001b[2m  - <launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-9ovve9 --remote-debugging-pipe --no-startup-window\u001b[22m\n\u001b[2m  - <launched> pid=57456\u001b[22m\n\u001b[2m  - [pid=57456] <gracefully close start>\u001b[22m\n\u001b[2m  - [pid=57456] <kill>\u001b[22m\n\u001b[2m  - [pid=57456] <will force kill>\u001b[22m\n\u001b[2m  - [pid=57456] <process did exit: exitCode=3221225794, signal=null>\u001b[22m\n\u001b[2m  - [pid=57456] starting temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=57456] finished temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=57456] <gracefully close end>\u001b[22m\n\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:21:28)"
+              "status": "passed",
+              "duration": 1845199
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 772157699
             }
           },
           {
@@ -1971,9 +38,12 @@
             "keyword": "Given ",
             "line": 11,
             "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 13736699
             }
           },
           {
@@ -1981,9 +51,12 @@
             "keyword": "And ",
             "line": 12,
             "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 2146399
             }
           },
           {
@@ -1991,9 +64,12 @@
             "keyword": "When ",
             "line": 16,
             "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:75"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 1040282099
             }
           },
           {
@@ -2001,9 +77,12 @@
             "keyword": "And ",
             "line": 17,
             "name": "I enter username \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:102"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 69660400
             }
           },
           {
@@ -2011,9 +90,12 @@
             "keyword": "And ",
             "line": 18,
             "name": "I enter password \"secret_sauce\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:115"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 47166199
             }
           },
           {
@@ -2021,9 +103,12 @@
             "keyword": "And ",
             "line": 19,
             "name": "I click the login button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:128"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 131367599
             }
           },
           {
@@ -2031,9 +116,12 @@
             "keyword": "Then ",
             "line": 20,
             "name": "I should see the products page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:153"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 14006600
             }
           },
           {
@@ -2041,9 +129,12 @@
             "keyword": "And ",
             "line": 21,
             "name": "the page title should contain \"Swag Labs\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:165"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 19026599
             }
           },
           {
@@ -2051,7 +142,7 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 231099
+              "duration": 52628600
             }
           },
           {
@@ -2059,7 +150,7 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 146999
+              "duration": 456699
             }
           }
         ],
@@ -2099,16 +190,23 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 7034800
+              "duration": 4558100
             }
           },
           {
             "keyword": "Before",
             "hidden": true,
             "result": {
-              "status": "failed",
-              "duration": 132674899,
-              "error_message": "browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-ERbRZG --remote-debugging-pipe --no-startup-window\n<launched> pid=82348\nCall log:\n\u001b[2m  - <launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-ERbRZG --remote-debugging-pipe --no-startup-window\u001b[22m\n\u001b[2m  - <launched> pid=82348\u001b[22m\n\u001b[2m  - [pid=82348] <gracefully close start>\u001b[22m\n\u001b[2m  - [pid=82348] <kill>\u001b[22m\n\u001b[2m  - [pid=82348] <will force kill>\u001b[22m\n\u001b[2m  - [pid=82348] <process did exit: exitCode=3221225794, signal=null>\u001b[22m\n\u001b[2m  - [pid=82348] starting temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=82348] finished temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=82348] <gracefully close end>\u001b[22m\n\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:21:28)"
+              "status": "passed",
+              "duration": 780299
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 772999900
             }
           },
           {
@@ -2116,9 +214,12 @@
             "keyword": "Given ",
             "line": 11,
             "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 18984300
             }
           },
           {
@@ -2126,9 +227,12 @@
             "keyword": "And ",
             "line": 12,
             "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 2221900
             }
           },
           {
@@ -2136,9 +240,12 @@
             "keyword": "Given ",
             "line": 25,
             "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 1433908799
             }
           },
           {
@@ -2146,9 +253,12 @@
             "keyword": "When ",
             "line": 26,
             "name": "I view the products list",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:200"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 10782900
             }
           },
           {
@@ -2156,9 +266,12 @@
             "keyword": "Then ",
             "line": 27,
             "name": "I should see at least 6 products",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:212"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 19102199
             }
           },
           {
@@ -2166,9 +279,12 @@
             "keyword": "And ",
             "line": 28,
             "name": "each product should have a name and price",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:225"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 249055899
             }
           },
           {
@@ -2176,9 +292,12 @@
             "keyword": "And ",
             "line": 29,
             "name": "each product should have an \"Add to cart\" button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:243"
+            },
             "result": {
-              "status": "ambiguous",
-              "duration": 0
+              "status": "passed",
+              "duration": 177856499
             }
           },
           {
@@ -2186,7 +305,7 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 204999
+              "duration": 44606700
             }
           },
           {
@@ -2194,7 +313,7 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 133299
+              "duration": 495699
             }
           }
         ],
@@ -2221,6 +340,2008 @@
           }
         ],
         "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;add-single-product-to-cart",
+        "keyword": "Scenario",
+        "line": 32,
+        "name": "Add single product to cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 2944899
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 190999
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 715755700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 805000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 238799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 33,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 992126499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 34,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:200"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 15110000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 35,
+            "name": "I add the first product to cart",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:259"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 87766100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 36,
+            "name": "the cart counter should show \"1\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:277"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 24099500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 37,
+            "name": "the product should show \"Remove\" button instead of \"Add to cart\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 13911100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 456600
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@shopping-cart",
+            "line": 31
+          },
+          {
+            "name": "@add-to-cart",
+            "line": 31
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;add-multiple-products-to-cart",
+        "keyword": "Scenario",
+        "line": 40,
+        "name": "Add multiple products to cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 3033999
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 489400
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 583503400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 601600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 403500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 41,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 930487199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 42,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:200"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 22903500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 43,
+            "name": "I add 3 products to cart",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:294"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 216327900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 44,
+            "name": "the cart counter should show \"3\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:277"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 19547300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 45,
+            "name": "I navigate to the cart page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:314"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 92858400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 46,
+            "name": "I should see 3 items in the cart",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:326"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 14045799
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 15060100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 185900
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@shopping-cart",
+            "line": 39
+          },
+          {
+            "name": "@multi-add",
+            "line": 39
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;remove-product-from-cart",
+        "keyword": "Scenario",
+        "line": 49,
+        "name": "Remove product from cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1811900
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 501400
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 559548500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 522600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 387099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 50,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 903811600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 51,
+            "name": "I have added 2 products to cart",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:339"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 382454900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 52,
+            "name": "I navigate to the cart page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:314"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 93869299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 53,
+            "name": "I remove the first product from cart",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:362"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 69517299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 54,
+            "name": "I should see 1 item in the cart",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 55,
+            "name": "the cart counter should show \"1\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:277"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 17888999
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 206199
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@shopping-cart",
+            "line": 48
+          },
+          {
+            "name": "@remove",
+            "line": 48
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;complete-checkout-process",
+        "keyword": "Scenario",
+        "line": 58,
+        "name": "Complete checkout process",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 2354900
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 414100
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 613142400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 817599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 455600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 59,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 971153300
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "Sauce Labs Backpack"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Sauce Labs Bike Light"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 60,
+            "name": "I have added products to cart:",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 63,
+            "name": "I navigate to the cart page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:314"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 64,
+            "name": "I click the checkout button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:375"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "firstName",
+                      "John"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "lastName",
+                      "Doe"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "zipCode",
+                      "12345"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 65,
+            "name": "I fill in checkout information:",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:384"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 69,
+            "name": "I click continue",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:403"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 70,
+            "name": "I should see the order summary",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:412"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 71,
+            "name": "I should see the total price",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:424"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 17158999
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 268199
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@checkout",
+            "line": 57
+          },
+          {
+            "name": "@complete-purchase",
+            "line": 57
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;finalize-order",
+        "keyword": "Scenario",
+        "line": 74,
+        "name": "Finalize order",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1340499
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 405699
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 577433399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 373100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 254300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 75,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1537401099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 76,
+            "name": "I have products in cart",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 77,
+            "name": "I am on the checkout summary page",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 78,
+            "name": "I click the \"Finish\" button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:437"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 79,
+            "name": "I should see the order confirmation page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:450"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 80,
+            "name": "I should see \"Thank you for your order\" message",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:462"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18843500
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 235899
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@checkout",
+            "line": 73
+          },
+          {
+            "name": "@finalize",
+            "line": 73
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;sort-products-by-price-low-to-high",
+        "keyword": "Scenario",
+        "line": 83,
+        "name": "Sort products by price low to high",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 985199
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 325599
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 728822599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 346399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 188399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 84,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1500550499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 85,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:200"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 14960100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 86,
+            "name": "I select sort option \"Price (low to high)\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:474"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 11018599,
+              "error_message": "Error: Sort dropdown not found\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:477:11)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 87,
+            "name": "the products should be sorted by price in ascending order",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:487"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18751199
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 278999
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@sorting",
+            "line": 82
+          },
+          {
+            "name": "@price-low-high",
+            "line": 82
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;sort-products-by-price-high-to-low",
+        "keyword": "Scenario",
+        "line": 90,
+        "name": "Sort products by price high to low",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 959800
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 303499
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 702913600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 417299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 472099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 91,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 983251899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 92,
+            "name": "I view the products list",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:200"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 8569700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 93,
+            "name": "I select sort option \"Price (high to low)\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:474"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 7310199,
+              "error_message": "Error: Sort dropdown not found\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:477:11)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 94,
+            "name": "the products should be sorted by price in descending order",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18660800
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 301299
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@sorting",
+            "line": 89
+          },
+          {
+            "name": "@price-high-low",
+            "line": 89
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;filter-to-view-single-product",
+        "keyword": "Scenario",
+        "line": 97,
+        "name": "Filter to view single product",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 973200
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 345799
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 861689399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 225500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 96999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 98,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1000444600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 99,
+            "name": "I click on \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:504"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 91064200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 100,
+            "name": "I should see the product detail page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:518"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 9837599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 101,
+            "name": "I should see the product name \"Sauce Labs Backpack\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:530"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 26129199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 102,
+            "name": "I should see the product price",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 103,
+            "name": "I should see the product description",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 18208099
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 312799
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@filter",
+            "line": 96
+          },
+          {
+            "name": "@single-item",
+            "line": 96
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;logout-from-application",
+        "keyword": "Scenario",
+        "line": 106,
+        "name": "Logout from application",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1071400
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 320299
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 655408700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 247699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 136600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 107,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 975790000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 108,
+            "name": "I click the menu button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:544"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 37626199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 109,
+            "name": "I click the logout link",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:552"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 957989300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 110,
+            "name": "I should be redirected to the login page",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 111,
+            "name": "the username field should be empty",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 20646600
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 409499
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@logout",
+            "line": 105
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;login-with-invalid-credentials",
+        "keyword": "Scenario",
+        "line": 114,
+        "name": "Login with invalid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 965400
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 286400
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 701392299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 369399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 198399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 115,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:75"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 609526199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 116,
+            "name": "I enter username \"invalid_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:102"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 63662599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 117,
+            "name": "I enter password \"wrong_password\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:115"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 46449700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 118,
+            "name": "I click the login button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:128"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 5013336899,
+              "error_message": "Error: function timed out, ensure the promise resolves within 5000 milliseconds\n    at Timeout.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\node_modules\\@cucumber\\cucumber\\src\\time.ts:52:14)\n    at listOnTimeout (node:internal/timers:594:17)\n    at processTimers (node:internal/timers:529:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 119,
+            "name": "I should see an error message",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:560"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 120,
+            "name": "the error message should contain \"Username and password do not match\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:572"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 55426599
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 508099
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@error-handling",
+            "line": 113
+          },
+          {
+            "name": "@invalid-login",
+            "line": 113
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;verify-page-load-performance",
+        "keyword": "Scenario",
+        "line": 123,
+        "name": "Verify page load performance",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 2054099
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 661700
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 776449199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 686899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 244200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 124,
+            "name": "I navigate to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:586"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1087195299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 125,
+            "name": "the page should load within 5 seconds",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:594"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2139156399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 126,
+            "name": "all images should be loaded",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:605"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 54364599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 127,
+            "name": "the page should be responsive",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:621"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2328600
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 24107100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 418200
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@performance",
+            "line": 122
+          },
+          {
+            "name": "@page-load",
+            "line": 122
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e-commerce-application;verify-page-accessibility",
+        "keyword": "Scenario",
+        "line": 130,
+        "name": "Verify page accessibility",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 2184300
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 857799
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 769113100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "the application URL is set to \"https://saucedemo.com\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:46"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 300500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "the browser is opened",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:55"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 171300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 131,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:75"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 644486499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 132,
+            "name": "all form inputs should have labels",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 133,
+            "name": "buttons should have accessible text",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 134,
+            "name": "page should have proper heading hierarchy",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 44227699
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 266999
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 4
+          },
+          {
+            "name": "@saucedemo",
+            "line": 4
+          },
+          {
+            "name": "@e2e",
+            "line": 4
+          },
+          {
+            "name": "@accessibility",
+            "line": 129
+          }
+        ],
+        "type": "scenario"
       }
     ],
     "id": "saucedemo-e-commerce-application",
@@ -2244,122 +2365,237 @@
     "uri": "features\\saucedemo.feature"
   },
   {
-    "description": "  As a user\n  I want to register, login, and manage my account\n  So that I can access the application securely",
+    "description": "  As a user\n  I want to test the SauceDemo application\n  So that I can verify the complete user workflow",
     "elements": [
       {
         "description": "",
-        "id": "user-authentication-and-account-management;successfully-register-new-user-with-valid-data",
+        "id": "saucedemo-e2e-testing;successful-login-with-valid-credentials",
         "keyword": "Scenario",
-        "line": 17,
-        "name": "Successfully register new user with valid data",
+        "line": 11,
+        "name": "Successful login with valid credentials",
         "steps": [
           {
             "keyword": "Before",
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 3813799
+              "duration": 2051400
             }
           },
           {
             "keyword": "Before",
             "hidden": true,
             "result": {
-              "status": "failed",
-              "duration": 88011300,
-              "error_message": "browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-HewQn7 --remote-debugging-pipe --no-startup-window\n<launched> pid=91096\nCall log:\n\u001b[2m  - <launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-HewQn7 --remote-debugging-pipe --no-startup-window\u001b[22m\n\u001b[2m  - <launched> pid=91096\u001b[22m\n\u001b[2m  - [pid=91096] <gracefully close start>\u001b[22m\n\u001b[2m  - [pid=91096] <kill>\u001b[22m\n\u001b[2m  - [pid=91096] <will force kill>\u001b[22m\n\u001b[2m  - [pid=91096] <process did exit: exitCode=3221225794, signal=null>\u001b[22m\n\u001b[2m  - [pid=91096] starting temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=91096] finished temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=91096] <gracefully close end>\u001b[22m\n\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:21:28)"
+              "status": "passed",
+              "duration": 584399
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 767086100
             }
           },
           {
             "arguments": [],
             "keyword": "Given ",
-            "line": 11,
-            "name": "the application is accessible",
+            "line": 8,
+            "name": "the application is loaded",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:65"
+            },
             "result": {
-              "status": "undefined",
-              "duration": 0
+              "status": "passed",
+              "duration": 1087200
             }
           },
           {
             "arguments": [],
-            "keyword": "And ",
-            "line": 12,
-            "name": "the database is connected",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "Given ",
-            "line": 18,
-            "name": "I am on the registration page",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [
-              {
-                "rows": [
-                  {
-                    "cells": [
-                      "firstName",
-                      "John"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "lastName",
-                      "Doe"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "email",
-                      "john@example.com"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "password",
-                      "SecurePass123!"
-                    ]
-                  },
-                  {
-                    "cells": [
-                      "confirm",
-                      "SecurePass123!"
-                    ]
-                  }
-                ]
-              }
-            ],
             "keyword": "When ",
-            "line": 19,
-            "name": "I enter the following user details:",
+            "line": 12,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:75"
+            },
             "result": {
-              "status": "undefined",
-              "duration": 0
+              "status": "passed",
+              "duration": 769605499
             }
           },
           {
             "arguments": [],
             "keyword": "And ",
-            "line": 25,
-            "name": "I accept the terms and conditions",
+            "line": 13,
+            "name": "I enter username \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:102"
+            },
             "result": {
-              "status": "undefined",
-              "duration": 0
+              "status": "passed",
+              "duration": 57082399
             }
           },
           {
             "arguments": [],
             "keyword": "And ",
-            "line": 26,
-            "name": "I click the register button",
+            "line": 14,
+            "name": "I enter password \"secret_sauce\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:115"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 37188099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 15,
+            "name": "I click the login button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:128"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 210464900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 16,
+            "name": "I should see the products page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:153"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 13618700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 17,
+            "name": "the page title should contain \"Swag Labs\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:165"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 29725099
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 14986700
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 189299
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 1
+          },
+          {
+            "name": "@e2e",
+            "line": 1
+          },
+          {
+            "name": "@saucedemo",
+            "line": 1
+          },
+          {
+            "name": "@smoke",
+            "line": 10
+          },
+          {
+            "name": "@login",
+            "line": 10
+          },
+          {
+            "name": "@positive",
+            "line": 10
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e2e-testing;view-products-after-login",
+        "keyword": "Scenario",
+        "line": 20,
+        "name": "View products after login",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1163399
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 284599
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 656473100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "the application is loaded",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:65"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1565099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 21,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1030885999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 22,
+            "name": "I navigate to the products page",
             "result": {
               "status": "undefined",
               "duration": 0
@@ -2368,20 +2604,10 @@
           {
             "arguments": [],
             "keyword": "Then ",
-            "line": 27,
-            "name": "I should see a success message \"Account created successfully\"",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 28,
-            "name": "I should be redirected to the login page",
+            "line": 23,
+            "name": "I should see at least 6 products",
             "match": {
-              "location": "features\\step-definitions\\saucedemoSteps.ts:512"
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:212"
             },
             "result": {
               "status": "skipped",
@@ -2391,10 +2617,13 @@
           {
             "arguments": [],
             "keyword": "And ",
-            "line": 29,
-            "name": "the user \"john@example.com\" should exist in the database",
+            "line": 24,
+            "name": "each product should have a name and price",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:225"
+            },
             "result": {
-              "status": "undefined",
+              "status": "skipped",
               "duration": 0
             }
           },
@@ -2403,7 +2632,7 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 564100
+              "duration": 25297599
             }
           },
           {
@@ -2411,97 +2640,413 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 344199
+              "duration": 220400
             }
           }
         ],
         "tags": [
           {
             "name": "@bdd",
-            "line": 4
+            "line": 1
           },
           {
-            "name": "@authentication",
-            "line": 4
+            "name": "@e2e",
+            "line": 1
           },
           {
-            "name": "@user-management",
-            "line": 4
-          },
-          {
-            "name": "@registration",
-            "line": 16
-          },
-          {
-            "name": "@positive",
-            "line": 16
+            "name": "@saucedemo",
+            "line": 1
           },
           {
             "name": "@smoke",
-            "line": 16
+            "line": 19
+          },
+          {
+            "name": "@products",
+            "line": 19
+          },
+          {
+            "name": "@positive",
+            "line": 19
           }
         ],
         "type": "scenario"
       },
       {
         "description": "",
-        "id": "user-authentication-and-account-management;successfully-login-with-valid-credentials",
+        "id": "saucedemo-e2e-testing;successful-logout",
         "keyword": "Scenario",
-        "line": 75,
-        "name": "Successfully login with valid credentials",
+        "line": 27,
+        "name": "Successful logout",
         "steps": [
           {
             "keyword": "Before",
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 3632499
+              "duration": 1134300
             }
           },
           {
             "keyword": "Before",
             "hidden": true,
             "result": {
+              "status": "passed",
+              "duration": 330099
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 719488499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "the application is loaded",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:65"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 287199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 28,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1024672299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 29,
+            "name": "I click the menu button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:544"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 83001700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 30,
+            "name": "I click logout",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 31,
+            "name": "I should be redirected to the login page",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 32,
+            "name": "the username field should be empty",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 14786100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 201600
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 1
+          },
+          {
+            "name": "@e2e",
+            "line": 1
+          },
+          {
+            "name": "@saucedemo",
+            "line": 1
+          },
+          {
+            "name": "@smoke",
+            "line": 26
+          },
+          {
+            "name": "@logout",
+            "line": 26
+          },
+          {
+            "name": "@positive",
+            "line": 26
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e2e-testing;login-fails-with-invalid-credentials",
+        "keyword": "Scenario",
+        "line": 35,
+        "name": "Login fails with invalid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 725200
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 242700
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 781658700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "the application is loaded",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:65"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 307699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 36,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:75"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 717728599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 37,
+            "name": "I enter username \"invalid_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:102"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 52478399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 38,
+            "name": "I enter password \"wrong_password\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:115"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 31152999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 39,
+            "name": "I click the login button",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:128"
+            },
+            "result": {
               "status": "failed",
-              "duration": 81619200,
-              "error_message": "browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\n<launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-62j6OT --remote-debugging-pipe --no-startup-window\n<launched> pid=57976\nCall log:\n\u001b[2m  - <launching> C:\\Users\\ChandraSekharNannapa\\AppData\\Local\\ms-playwright\\chromium_headless_shell-1208\\chrome-headless-shell-win64\\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\playwright_chromiumdev_profile-62j6OT --remote-debugging-pipe --no-startup-window\u001b[22m\n\u001b[2m  - <launched> pid=57976\u001b[22m\n\u001b[2m  - [pid=57976] <gracefully close start>\u001b[22m\n\u001b[2m  - [pid=57976] <kill>\u001b[22m\n\u001b[2m  - [pid=57976] <will force kill>\u001b[22m\n\u001b[2m  - [pid=57976] <process did exit: exitCode=3221225794, signal=null>\u001b[22m\n\u001b[2m  - [pid=57976] starting temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=57976] finished temporary directories cleanup\u001b[22m\n\u001b[2m  - [pid=57976] <gracefully close end>\u001b[22m\n\n    at World.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\features\\step-definitions\\saucedemoPlaywright.ts:21:28)"
+              "duration": 5006365099,
+              "error_message": "Error: function timed out, ensure the promise resolves within 5000 milliseconds\n    at Timeout.<anonymous> (C:\\chandra-1212-main\\playwright-crx-enhanced\\backend\\node_modules\\@cucumber\\cucumber\\src\\time.ts:52:14)\n    at listOnTimeout (node:internal/timers:594:17)\n    at processTimers (node:internal/timers:529:7)"
             }
           },
           {
             "arguments": [],
-            "keyword": "Given ",
-            "line": 11,
-            "name": "the application is accessible",
+            "keyword": "Then ",
+            "line": 40,
+            "name": "I should see an error message",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:560"
+            },
             "result": {
-              "status": "undefined",
+              "status": "skipped",
               "duration": 0
             }
           },
           {
             "arguments": [],
             "keyword": "And ",
-            "line": 12,
-            "name": "the database is connected",
+            "line": 41,
+            "name": "the error message should contain \"do not match\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:572"
+            },
             "result": {
-              "status": "undefined",
+              "status": "skipped",
               "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 43980700
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 572899
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 1
+          },
+          {
+            "name": "@e2e",
+            "line": 1
+          },
+          {
+            "name": "@saucedemo",
+            "line": 1
+          },
+          {
+            "name": "@api",
+            "line": 34
+          },
+          {
+            "name": "@error",
+            "line": 34
+          },
+          {
+            "name": "@negative",
+            "line": 34
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e2e-testing;add-item-to-cart",
+        "keyword": "Scenario",
+        "line": 44,
+        "name": "Add item to cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1054100
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 327700
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 727052600
             }
           },
           {
             "arguments": [],
             "keyword": "Given ",
-            "line": 76,
-            "name": "the user \"user@example.com\" exists with password \"ValidPass123\"",
+            "line": 8,
+            "name": "the application is loaded",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:65"
+            },
             "result": {
-              "status": "undefined",
-              "duration": 0
+              "status": "passed",
+              "duration": 224699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 45,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 926344900
             }
           },
           {
             "arguments": [],
             "keyword": "And ",
-            "line": 77,
-            "name": "I am on the login page",
+            "line": 46,
+            "name": "I am on the products page",
             "result": {
               "status": "undefined",
               "duration": 0
@@ -2510,58 +3055,31 @@
           {
             "arguments": [],
             "keyword": "When ",
-            "line": 78,
-            "name": "I enter email \"user@example.com\"",
+            "line": 47,
+            "name": "I click \"Add to cart\" for the first product",
             "result": {
               "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 79,
-            "name": "I enter password \"ValidPass123\"",
-            "result": {
-              "status": "ambiguous",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 80,
-            "name": "I click the login button",
-            "result": {
-              "status": "ambiguous",
               "duration": 0
             }
           },
           {
             "arguments": [],
             "keyword": "Then ",
-            "line": 81,
-            "name": "I should be redirected to the dashboard",
+            "line": 48,
+            "name": "the cart counter should show \"1\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:277"
+            },
             "result": {
-              "status": "undefined",
+              "status": "skipped",
               "duration": 0
             }
           },
           {
             "arguments": [],
             "keyword": "And ",
-            "line": 82,
-            "name": "I should see the user greeting \"Welcome, User\"",
-            "result": {
-              "status": "undefined",
-              "duration": 0
-            }
-          },
-          {
-            "arguments": [],
-            "keyword": "And ",
-            "line": 83,
-            "name": "a session cookie should be created",
+            "line": 49,
+            "name": "the button text should change to \"Remove from cart\"",
             "result": {
               "status": "undefined",
               "duration": 0
@@ -2572,7 +3090,7 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 202800
+              "duration": 22045200
             }
           },
           {
@@ -2580,57 +3098,251 @@
             "hidden": true,
             "result": {
               "status": "passed",
-              "duration": 153599
+              "duration": 243300
             }
           }
         ],
         "tags": [
           {
             "name": "@bdd",
-            "line": 4
+            "line": 1
           },
           {
-            "name": "@authentication",
-            "line": 4
+            "name": "@e2e",
+            "line": 1
           },
           {
-            "name": "@user-management",
-            "line": 4
+            "name": "@saucedemo",
+            "line": 1
           },
           {
-            "name": "@login",
-            "line": 74
+            "name": "@shopping-cart",
+            "line": 43
           },
           {
             "name": "@positive",
-            "line": 74
+            "line": 43
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "saucedemo-e2e-testing;complete-checkout-process",
+        "keyword": "Scenario",
+        "line": 52,
+        "name": "Complete checkout process",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 885199
+            }
           },
           {
-            "name": "@smoke",
-            "line": 74
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 238899
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 861756800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "the application is loaded",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:65"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 252599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 53,
+            "name": "I am logged in as \"standard_user\"",
+            "match": {
+              "location": "features\\step-definitions\\saucedemoPlaywright.ts:179"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1056697099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 54,
+            "name": "I have 2 items in my cart",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 55,
+            "name": "I click the cart icon",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 56,
+            "name": "I click \"Checkout\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 57,
+            "name": "I fill in first name \"John\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 58,
+            "name": "I fill in last name \"Doe\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 59,
+            "name": "I fill in postal code \"12345\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 60,
+            "name": "I click \"Continue\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 61,
+            "name": "I click \"Finish\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 62,
+            "name": "I should see \"Thank you for your order\"",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 63,
+            "name": "the order is complete",
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 16066200
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 483400
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@bdd",
+            "line": 1
+          },
+          {
+            "name": "@e2e",
+            "line": 1
+          },
+          {
+            "name": "@saucedemo",
+            "line": 1
+          },
+          {
+            "name": "@checkout",
+            "line": 51
+          },
+          {
+            "name": "@positive",
+            "line": 51
           }
         ],
         "type": "scenario"
       }
     ],
-    "id": "user-authentication-and-account-management",
-    "line": 5,
+    "id": "saucedemo-e2e-testing",
+    "line": 2,
     "keyword": "Feature",
-    "name": "User Authentication and Account Management",
+    "name": "SauceDemo E2E Testing",
     "tags": [
       {
         "name": "@bdd",
-        "line": 4
+        "line": 1
       },
       {
-        "name": "@authentication",
-        "line": 4
+        "name": "@e2e",
+        "line": 1
       },
       {
-        "name": "@user-management",
-        "line": 4
+        "name": "@saucedemo",
+        "line": 1
       }
     ],
-    "uri": "features\\user-authentication.feature"
+    "uri": "features\\test.feature"
   }
 ]

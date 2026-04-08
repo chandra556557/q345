@@ -27,6 +27,11 @@ import {
   convertToGherkin,
   testCaseUpload,
 } from '../controllers/bdd.controller';
+import {
+  runCucumberTests,
+  getTestRunStatus,
+  getTestRuns
+} from '../controllers/cucumberTestRunner.controller';
 
 const router = Router();
 
@@ -67,5 +72,10 @@ router.delete('/schedules/:id', authMiddleware, deleteSchedule);
 
 // Test case → Gherkin conversion (supports file upload or JSON body)
 router.post('/convert', authMiddleware, testCaseUpload.single('file'), convertToGherkin);
+
+// Cucumber Test Runner - Run tests from UI dashboard
+router.post('/run-cucumber', authMiddleware, runCucumberTests);
+router.get('/run-cucumber', authMiddleware, getTestRuns);
+router.get('/run-cucumber/:runId', authMiddleware, getTestRunStatus);
 
 export default router;

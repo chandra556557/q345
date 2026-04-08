@@ -1,219 +1,212 @@
 <?xml version="1.0"?>
-<testsuite failures="11" skipped="0" name="cucumber-js" time="9.685460546" tests="16">
-  <testcase classname="REST API Testing" name="Get list of all users" time="0.736299198">
+<testsuite failures="15" skipped="0" name="cucumber-js" time="50.846227393999996" tests="20">
+  <testcase classname="SauceDemo E-commerce Application" name="Successful login with valid credentials" time="2.1733431899999998">
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+When I navigate to the login page.........................................passed
+And I enter username "standard_user"......................................passed
+And I enter password "secret_sauce".......................................passed
+And I click the login button..............................................passed
+Then I should see the products page.......................................passed
+And the page title should contain "Swag Labs".............................passed]]></system-out>
+  </testcase>
+  <testcase classname="SauceDemo E-commerce Application" name="View products list" time="2.735353194">
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+When I view the products list.............................................passed
+Then I should see at least 6 products.....................................passed
+And each product should have a name and price.............................passed
+And each product should have an "Add to cart" button......................passed]]></system-out>
+  </testcase>
+  <testcase classname="SauceDemo E-commerce Application" name="Add single product to cart" time="1.853405196">
     <failure/>
-    <system-out><![CDATA[Given the API is running on "http://localhost:3001"....................undefined
-And I have a valid authentication token................................undefined
-And the database is seeded with test data..............................undefined
-When I send a GET request to "/api/users"..............................undefined
-Then the response status should be 200.................................undefined
-And the response should contain a JSON array...........................undefined
-And the array should have at least 3 users.............................undefined
-And each user should have the following fields:........................undefined
-And the response time should be less than 500ms........................undefined]]></system-out>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+When I view the products list.............................................passed
+And I add the first product to cart.......................................passed
+Then the cart counter should show "1".....................................passed
+And the product should show "Remove" button instead of "Add to cart"...undefined]]></system-out>
   </testcase>
-  <testcase classname="Database CRUD Operations" name="Retrieve record by primary key" time="0.722323496">
+  <testcase classname="SauceDemo E-commerce Application" name="Add multiple products to cart" time="1.8994479969999998">
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+When I view the products list.............................................passed
+And I add 3 products to cart..............................................passed
+Then the cart counter should show "3".....................................passed
+And I navigate to the cart page...........................................passed
+And I should see 3 items in the cart......................................passed]]></system-out>
+  </testcase>
+  <testcase classname="SauceDemo E-commerce Application" name="Remove product from cart" time="2.0305197950000005">
     <failure/>
-    <system-out><![CDATA[Given the database is connected........................................undefined
-And the database tables are clean......................................undefined
-And test data fixtures are available...................................undefined
-Given a user with ID "1" exists........................................undefined
-When I query the user by ID "1"........................................undefined
-Then the query should return exactly 1 record..........................undefined
-And the record should contain all expected fields......................undefined
-And the query should execute in less than 100ms........................undefined]]></system-out>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+And I have added 2 products to cart.......................................passed
+When I navigate to the cart page..........................................passed
+And I remove the first product from cart..................................passed
+Then I should see 1 item in the cart...................................undefined
+And the cart counter should show "1".....................................skipped]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Switch to project 1" time="0.8174312939999999">
-    <system-out><![CDATA[Given the following projects are available:...............................passed
-Given I use project "project1"............................................passed
-Then I should be using project "project1".................................passed
-And the project should have database "playwright_project1"................passed
-And the project should use port 3001......................................passed]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Complete checkout process" time="1.605765097">
+    <failure/>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+And I have added products to cart:.....................................undefined
+When I navigate to the cart page.........................................skipped
+And I click the checkout button..........................................skipped
+And I fill in checkout information:......................................skipped
+And I click continue.....................................................skipped
+Then I should see the order summary......................................skipped
+And I should see the total price.........................................skipped]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Switch to project 2" time="0.8259432980000001">
-    <system-out><![CDATA[Given the following projects are available:...............................passed
-Given I use project "project2"............................................passed
-Then I should be using project "project2".................................passed
-And the project should have database "playwright_project2"................passed
-And the project should use port 3002......................................passed]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Finalize order" time="2.1362874950000004">
+    <failure/>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+And I have products in cart............................................undefined
+And I am on the checkout summary page..................................undefined
+When I click the "Finish" button.........................................skipped
+Then I should see the order confirmation page............................skipped
+And I should see "Thank you for your order" message......................skipped]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Health check for project 1" time="0.6989437930000002">
-    <system-out><![CDATA[Given the following projects are available:...............................passed
-Given I use project "project1"............................................passed
-When I call the health check endpoint.....................................passed
-Then the API should return status 200.....................................passed
-And the health check status should be "ok"................................passed
-And the environment should be "development"...............................passed]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Sort products by price low to high" time="2.2762275909999996">
+    <failure type="Error" message="Sort dropdown not found"><![CDATA[Error: Sort dropdown not found
+    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\saucedemoPlaywright.ts:477:11)]]></failure>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+When I view the products list.............................................passed
+And I select sort option "Price (low to high)"............................failed
+Then the products should be sorted by price in ascending order...........skipped]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Health check for project 2" time="0.7304462970000001">
-    <failure type="Error" message="Health check failed: Error"><![CDATA[Error: Health check failed: Error
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\projectSteps.ts:120:11)
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)]]></failure>
-    <system-out><![CDATA[Given the following projects are available:...............................passed
-Given I use project "project2"............................................passed
-When I call the health check endpoint.....................................failed
-Then the API should return status 200....................................skipped
-And the health check status should be "ok"...............................skipped
-And the environment should be "staging"..................................skipped]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Sort products by price high to low" time="1.7231601939999999">
+    <failure type="Error" message="Sort dropdown not found"><![CDATA[Error: Sort dropdown not found
+    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\saucedemoPlaywright.ts:477:11)]]></failure>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+When I view the products list.............................................passed
+And I select sort option "Price (high to low)"............................failed
+Then the products should be sorted by price in descending order........undefined]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Database connection for project 1" time="0.7398381940000003">
-    <system-out><![CDATA[Given the following projects are available:...............................passed
-Given I use project "project1"............................................passed
-When I call the database health check endpoint............................passed
-Then the API should return status 200.....................................passed
-And the health check status should be "ok"................................passed]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Filter to view single product" time="2.009327393">
+    <failure/>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+When I click on "Sauce Labs Backpack".....................................passed
+Then I should see the product detail page.................................passed
+And I should see the product name "Sauce Labs Backpack"...................passed
+And I should see the product price.....................................undefined
+And I should see the product description...............................undefined]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Database connection for project 2" time="0.742497198">
-    <failure type="Error" message="Database health check failed: Error"><![CDATA[Error: Database health check failed: Error
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\projectSteps.ts:145:11)
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)]]></failure>
-    <system-out><![CDATA[Given the following projects are available:...............................passed
-Given I use project "project2"............................................passed
-When I call the database health check endpoint............................failed
-Then the API should return status 200....................................skipped
-And the health check status should be "ok"...............................skipped]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Logout from application" time="2.649646296">
+    <failure/>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+Given I am logged in as "standard_user"...................................passed
+When I click the menu button..............................................passed
+And I click the logout link...............................................passed
+Then I should be redirected to the login page..........................undefined
+And the username field should be empty.................................undefined]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Verify project 1 configuration" time="0.7662445959999998">
-    <system-out><![CDATA[Given the following projects are available:...............................passed
-Given I have project "project1" with database name "playwright_project1...passed
-When I call the health check endpoint.....................................passed
-Then the API should return status 200.....................................passed]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Login with invalid credentials" time="6.4921219919999995">
+    <failure type="Error" message="function timed out, ensure the promise resolves within 5000 milliseconds"><![CDATA[Error: function timed out, ensure the promise resolves within 5000 milliseconds
+    at Timeout.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\node_modules\@cucumber\cucumber\src\time.ts:52:14)
+    at listOnTimeout (node:internal/timers:594:17)
+    at processTimers (node:internal/timers:529:7)]]></failure>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+When I navigate to the login page.........................................passed
+And I enter username "invalid_user".......................................passed
+And I enter password "wrong_password".....................................passed
+And I click the login button..............................................failed
+Then I should see an error message.......................................skipped
+And the error message should contain "Username and password do not mat...skipped]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Verify project 2 configuration" time="0.7395554950000001">
-    <failure type="Error" message="Health check failed: Error"><![CDATA[Error: Health check failed: Error
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\projectSteps.ts:120:11)
-    at processTicksAndRejections (node:internal/process/task_queues:105:5)]]></failure>
-    <system-out><![CDATA[Given the following projects are available:...............................passed
-Given I have project "project2" with database name "playwright_project2...passed
-When I call the health check endpoint.....................................failed
-Then the API should return status 200....................................skipped]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Verify page load performance" time="4.087666294000001">
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+When I navigate to "https://saucedemo.com"................................passed
+Then the page should load within 5 seconds................................passed
+And all images should be loaded...........................................passed
+And the page should be responsive.........................................passed]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Access API endpoints for project 1" time="0.8498906979999999">
-    <failure type="Error" message="browserContext.newPage: Target page, context or browser has been closed"><![CDATA[browserContext.newPage: Target page, context or browser has been closed
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\saucedemoPlaywright.ts:23:34)]]></failure>
-    <system-out><![CDATA[Given the following projects are available:..............................skipped
-Given I use project "project1"...........................................skipped
-When I make a request to "/api"..........................................skipped
-Then the API should return status 200....................................skipped
-And the response should contain "playwright-crx-backend".................skipped]]></system-out>
+  <testcase classname="SauceDemo E-commerce Application" name="Verify page accessibility" time="1.4616081959999998">
+    <failure/>
+    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"...............passed
+And the browser is opened.................................................passed
+When I navigate to the login page.........................................passed
+Then all form inputs should have labels................................undefined
+And buttons should have accessible text................................undefined
+And page should have proper heading hierarchy..........................undefined]]></system-out>
   </testcase>
-  <testcase classname="Dynamic Project Management" name="Access API endpoints for project 2" time="0.859275299">
-    <failure type="Error" message="browserContext.newPage: Target page, context or browser has been closed"><![CDATA[browserContext.newPage: Target page, context or browser has been closed
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\saucedemoPlaywright.ts:23:34)]]></failure>
-    <system-out><![CDATA[Given the following projects are available:..............................skipped
-Given I use project "project2"...........................................skipped
-When I make a request to "/api"..........................................skipped
-Then the API should return status 200....................................skipped
-And the response should contain "playwright-crx-backend".................skipped]]></system-out>
+  <testcase classname="SauceDemo E2E Testing" name="Successful login with valid credentials" time="1.903669794">
+    <system-out><![CDATA[Given the application is loaded...........................................passed
+When I navigate to the login page.........................................passed
+And I enter username "standard_user"......................................passed
+And I enter password "secret_sauce".......................................passed
+And I click the login button..............................................passed
+Then I should see the products page.......................................passed
+And the page title should contain "Swag Labs".............................passed]]></system-out>
   </testcase>
-  <testcase classname="SauceDemo E-commerce Application" name="Successful login with valid credentials" time="0.138382197">
-    <failure type="Error" message="browserType.launch: Target page, context or browser has been closed&#xA;Browser logs:&#xA;&#xA;&lt;launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-9ovve9 --remote-debugging-pipe --no-startup-window&#xA;&lt;launched> pid=57456&#xA;Call log:&#xA;[2m  - &lt;launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-9ovve9 --remote-debugging-pipe --no-startup-window[22m&#xA;[2m  - &lt;launched> pid=57456[22m&#xA;[2m  - [pid=57456] &lt;gracefully close start>[22m&#xA;[2m  - [pid=57456] &lt;kill>[22m&#xA;[2m  - [pid=57456] &lt;will force kill>[22m&#xA;[2m  - [pid=57456] &lt;process did exit: exitCode=3221225794, signal=null>[22m&#xA;[2m  - [pid=57456] starting temporary directories cleanup[22m&#xA;[2m  - [pid=57456] finished temporary directories cleanup[22m&#xA;[2m  - [pid=57456] &lt;gracefully close end>[22m&#xA;"><![CDATA[browserType.launch: Target page, context or browser has been closed
-Browser logs:
-
-<launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-9ovve9 --remote-debugging-pipe --no-startup-window
-<launched> pid=57456
-Call log:
-[2m  - <launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-9ovve9 --remote-debugging-pipe --no-startup-window[22m
-[2m  - <launched> pid=57456[22m
-[2m  - [pid=57456] <gracefully close start>[22m
-[2m  - [pid=57456] <kill>[22m
-[2m  - [pid=57456] <will force kill>[22m
-[2m  - [pid=57456] <process did exit: exitCode=3221225794, signal=null>[22m
-[2m  - [pid=57456] starting temporary directories cleanup[22m
-[2m  - [pid=57456] finished temporary directories cleanup[22m
-[2m  - [pid=57456] <gracefully close end>[22m
-
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\saucedemoPlaywright.ts:21:28)]]></failure>
-    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"............ambiguous
-And the browser is opened..............................................ambiguous
-When I navigate to the login page......................................ambiguous
-And I enter username "standard_user"...................................ambiguous
-And I enter password "secret_sauce"....................................ambiguous
-And I click the login button...........................................ambiguous
-Then I should see the products page....................................ambiguous
-And the page title should contain "Swag Labs"..........................ambiguous]]></system-out>
+  <testcase classname="SauceDemo E2E Testing" name="View products after login" time="1.715890195">
+    <failure/>
+    <system-out><![CDATA[Given the application is loaded...........................................passed
+Given I am logged in as "standard_user"...................................passed
+When I navigate to the products page...................................undefined
+Then I should see at least 6 products....................................skipped
+And each product should have a name and price............................skipped]]></system-out>
   </testcase>
-  <testcase classname="SauceDemo E-commerce Application" name="View products list" time="0.14004799700000004">
-    <failure type="Error" message="browserType.launch: Target page, context or browser has been closed&#xA;Browser logs:&#xA;&#xA;&lt;launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-ERbRZG --remote-debugging-pipe --no-startup-window&#xA;&lt;launched> pid=82348&#xA;Call log:&#xA;[2m  - &lt;launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-ERbRZG --remote-debugging-pipe --no-startup-window[22m&#xA;[2m  - &lt;launched> pid=82348[22m&#xA;[2m  - [pid=82348] &lt;gracefully close start>[22m&#xA;[2m  - [pid=82348] &lt;kill>[22m&#xA;[2m  - [pid=82348] &lt;will force kill>[22m&#xA;[2m  - [pid=82348] &lt;process did exit: exitCode=3221225794, signal=null>[22m&#xA;[2m  - [pid=82348] starting temporary directories cleanup[22m&#xA;[2m  - [pid=82348] finished temporary directories cleanup[22m&#xA;[2m  - [pid=82348] &lt;gracefully close end>[22m&#xA;"><![CDATA[browserType.launch: Target page, context or browser has been closed
-Browser logs:
-
-<launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-ERbRZG --remote-debugging-pipe --no-startup-window
-<launched> pid=82348
-Call log:
-[2m  - <launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-ERbRZG --remote-debugging-pipe --no-startup-window[22m
-[2m  - <launched> pid=82348[22m
-[2m  - [pid=82348] <gracefully close start>[22m
-[2m  - [pid=82348] <kill>[22m
-[2m  - [pid=82348] <will force kill>[22m
-[2m  - [pid=82348] <process did exit: exitCode=3221225794, signal=null>[22m
-[2m  - [pid=82348] starting temporary directories cleanup[22m
-[2m  - [pid=82348] finished temporary directories cleanup[22m
-[2m  - [pid=82348] <gracefully close end>[22m
-
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\saucedemoPlaywright.ts:21:28)]]></failure>
-    <system-out><![CDATA[Given the application URL is set to "https://saucedemo.com"............ambiguous
-And the browser is opened..............................................ambiguous
-Given I am logged in as "standard_user"................................ambiguous
-When I view the products list..........................................ambiguous
-Then I should see at least 6 products..................................ambiguous
-And each product should have a name and price..........................ambiguous
-And each product should have an "Add to cart" button...................ambiguous]]></system-out>
+  <testcase classname="SauceDemo E2E Testing" name="Successful logout" time="1.843901796">
+    <failure/>
+    <system-out><![CDATA[Given the application is loaded...........................................passed
+Given I am logged in as "standard_user"...................................passed
+When I click the menu button..............................................passed
+And I click logout.....................................................undefined
+Then I should be redirected to the login page..........................undefined
+And the username field should be empty.................................undefined]]></system-out>
   </testcase>
-  <testcase classname="User Authentication and Account Management" name="Successfully register new user with valid data" time="0.09273339800000001">
-    <failure type="Error" message="browserType.launch: Target page, context or browser has been closed&#xA;Browser logs:&#xA;&#xA;&lt;launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-HewQn7 --remote-debugging-pipe --no-startup-window&#xA;&lt;launched> pid=91096&#xA;Call log:&#xA;[2m  - &lt;launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-HewQn7 --remote-debugging-pipe --no-startup-window[22m&#xA;[2m  - &lt;launched> pid=91096[22m&#xA;[2m  - [pid=91096] &lt;gracefully close start>[22m&#xA;[2m  - [pid=91096] &lt;kill>[22m&#xA;[2m  - [pid=91096] &lt;will force kill>[22m&#xA;[2m  - [pid=91096] &lt;process did exit: exitCode=3221225794, signal=null>[22m&#xA;[2m  - [pid=91096] starting temporary directories cleanup[22m&#xA;[2m  - [pid=91096] finished temporary directories cleanup[22m&#xA;[2m  - [pid=91096] &lt;gracefully close end>[22m&#xA;"><![CDATA[browserType.launch: Target page, context or browser has been closed
-Browser logs:
-
-<launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-HewQn7 --remote-debugging-pipe --no-startup-window
-<launched> pid=91096
-Call log:
-[2m  - <launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-HewQn7 --remote-debugging-pipe --no-startup-window[22m
-[2m  - <launched> pid=91096[22m
-[2m  - [pid=91096] <gracefully close start>[22m
-[2m  - [pid=91096] <kill>[22m
-[2m  - [pid=91096] <will force kill>[22m
-[2m  - [pid=91096] <process did exit: exitCode=3221225794, signal=null>[22m
-[2m  - [pid=91096] starting temporary directories cleanup[22m
-[2m  - [pid=91096] finished temporary directories cleanup[22m
-[2m  - [pid=91096] <gracefully close end>[22m
-
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\saucedemoPlaywright.ts:21:28)]]></failure>
-    <system-out><![CDATA[Given the application is accessible....................................undefined
-And the database is connected..........................................undefined
-Given I am on the registration page....................................undefined
-When I enter the following user details:...............................undefined
-And I accept the terms and conditions..................................undefined
-And I click the register button........................................undefined
-Then I should see a success message "Account created successfully".....undefined
-And I should be redirected to the login page.............................skipped
-And the user "john@example.com" should exist in the database...........undefined]]></system-out>
+  <testcase classname="SauceDemo E2E Testing" name="Login fails with invalid credentials" time="6.635212993999999">
+    <failure type="Error" message="function timed out, ensure the promise resolves within 5000 milliseconds"><![CDATA[Error: function timed out, ensure the promise resolves within 5000 milliseconds
+    at Timeout.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\node_modules\@cucumber\cucumber\src\time.ts:52:14)
+    at listOnTimeout (node:internal/timers:594:17)
+    at processTimers (node:internal/timers:529:7)]]></failure>
+    <system-out><![CDATA[Given the application is loaded...........................................passed
+When I navigate to the login page.........................................passed
+And I enter username "invalid_user".......................................passed
+And I enter password "wrong_password".....................................passed
+And I click the login button..............................................failed
+Then I should see an error message.......................................skipped
+And the error message should contain "do not match"......................skipped]]></system-out>
   </testcase>
-  <testcase classname="User Authentication and Account Management" name="Successfully login with valid credentials" time="0.08560809800000001">
-    <failure type="Error" message="browserType.launch: Target page, context or browser has been closed&#xA;Browser logs:&#xA;&#xA;&lt;launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-62j6OT --remote-debugging-pipe --no-startup-window&#xA;&lt;launched> pid=57976&#xA;Call log:&#xA;[2m  - &lt;launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-62j6OT --remote-debugging-pipe --no-startup-window[22m&#xA;[2m  - &lt;launched> pid=57976[22m&#xA;[2m  - [pid=57976] &lt;gracefully close start>[22m&#xA;[2m  - [pid=57976] &lt;kill>[22m&#xA;[2m  - [pid=57976] &lt;will force kill>[22m&#xA;[2m  - [pid=57976] &lt;process did exit: exitCode=3221225794, signal=null>[22m&#xA;[2m  - [pid=57976] starting temporary directories cleanup[22m&#xA;[2m  - [pid=57976] finished temporary directories cleanup[22m&#xA;[2m  - [pid=57976] &lt;gracefully close end>[22m&#xA;"><![CDATA[browserType.launch: Target page, context or browser has been closed
-Browser logs:
-
-<launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-62j6OT --remote-debugging-pipe --no-startup-window
-<launched> pid=57976
-Call log:
-[2m  - <launching> C:\Users\ChandraSekharNannapa\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=C:\Users\CHANDR~1\AppData\Local\Temp\playwright_chromiumdev_profile-62j6OT --remote-debugging-pipe --no-startup-window[22m
-[2m  - <launched> pid=57976[22m
-[2m  - [pid=57976] <gracefully close start>[22m
-[2m  - [pid=57976] <kill>[22m
-[2m  - [pid=57976] <will force kill>[22m
-[2m  - [pid=57976] <process did exit: exitCode=3221225794, signal=null>[22m
-[2m  - [pid=57976] starting temporary directories cleanup[22m
-[2m  - [pid=57976] finished temporary directories cleanup[22m
-[2m  - [pid=57976] <gracefully close end>[22m
-
-    at World.<anonymous> (C:\chandra-1212-main\playwright-crx-enhanced\backend\features\step-definitions\saucedemoPlaywright.ts:21:28)]]></failure>
-    <system-out><![CDATA[Given the application is accessible....................................undefined
-And the database is connected..........................................undefined
-Given the user "user@example.com" exists with password "ValidPass123...undefined
-And I am on the login page.............................................undefined
-When I enter email "user@example.com"..................................undefined
-And I enter password "ValidPass123"....................................ambiguous
-And I click the login button...........................................ambiguous
-Then I should be redirected to the dashboard...........................undefined
-And I should see the user greeting "Welcome, User".....................undefined
-And a session cookie should be created.................................undefined]]></system-out>
+  <testcase classname="SauceDemo E2E Testing" name="Add item to cart" time="1.677292499">
+    <failure/>
+    <system-out><![CDATA[Given the application is loaded...........................................passed
+Given I am logged in as "standard_user"...................................passed
+And I am on the products page..........................................undefined
+When I click "Add to cart" for the first product.......................undefined
+Then the cart counter should show "1"....................................skipped
+And the button text should change to "Remove from cart"................undefined]]></system-out>
+  </testcase>
+  <testcase classname="SauceDemo E2E Testing" name="Complete checkout process" time="1.936380196">
+    <failure/>
+    <system-out><![CDATA[Given the application is loaded...........................................passed
+Given I am logged in as "standard_user"...................................passed
+And I have 2 items in my cart..........................................undefined
+When I click the cart icon.............................................undefined
+And I click "Checkout".................................................undefined
+And I fill in first name "John"........................................undefined
+And I fill in last name "Doe"..........................................undefined
+And I fill in postal code "12345"......................................undefined
+And I click "Continue".................................................undefined
+And I click "Finish"...................................................undefined
+Then I should see "Thank you for your order"...........................undefined
+And the order is complete..............................................undefined]]></system-out>
   </testcase>
 </testsuite>

@@ -1,0 +1,117 @@
+{
+  "uuid": "ed1d4fe6-880c-48fa-8b62-a6d8fcca7606",
+  "historyId": "25cc870a-df48-4554-93c5-d4d0551cc63d-Successful login with valid credentials",
+  "testCaseId": "ed1d4fe6-880c-48fa-8b62-a6d8fcca7606",
+  "fullName": "SauceDemo E2E Testing > Successful login with valid credentials",
+  "name": "Successful login with valid credentials",
+  "status": "failed",
+  "statusDetails": {},
+  "stage": "finished",
+  "start": 1775555434629,
+  "stop": 1775555437913,
+  "labels": [
+    {
+      "name": "suite",
+      "value": "SauceDemo E2E Testing"
+    },
+    {
+      "name": "parentSuite",
+      "value": "BDD / Cucumber"
+    },
+    {
+      "name": "feature",
+      "value": "SauceDemo E2E Testing"
+    },
+    {
+      "name": "story",
+      "value": "Successful login with valid credentials"
+    },
+    {
+      "name": "framework",
+      "value": "Cucumber BDD"
+    },
+    {
+      "name": "language",
+      "value": "gherkin"
+    }
+  ],
+  "links": [],
+  "parameters": [],
+  "steps": [
+    {
+      "name": "Before ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775555437135,
+      "stop": 1775555437913,
+      "attachments": []
+    },
+    {
+      "name": "When I navigate to the login page",
+      "status": "failed",
+      "statusDetails": {
+        "message": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/* URL */\", waiting until \"load\"\u001b[22m\n\n    at PlaywrightWorld.<anonymous> (C:\\Users\\CHANDR~1\\AppData\\Local\\Temp\\bdd-shared-env\\runs\\25cc870a-df48-4554-93c5-d4d0551cc63d\\features\\step_definitions\\steps.js:1016:19)"
+      },
+      "stage": "finished",
+      "start": 1775555435604,
+      "stop": 1775555437913,
+      "attachments": []
+    },
+    {
+      "name": "And I enter username \"standard_user\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775555437913,
+      "stop": 1775555437913,
+      "attachments": []
+    },
+    {
+      "name": "And I enter password \"secret_sauce\"",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775555437913,
+      "stop": 1775555437913,
+      "attachments": []
+    },
+    {
+      "name": "And I click the login button",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775555437913,
+      "stop": 1775555437913,
+      "attachments": []
+    },
+    {
+      "name": "Then I should see the products page",
+      "status": "skipped",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775555437913,
+      "stop": 1775555437913,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775555437736,
+      "stop": 1775555437913,
+      "attachments": []
+    },
+    {
+      "name": "After ",
+      "status": "passed",
+      "statusDetails": {},
+      "stage": "finished",
+      "start": 1775555437893,
+      "stop": 1775555437913,
+      "attachments": []
+    }
+  ],
+  "attachments": []
+}

@@ -1,0 +1,11 @@
+{
+  "uuid": "6a2499f3-dacf-4d26-9d3d-253c1ce44f38",
+  "name": "SauceDemo E2E Testing",
+  "children": [
+    "d1672ee9-cd1e-4b25-ab49-cbddd4d359e6"
+  ],
+  "befores": [],
+  "afters": [],
+  "start": 1775556144271,
+  "stop": 1775556145623
+}
