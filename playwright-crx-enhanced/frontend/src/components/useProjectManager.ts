@@ -85,7 +85,7 @@ export function useProjectManager() {
     const projectTags = selectedProject.tags.split(',').map(t => t.trim()).filter(Boolean);
     const userTagList = userTags ? userTags.split(',').map(t => t.trim()).filter(Boolean) : [];
     const allTags = [...new Set([...projectTags, ...userTagList])];
-    return allTags.join(' and ');
+    return allTags.join(' or ');
   };
 
   return {

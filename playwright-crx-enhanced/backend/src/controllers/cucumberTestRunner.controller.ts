@@ -177,6 +177,7 @@ function executeTestsInBackground(
       const childProcess = spawn('npm', args, {
         cwd: backendDir,
         stdio: 'pipe',
+        shell: true,
         env: { ...process.env, ...projectEnvVars }
       });
 

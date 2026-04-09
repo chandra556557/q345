@@ -275,6 +275,9 @@ class BDDService {
     const lines: string[] = [];
     lines.push(`import { test, expect } from '@playwright/test';`);
     lines.push('');
+    lines.push(`// Base URL from environment or fallback — configure per project`);
+    lines.push(`const BASE_URL = process.env.BASE_URL || '${this.extractBaseUrl(feature)}';`);
+    lines.push('');
     lines.push(`test.describe('${this.escapeString(feature.name)}', () => {`);
 
     for (const scenario of feature.scenarios) {
@@ -324,6 +327,9 @@ class BDDService {
     lines.push(`import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;`);
     lines.push('');
     lines.push(`public class ${className} {`);
+    lines.push('');
+    lines.push(`    // Base URL from environment or fallback — configure per project`);
+    lines.push(`    private static final String BASE_URL = System.getenv("BASE_URL") != null ? System.getenv("BASE_URL") : "${this.extractBaseUrl(feature)}";`);
     lines.push('');
 
     for (const scenario of feature.scenarios) {
@@ -389,9 +395,12 @@ class BDDService {
       const urlMatch = text.match(/"([^"]+)"|'([^']+)'|(\S+(?:\.com|\.org|\.net|\.io)\S*)/);
       if (urlMatch) {
         const url = urlMatch[1] || urlMatch[2] || urlMatch[3];
-        return `page.navigate("${url}");`;
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          return `page.navigate(System.getenv("BASE_URL") != null ? System.getenv("BASE_URL") : "${url}");`;
+        }
+        return `page.navigate(System.getenv("BASE_URL") + "${url.startsWith('/') ? url : '/' + url}");`;
       }
-      return `page.navigate(/* URL */);`;
+      return `page.navigate(System.getenv("BASE_URL") != null ? System.getenv("BASE_URL") : "/* URL */");`;
     }
 
     if (lower.includes('click')) {
@@ -1171,10 +1180,17 @@ class BDDService {
     const lower = text.toLowerCase();
     const quotes = (text.match(/"([^"]+)"/g) || []).map(m => m.replace(/"/g, ''));
 
-    // Navigation / Launch
+    // Navigation / Launch — use BASE_URL for full URLs, resolve relative paths
     if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit) /) || lower.includes('launch')) {
-      const url = quotes[0] || '/* URL */';
-      return `await page.goto('${this.escapeString(url)}');`;
+      const url = quotes[0] || '';
+      if (!url) return `await page.goto(BASE_URL);`;
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        // Full URL — use BASE_URL with fallback
+        return `await page.goto(BASE_URL || '${this.escapeString(url)}');`;
+      }
+      // Relative path — append to BASE_URL
+      const path = url.startsWith('/') ? url : `/${url}`;
+      return `await page.goto(BASE_URL + '${this.escapeString(path)}');`;
     }
     if (lower === 'i go back') return `await page.goBack();`;
     if (lower === 'i go forward') return `await page.goForward();`;
@@ -1307,7 +1323,7 @@ class BDDService {
         return `await page.getByText('${this.escapeString(quotes[0])}').first().waitFor({ state: 'hidden' });`;
       }
       if (lower.includes('page to load') || lower.includes('navigation')) {
-        return `await page.waitForLoadState('networkidle');`;
+        return `await page.waitForLoadState('domcontentloaded');`;
       }
       return `await page.waitForTimeout(1000);`;
     }
@@ -1330,7 +1346,7 @@ class BDDService {
       // Extract page name from "redirected to the X page"
       const pageMatch = text.match(/(?:to|on)\s+(?:the\s+)?(\w+)\s+page/i);
       if (pageMatch) return `await expect(page).toHaveURL(new RegExp('${this.escapeString(pageMatch[1].toLowerCase())}'));`;
-      return `await page.waitForLoadState('networkidle');`;
+      return `await page.waitForLoadState('domcontentloaded');`;
     }
 
     // Visibility assertions
@@ -1437,6 +1453,28 @@ class BDDService {
 
   private escapeString(s: string): string {
     return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+  }
+
+  /**
+   * Extract the base URL from a parsed feature by scanning all step texts for URLs.
+   * Returns the first full URL found, or empty string if none.
+   */
+  private extractBaseUrl(feature: ParsedFeature): string {
+    for (const scenario of feature.scenarios) {
+      for (const step of scenario.steps) {
+        const urlMatch = step.text.match(/https?:\/\/[^\s"']+/);
+        if (urlMatch) {
+          // Extract origin (protocol + host) without path
+          try {
+            const parsed = new URL(urlMatch[0]);
+            return parsed.origin;
+          } catch {
+            return urlMatch[0];
+          }
+        }
+      }
+    }
+    return '';
   }
 
   /**
@@ -2396,6 +2434,15 @@ module.exports = {
     lines.push(`  this.page.on('console', msg => {`);
     lines.push(`    if (msg.type() === 'error') console.log('[BROWSER ERROR]', msg.text());`);
     lines.push(`  });`);
+    lines.push('');
+    lines.push(`  // Auto-navigate to project baseUrl if configured (no explicit "Given I navigate" needed)`);
+    lines.push(`  if (ENV_PROFILE.baseUrl) {`);
+    lines.push(`    await this.page.goto(ENV_PROFILE.baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(e => {`);
+    lines.push(`      console.log('[WARN] Auto-navigation to ' + ENV_PROFILE.baseUrl + ' failed: ' + e.message);`);
+    lines.push(`    });`);
+    lines.push(`    // Capture initial page screenshot after navigation`);
+    lines.push(`    await this.takeScreenshot('initial-page').catch(() => {});`);
+    lines.push(`  }`);
     lines.push('});');
     lines.push('');
 
@@ -2435,12 +2482,15 @@ module.exports = {
     lines.push(`});`);
     lines.push('');
     lines.push(`AfterStep(async function (step) {`);
-    lines.push(`  // Auto-screenshot on step failure`);
-    lines.push(`  if (step.result && step.result.status === 'FAILED' && this.page) {`);
-    lines.push(`    try {`);
+    lines.push(`  if (!this.page) return;`);
+    lines.push(`  try {`);
+    lines.push(`    if (step.result && step.result.status === 'FAILED') {`);
     lines.push(`      await this.takeScreenshot('step-fail-' + this.stepIndex);`);
-    lines.push(`    } catch (e) { /* ignore */ }`);
-    lines.push(`  }`);
+    lines.push(`    } else {`);
+    lines.push(`      // Capture screenshot on every step (pass/fail) for full traceability`);
+    lines.push(`      await this.takeScreenshot('step-' + this.stepIndex + '-' + (step.result?.status || 'done'));`);
+    lines.push(`    }`);
+    lines.push(`  } catch (e) { /* ignore screenshot errors */ }`);
     lines.push(`});`);
     lines.push('');
 
@@ -2531,22 +2581,20 @@ module.exports = {
       // ========================================
       lines.push(`// Smart locator helpers`);
       lines.push(`async function findInput(page, field) {`);
-      lines.push(`  // Wait for page to be fully loaded (handles SPAs that render forms dynamically)`);
-      lines.push(`  await page.waitForLoadState('networkidle').catch(() => {});`);
-      lines.push(`  await page.waitForLoadState('domcontentloaded');`);
+      lines.push(`  // Wait for DOM ready (skip networkidle — it hangs on sites with analytics)`);
+      lines.push(`  await page.waitForLoadState('domcontentloaded').catch(() => {});`);
       lines.push('');
-      lines.push(`  // Build a combined CSS selector for waiting`);
+      lines.push(`  // Build a combined CSS selector`);
       lines.push(`  const cssSelector = \`input[name="\${field}" i], input[id="\${field}" i], textarea[name="\${field}" i], input[aria-label="\${field}" i], input[placeholder="\${field}" i]\`;`);
       lines.push('');
-      lines.push(`  // Wait for at least one matching input to appear in DOM (up to 30s)`);
+      lines.push(`  // Wait for matching input (10s max)`);
       lines.push(`  try {`);
-      lines.push(`    await page.waitForSelector(cssSelector, { state: 'attached', timeout: 30000 });`);
+      lines.push(`    await page.waitForSelector(cssSelector, { state: 'attached', timeout: 10000 });`);
       lines.push(`  } catch (e) {`);
-      lines.push(`    // If CSS selector didn't find it, try waiting for any input/textarea to appear`);
-      lines.push(`    await page.waitForSelector('input, textarea', { state: 'attached', timeout: 10000 }).catch(() => {});`);
+      lines.push(`    await page.waitForSelector('input, textarea', { state: 'attached', timeout: 5000 }).catch(() => {});`);
       lines.push(`  }`);
       lines.push('');
-      lines.push(`  // Now try smart selectors in priority order`);
+      lines.push(`  // Try smart selectors in priority order`);
       lines.push(`  const byLabel = page.getByLabel(field);`);
       lines.push(`  if (await byLabel.count() > 0) return byLabel.first();`);
       lines.push(`  const byPlaceholder = page.getByPlaceholder(field);`);
@@ -2557,7 +2605,7 @@ module.exports = {
       lines.push(`  if (await byTestId.count() > 0) return byTestId.first();`);
       lines.push(`  // Fallback to CSS attribute selectors`);
       lines.push(`  const fallback = page.locator(cssSelector).first();`);
-      lines.push(`  await fallback.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});`);
+      lines.push(`  await fallback.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});`);
       lines.push(`  return fallback;`);
       lines.push('}');
       lines.push('');
@@ -2586,14 +2634,14 @@ module.exports = {
       // 1. NAVIGATION
       // ========================================
       lines.push(`// --- Navigation steps ---`);
-      lines.push(`Given('I navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('I am on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('I open the url {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('I go to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('I visit {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('User is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('user is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`Given('the user is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`Given('I navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`Given('I am on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`Given('I open the url {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`Given('I go to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`Given('I visit {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`Given('User is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`Given('user is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`Given('the user is on {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
       lines.push(`Given('I am on the {string} page', async function (pageName) {`);
       lines.push(`  await this.page.waitForLoadState('domcontentloaded');`);
       lines.push(`  console.log('On page:', pageName, 'URL:', this.page.url());`);
@@ -2603,36 +2651,36 @@ module.exports = {
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push('});');
       lines.push(`Given('the user launches the application', async function () {`);
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push('});');
       lines.push(`Given('I launch the application', async function () {`);
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push('});');
       lines.push(`Given('the application is open', async function () {`);
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push('});');
       // When versions of navigation (steps can appear as When after a Given)
-      lines.push(`When('I navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`When('Navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`When('I go to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`When('I open the url {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
-      lines.push(`When('I visit {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'networkidle' }); });`);
+      lines.push(`When('I navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`When('Navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`When('I go to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`When('I open the url {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      lines.push(`When('I visit {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
       lines.push(`When('I go back', async function () { await this.page.goBack(); });`);
       lines.push(`When('I go forward', async function () { await this.page.goForward(); });`);
       lines.push(`When('I refresh the page', async function () { await this.page.reload(); });`);
@@ -2645,10 +2693,10 @@ module.exports = {
       lines.push(`// --- Environment Profile Steps ---`);
       lines.push(`Given('I am on the base URL', async function () {`);
       lines.push(`  const url = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`  await this.page.goto(url, { waitUntil: 'networkidle' });`);
+      lines.push(`  await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`});`);
       lines.push(`Given('I am on the base URL path {string}', async function (urlPath) {`);
-      lines.push(`  await this.page.goto(resolveUrl(urlPath), { waitUntil: 'networkidle' });`);
+      lines.push(`  await this.page.goto(resolveUrl(urlPath), { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`});`);
       lines.push(`Given('I use {string} credentials', async function (credName) {`);
       lines.push(`  const creds = getCredentials(credName);`);
@@ -2686,7 +2734,7 @@ module.exports = {
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push(`  const creds = ENV_PROFILE.credentials?.default || { username: 'standard_user', password: 'secret_sauce' };`);
       lines.push(`  const userInput = await findInput(this.page, 'Username');`);
@@ -2702,7 +2750,7 @@ module.exports = {
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push(`  const creds = ENV_PROFILE.credentials?.[credName] || { username: credName, password: 'secret_sauce' };`);
       lines.push(`  const userInput = await findInput(this.page, 'Username');`);
@@ -2721,7 +2769,7 @@ module.exports = {
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push(`  const creds = ENV_PROFILE.credentials?.default || { username: 'standard_user', password: 'secret_sauce' };`);
       lines.push(`  const userInput = await findInput(this.page, 'Username');`);
@@ -2737,7 +2785,7 @@ module.exports = {
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push(`  const creds = ENV_PROFILE.credentials?.[credName] || { username: credName, password: 'secret_sauce' };`);
       lines.push(`  const userInput = await findInput(this.page, 'Username');`);
@@ -2754,7 +2802,7 @@ module.exports = {
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push(`  const creds = ENV_PROFILE.credentials?.[credName] || { username: credName, password: 'secret_sauce' };`);
       lines.push(`  const userInput = await findInput(this.page, 'Username');`);
@@ -2770,7 +2818,7 @@ module.exports = {
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push(`  const creds = ENV_PROFILE.credentials?.default || { username: 'standard_user', password: 'secret_sauce' };`);
       lines.push(`  const userInput = await findInput(this.page, 'Username');`);
@@ -2786,7 +2834,7 @@ module.exports = {
       lines.push(`  const currentUrl = this.page.url();`);
       lines.push(`  if (!currentUrl || currentUrl === 'about:blank') {`);
       lines.push(`    const baseUrl = ENV_PROFILE.baseUrl || 'http://localhost:3000';`);
-      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'networkidle' });`);
+      lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push(`  const creds = ENV_PROFILE.credentials?.default || { username: 'standard_user', password: 'secret_sauce' };`);
       lines.push(`  const userInput = await findInput(this.page, 'Username');`);

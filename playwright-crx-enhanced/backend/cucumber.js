@@ -22,14 +22,6 @@ module.exports = {
     // Features directory
     paths: ['features/**/*.feature'],
 
-    // Support files (hooks, step definitions, helpers)
-    support: [
-      'features/support/world.ts',
-      'features/support/**/*.ts',
-      'features/hooks/**/*.ts',
-      'features/step-definitions/**/*.ts'
-    ],
-
     // Format options
     format: [
       'progress-bar',
@@ -55,40 +47,32 @@ module.exports = {
     // Tags filter
     tags: process.env.CUCUMBER_TAGS || '',
 
-    // Timeout
-    timeout: 60000
+    // Timeout (120s for browser tests — launch + navigation can be slow)
+    timeout: 120000
   },
 
   // Project-specific profiles
   project1: {
     paths: ['features/**/*.feature'],
-    support: [
-      'features/support/world.ts',
-      'features/support/**/*.ts',
-      'features/hooks/**/*.ts',
-      'features/step-definitions/**/*.ts'
-    ],
+    require: ['features/support/**/*.ts', 'features/step-definitions/**/*.ts'],
+    requireModule: ['ts-node/register'],
     format: [
       'progress-bar',
       'html:test-results/project1-cucumber-report.html',
       'json:test-results/project1-cucumber-report.json'
     ],
-    timeout: 60000
+    timeout: 120000
   },
 
   project2: {
     paths: ['features/**/*.feature'],
-    support: [
-      'features/support/world.ts',
-      'features/support/**/*.ts',
-      'features/hooks/**/*.ts',
-      'features/step-definitions/**/*.ts'
-    ],
+    require: ['features/support/**/*.ts', 'features/step-definitions/**/*.ts'],
+    requireModule: ['ts-node/register'],
     format: [
       'progress-bar',
       'html:test-results/project2-cucumber-report.html',
       'json:test-results/project2-cucumber-report.json'
     ],
-    timeout: 60000
+    timeout: 120000
   }
 };

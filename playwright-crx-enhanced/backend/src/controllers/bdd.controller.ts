@@ -21,6 +21,61 @@ export const testCaseUpload = multer({
   },
 });
 
+// Multer: .feature file upload (single or bulk, max 1MB each, max 20 files)
+export const featureFileUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 1 * 1024 * 1024, files: 20 },
+  fileFilter: (_req, file, cb) => {
+    const isFeatureExt = /\.(feature|gherkin)$/i.test(file.originalname);
+    const isTextMime = ['text/plain', 'application/octet-stream', 'application/x-gherkin'].includes(file.mimetype);
+    // Require valid extension; mimetype check is secondary (browsers vary)
+    if (isFeatureExt && isTextMime) {
+      cb(null, true);
+    } else if (isFeatureExt) {
+      // Accept if extension matches even with unexpected mimetype
+      cb(null, true);
+    } else {
+      cb(new Error(`Only .feature or .gherkin files are supported (got: ${file.originalname})`));
+    }
+  },
+});
+
+/** Strip UTF-8 BOM from file content */
+function stripBom(content: string): string {
+  return content.replace(/^\uFEFF/, '');
+}
+
+/** Parse CSV line handling quoted fields with commas */
+function parseCsvLine(line: string, delimiter: string): string[] {
+  const cells: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') {
+        current += '"';
+        i++; // skip escaped quote
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === delimiter) {
+        cells.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
 /**
  * Create a new BDD feature
  * POST /api/bdd/features
@@ -80,6 +135,167 @@ export const createFeature = asyncHandler(async (req: Request, res: Response) =>
   } finally {
     client.release();
   }
+});
+
+/**
+ * Bulk import .feature files
+ * POST /api/bdd/features/import
+ * Accepts multiple .feature files, creates a BDDFeature per file
+ */
+export const importFeatureFiles = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const organizationId = req.tenant?.organizationId || null;
+  const { projectId } = req.body;
+  const files = req.files as Express.Multer.File[];
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'At least one .feature file is required' });
+  }
+
+  const results: Array<{ filename: string; featureId?: string; scenarioCount?: number; error?: string }> = [];
+
+  for (const file of files) {
+    const featureContent = stripBom(file.buffer.toString('utf-8')).trim();
+    if (!featureContent) {
+      results.push({ filename: file.originalname, error: 'Empty file' });
+      continue;
+    }
+
+    // Derive name from filename (remove extension)
+    const name = file.originalname.replace(/\.(feature|gherkin)$/i, '').replace(/[-_]/g, ' ');
+
+    try {
+      const parsed = bddService.parseFeatureContent(featureContent);
+      const featureName = parsed.name || name;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const { rows } = await client.query(
+          `INSERT INTO "BDDFeature" (id, "userId", "organizationId", "projectId", name, description, "featureContent", tags, status, "createdAt", "updatedAt")
+           VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, 'draft', now(), now())
+           RETURNING *`,
+          [userId, organizationId, projectId || null, featureName, parsed.description || null, featureContent, JSON.stringify(parsed.tags || [])]
+        );
+
+        const feature = rows[0];
+        for (let sIdx = 0; sIdx < parsed.scenarios.length; sIdx++) {
+          const scenario = parsed.scenarios[sIdx];
+          const { rows: scenarioRows } = await client.query(
+            `INSERT INTO "BDDScenario" (id, "featureId", name, description, "scenarioType", tags, "examplesData", "sortOrder", "createdAt", "updatedAt")
+             VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, now(), now())
+             RETURNING *`,
+            [feature.id, scenario.name, scenario.description || null, scenario.type, JSON.stringify(scenario.tags || []), scenario.examples ? JSON.stringify(scenario.examples) : null, sIdx]
+          );
+          const scenarioRow = scenarioRows[0];
+          for (let stIdx = 0; stIdx < scenario.steps.length; stIdx++) {
+            const step = scenario.steps[stIdx];
+            await client.query(
+              `INSERT INTO "BDDStep" (id, "scenarioId", keyword, text, "dataTable", "docString", "sortOrder", "createdAt")
+               VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, now())`,
+              [scenarioRow.id, step.keyword, step.text, step.dataTable ? JSON.stringify(step.dataTable) : null, step.docString || null, stIdx]
+            );
+          }
+        }
+
+        await client.query('COMMIT');
+        results.push({ filename: file.originalname, featureId: feature.id, scenarioCount: parsed.scenarios.length });
+        logger.info(`Imported feature file: ${file.originalname} → ${feature.id} (${parsed.scenarios.length} scenarios)`);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (err: any) {
+      results.push({ filename: file.originalname, error: err.message || 'Parse/import failed' });
+      logger.error(`Failed to import ${file.originalname}: ${err.message}`);
+    }
+  }
+
+  const imported = results.filter(r => r.featureId);
+  const failed = results.filter(r => r.error);
+  return res.status(201).json({
+    success: true,
+    data: {
+      totalFiles: files.length,
+      imported: imported.length,
+      failed: failed.length,
+      results,
+    }
+  });
+});
+
+/**
+ * Convert CSV to Scenario Outline with Examples table
+ * POST /api/bdd/features/csv-to-outline
+ * Accepts a CSV file + scenario template, generates Gherkin with Examples
+ */
+export const csvToScenarioOutline = asyncHandler(async (req: Request, res: Response) => {
+  const file = req.file as Express.Multer.File | undefined;
+  const { scenarioName, featureName, steps, tags } = req.body;
+
+  let csvContent = '';
+  if (file) {
+    csvContent = stripBom(file.buffer.toString('utf-8')).trim();
+  } else if (req.body.csvContent) {
+    csvContent = stripBom(req.body.csvContent).trim();
+  }
+
+  if (!csvContent) {
+    return res.status(400).json({ error: 'CSV content or file is required' });
+  }
+
+  // Parse CSV: first row = headers, rest = data
+  const lines = csvContent.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) {
+    return res.status(400).json({ error: 'CSV must have at least a header row and one data row' });
+  }
+
+  const delimiter = lines[0].includes('\t') ? '\t' : ',';
+  const headers = parseCsvLine(lines[0], delimiter);
+  const dataRows = lines.slice(1).map(line => parseCsvLine(line, delimiter));
+
+  // Build steps template — if not provided, auto-generate from headers
+  let stepLines: string;
+  if (steps) {
+    stepLines = steps;
+  } else {
+    // Auto-generate steps using headers as placeholders
+    stepLines = headers.map((h, i) => {
+      if (i === 0) return `    Given I have "${h}" set to "<${h}>"`;
+      if (i === headers.length - 1) return `    Then I should see "<${h}>"`;
+      return `    And I set "${h}" to "<${h}>"`;
+    }).join('\n');
+  }
+
+  // Build Gherkin
+  const tagLine = tags ? `  ${tags}\n` : '';
+  const outlineName = scenarioName || 'Test with dynamic data';
+  const fName = featureName || 'Data-Driven Testing';
+
+  let gherkin = `Feature: ${fName}\n\n`;
+  gherkin += `${tagLine}  Scenario Outline: ${outlineName}\n`;
+  gherkin += `${stepLines}\n\n`;
+  gherkin += `    Examples:\n`;
+  gherkin += `      | ${headers.map(h => h.replace(/\|/g, '\\|')).join(' | ')} |\n`;
+  for (const row of dataRows) {
+    // Pad cells to match header count, escape pipes
+    const paddedRow = headers.map((_, i) => (row[i] || '').replace(/\|/g, '\\|'));
+    gherkin += `      | ${paddedRow.join(' | ')} |\n`;
+  }
+
+  return res.json({
+    success: true,
+    data: {
+      featureContent: gherkin,
+      totalExamples: dataRows.length,
+      headers,
+      scenarioCount: 1,
+      effectiveTests: dataRows.length,
+    }
+  });
 });
 
 /**
@@ -334,6 +550,71 @@ export const generateCode = asyncHandler(async (req: Request, res: Response) => 
 });
 
 /**
+ * Generate Playwright code from a BDD feature AND save it as a Script
+ * POST /api/bdd/features/:id/save-as-script
+ */
+export const saveAsScript = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { id } = req.params;
+  const rawLang = (req.body.language || 'typescript') as string;
+  const lang: Language = VALID_LANGUAGES.includes(rawLang as Language) ? rawLang as Language : 'typescript';
+  const { scriptName, browserType = 'chromium' } = req.body;
+
+  // Fetch BDD feature
+  const { rows: featureRows } = await pool.query(
+    `SELECT * FROM "BDDFeature" WHERE id = $1 AND "userId" = $2`,
+    [id, userId]
+  );
+  if (featureRows.length === 0) return res.status(404).json({ error: 'Feature not found' });
+
+  const feature = featureRows[0];
+
+  // Fetch project config for baseUrl
+  const projectConfig = await fetchProjectConfig(feature.projectId);
+
+  // Check if script already exists for this feature
+  const { rows: existingScripts } = await pool.query(
+    `SELECT id, name FROM "Script" WHERE "bddFeatureId" = $1 AND "userId" = $2`,
+    [id, userId]
+  );
+  if (existingScripts.length > 0) {
+    return res.status(409).json({
+      error: 'Script already exists for this feature',
+      existingScript: { id: existingScripts[0].id, name: existingScripts[0].name }
+    });
+  }
+
+  // Generate Playwright code
+  const parsed = bddService.parseFeatureContent(feature.featureContent);
+  const playwrightCode = bddService.generatePlaywrightCode(parsed, lang);
+
+  // Create Script record
+  const name = scriptName || feature.name;
+  const description = `Generated from BDD feature: ${feature.name}`;
+  const tags = feature.tags || '[]';
+
+  const { rows: scriptRows } = await pool.query(
+    `INSERT INTO "Script" (id, name, description, language, code, "projectId", "userId", "browserType", "workflowStatus", tags, "bddFeatureId", "generatedFrom", "baseUrl", "createdAt", "updatedAt")
+     VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, 'draft', $8, $9, 'bdd-feature', $10, now(), now())
+     RETURNING id, name, description, language, "browserType", "workflowStatus", "projectId", "bddFeatureId", "baseUrl", "createdAt"`,
+    [name, description, lang, playwrightCode, feature.projectId || null, userId, browserType, tags, id, projectConfig?.baseUrl || null]
+  );
+
+  const script = scriptRows[0];
+  logger.info(`BDD Feature ${id} → Script ${script.id} (${lang}, ${parsed.scenarios.length} scenarios)`);
+
+  return res.status(201).json({
+    success: true,
+    data: {
+      script,
+      playwrightCode,
+      language: lang,
+      scenarioCount: parsed.scenarios.length,
+    }
+  });
+});
+
+/**
  * Run a BDD feature
  * POST /api/bdd/features/:id/run
  */
@@ -368,8 +649,30 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
 
   const feature = rows[0];
 
-  // Count steps
+  // Validate feature content before execution
   const parsed = bddService.parseFeatureContent(feature.featureContent);
+  const validationErrors: string[] = [];
+  if (!parsed.name) validationErrors.push('Feature has no name');
+  if (parsed.scenarios.length === 0) validationErrors.push('Feature has no scenarios');
+  for (const scenario of parsed.scenarios) {
+    if (scenario.steps.length === 0) {
+      validationErrors.push(`Scenario "${scenario.name}" has no steps`);
+    }
+    for (const step of scenario.steps) {
+      if (!step.keyword || !step.text) {
+        validationErrors.push(`Scenario "${scenario.name}" has an invalid step (missing keyword or text)`);
+      }
+    }
+    if (scenario.type === 'Scenario Outline' && (!scenario.examples || scenario.examples.length === 0)) {
+      validationErrors.push(`Scenario Outline "${scenario.name}" has no Examples table`);
+    }
+  }
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      error: 'Feature validation failed',
+      validationErrors,
+    });
+  }
   const totalSteps = parsed.scenarios.reduce((sum, s) => sum + s.steps.length, 0);
 
   const parsedParallelWorkers = parallelWorkers ? parseInt(parallelWorkers, 10) : 1;
@@ -411,6 +714,13 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
 
   const run = runRows[0];
 
+  // Build environment profile — merge project config baseUrl with user-provided environment
+  const envProfile = {
+    ...(environment || {}),
+    baseUrl: environment?.baseUrl || projectConfig?.baseUrl || undefined,
+    name: environment?.name || projectConfig?.name || undefined,
+  };
+
   // Execute asynchronously with all options
   setImmediate(() => {
     bddService.executeFeature(run.id, feature.featureContent, stepDefinitions, {
@@ -419,7 +729,7 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
       retryCount: parsedRetryCount || undefined,
       retryDelayMs: retryDelayMs ? parseInt(retryDelayMs, 10) : undefined,
       quarantineFailures: quarantineFailures === true || quarantineFailures === 'true',
-      environment: environment || undefined,
+      environment: envProfile.baseUrl ? envProfile : undefined,
     }, userId, organizationId).catch(async (err: any) => {
       logger.error(`BDD Run ${run.id}: Unhandled error: ${err.message}`);
       await pool.query(

@@ -26,6 +26,10 @@ import {
   streamRun,
   convertToGherkin,
   testCaseUpload,
+  featureFileUpload,
+  importFeatureFiles,
+  csvToScenarioOutline,
+  saveAsScript,
 } from '../controllers/bdd.controller';
 import {
   runCucumberTests,
@@ -35,6 +39,10 @@ import {
 
 const router = Router();
 
+// Feature file import (must be before :id routes to avoid route conflict)
+router.post('/features/import', authMiddleware, optionalTenantMiddleware, featureFileUpload.array('files', 20), importFeatureFiles);
+router.post('/features/csv-to-outline', authMiddleware, testCaseUpload.single('file'), csvToScenarioOutline);
+
 // Feature CRUD
 router.get('/features', authMiddleware, getFeatures);
 router.get('/features/:id', authMiddleware, getFeature);
@@ -42,9 +50,10 @@ router.post('/features', authMiddleware, optionalTenantMiddleware, createFeature
 router.put('/features/:id', authMiddleware, optionalTenantMiddleware, updateFeature);
 router.delete('/features/:id', authMiddleware, deleteFeature);
 
-// Parse / Generate
+// Parse / Generate / Save as Script
 router.post('/parse', authMiddleware, parseFeature);
 router.post('/features/:id/generate', authMiddleware, generateCode);
+router.post('/features/:id/save-as-script', authMiddleware, optionalTenantMiddleware, saveAsScript);
 
 // Run execution
 router.post('/features/:id/run', authMiddleware, optionalTenantMiddleware, runFeature);

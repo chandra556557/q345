@@ -302,6 +302,7 @@ const BDDTesting: React.FC = () => {
     if (!featureContent.trim()) return;
     try {
       setLoading(true);
+      setEditorSavedScript(null); // Reset saved state on new parse
       const res = await axios.post(`${API_URL}/bdd/parse`, { featureContent, language: codeLanguage }, { headers });
       setParsedPreview(res.data.data.parsed);
       setGeneratedCode(res.data.data.playwrightCode);
@@ -355,6 +356,189 @@ const BDDTesting: React.FC = () => {
       setError(err.response?.data?.error || 'Failed to parse Gherkin');
     } finally {
       setConvertParsing(false);
+    }
+  };
+
+  // Upload .feature file into editor
+  const handleUploadFeatureFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = ev.target?.result as string;
+      if (content) {
+        setFeatureContent(content);
+        // Auto-set name from filename if empty
+        if (!featureName.trim()) {
+          setFeatureName(file.name.replace(/\.(feature|gherkin)$/i, '').replace(/[-_]/g, ' '));
+        }
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // reset input
+  };
+
+  // Bulk import multiple .feature files
+  const [importing, setImporting] = useState(false);
+  const [importResults, setImportResults] = useState<any>(null);
+
+  const handleBulkImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setImporting(true);
+    setError('');
+    setImportResults(null);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach(f => formData.append('files', f));
+      if (pm.selectedProjectId) formData.append('projectId', pm.selectedProjectId);
+
+      const res = await axios.post(`${API_URL}/bdd/features/import`, formData, {
+        headers: { Authorization: headers.Authorization },
+      });
+      setImportResults(res.data.data);
+      await loadFeatures();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to import feature files');
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
+
+  // CSV to Scenario Outline
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvScenarioName, setCsvScenarioName] = useState('');
+  const [csvFeatureName, setCsvFeatureName] = useState('');
+  const [csvSteps, setCsvSteps] = useState('');
+  const [csvConverting, setCsvConverting] = useState(false);
+
+  const handleCsvToOutline = async () => {
+    if (!csvFile) {
+      setError('Upload a CSV file with test data rows');
+      return;
+    }
+    setCsvConverting(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      if (csvFile) formData.append('file', csvFile);
+      if (csvScenarioName) formData.append('scenarioName', csvScenarioName);
+      if (csvFeatureName) formData.append('featureName', csvFeatureName);
+      if (csvSteps) formData.append('steps', csvSteps);
+
+      const res = await axios.post(`${API_URL}/bdd/features/csv-to-outline`, formData, {
+        headers: { Authorization: headers.Authorization },
+      });
+      const result = res.data.data;
+      setFeatureContent(result.featureContent);
+      if (!featureName.trim() && csvFeatureName) setFeatureName(csvFeatureName);
+      // Reset CSV form
+      setCsvFile(null);
+      setCsvScenarioName('');
+      setCsvFeatureName('');
+      setCsvSteps('');
+      setActiveTab('editor');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to convert CSV');
+    } finally {
+      setCsvConverting(false);
+    }
+  };
+
+  // Generate Playwright code from a saved feature
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [generatedFeatureCode, setGeneratedFeatureCode] = useState('');
+  const [generateLanguage, setGenerateLanguage] = useState<'typescript' | 'java' | 'java-cucumber'>('typescript');
+
+  const handleGenerateCode = async (featureId: string) => {
+    setGeneratingCode(true);
+    setGeneratedFeatureCode('');
+    setSavedScriptInfo(null);
+    setError('');
+    try {
+      const res = await axios.post(`${API_URL}/bdd/features/${featureId}/generate`, { language: generateLanguage }, { headers });
+      setGeneratedFeatureCode(res.data.data.playwrightCode);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to generate code');
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  // Save generated code as a Script record
+  const [savingAsScript, setSavingAsScript] = useState(false);
+  const [savedScriptInfo, setSavedScriptInfo] = useState<{ id: string; name: string } | null>(null);
+
+  const handleSaveAsScript = async (featureId: string) => {
+    setSavingAsScript(true);
+    setError('');
+    try {
+      const res = await axios.post(`${API_URL}/bdd/features/${featureId}/save-as-script`, {
+        language: generateLanguage,
+        browserType: 'chromium',
+      }, { headers });
+      const script = res.data.data.script;
+      setSavedScriptInfo({ id: script.id, name: script.name });
+      setGeneratedFeatureCode(res.data.data.playwrightCode);
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        const existing = err.response.data.existingScript;
+        setSavedScriptInfo({ id: existing.id, name: existing.name });
+        setError(`Script already exists: "${existing.name}". Go to Scripts module to enhance it.`);
+      } else {
+        setError(err.response?.data?.error || 'Failed to save as script');
+      }
+    } finally {
+      setSavingAsScript(false);
+    }
+  };
+
+  // Save generated code from editor as a Script (no need for saved feature — uses parse API directly)
+  const [savingEditorScript, setSavingEditorScript] = useState(false);
+  const [editorSavedScript, setEditorSavedScript] = useState<{ id: string; name: string } | null>(null);
+
+  const handleSaveGeneratedAsScript = async () => {
+    if (!generatedCode || !featureName.trim()) {
+      setError('Parse a feature first and ensure it has a name');
+      return;
+    }
+    setSavingEditorScript(true);
+    setError('');
+    try {
+      // If feature is already saved, use saveAsScript endpoint
+      if (editingFeatureId) {
+        const res = await axios.post(`${API_URL}/bdd/features/${editingFeatureId}/save-as-script`, {
+          language: codeLanguage,
+          browserType: 'chromium',
+          scriptName: featureName,
+        }, { headers });
+        const script = res.data.data.script;
+        setEditorSavedScript({ id: script.id, name: script.name });
+      } else {
+        // Feature not saved yet — create script directly via scripts API
+        const res = await axios.post(`${API_URL}/scripts`, {
+          name: featureName,
+          description: `Generated from BDD feature editor: ${featureName}`,
+          language: codeLanguage === 'java-cucumber' ? 'java' : codeLanguage,
+          code: generatedCode,
+          projectId: pm.selectedProjectId || undefined,
+          browserType: 'chromium',
+        }, { headers });
+        const script = res.data.data || res.data;
+        setEditorSavedScript({ id: script.id, name: script.name || featureName });
+      }
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        const existing = err.response.data.existingScript;
+        setEditorSavedScript({ id: existing.id, name: existing.name });
+        setError(`Script already exists: "${existing.name}". Go to Scripts to enhance it.`);
+      } else {
+        setError(err.response?.data?.error || 'Failed to save as script');
+      }
+    } finally {
+      setSavingEditorScript(false);
     }
   };
 
@@ -826,6 +1010,10 @@ const BDDTesting: React.FC = () => {
             <button className="bdd-btn bdd-btn-success" onClick={handleSaveFeature} disabled={saving || !featureName.trim() || !featureContent.trim()}>
               {saving ? 'Saving...' : editingFeatureId ? 'Update Feature' : 'Save Feature'}
             </button>
+            <label className="bdd-btn bdd-btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              Upload .feature
+              <input type="file" accept=".feature,.gherkin,.txt,text/plain" onChange={handleUploadFeatureFile} style={{ display: 'none' }} />
+            </label>
             {editingFeatureId && (
               <button className="bdd-btn" onClick={() => { setEditingFeatureId(null); setFeatureName(''); setFeatureContent(SAMPLE_FEATURE); setGeneratedCode(''); setParsedPreview(null); }}>
                 Cancel Edit
@@ -866,6 +1054,22 @@ const BDDTesting: React.FC = () => {
               <pre className="bdd-code-preview">
                 {generatedCode || (codeLanguage === 'java-cucumber' ? '// Click "Parse & Preview" to generate Java Cucumber BDD project\n// Generates: Step Definitions, Hooks, Runner, pom.xml' : codeLanguage === 'java' ? '// Click "Parse & Preview" to generate Java Playwright code' : '// Click "Parse & Preview" to generate Playwright code from your Gherkin feature')}
               </pre>
+              {/* Save as Script + Copy buttons below generated code */}
+              {generatedCode && (
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button className="bdd-btn bdd-btn-success" onClick={handleSaveGeneratedAsScript} disabled={savingEditorScript || !!editorSavedScript}>
+                    {savingEditorScript ? 'Saving...' : editorSavedScript ? 'Saved as Script' : 'Save as Script'}
+                  </button>
+                  <button className="bdd-btn bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(generatedCode)}>
+                    Copy Code
+                  </button>
+                  {editorSavedScript && (
+                    <span style={{ fontSize: '12px', color: '#2e7d32', background: '#e8f5e9', padding: '4px 10px', borderRadius: '4px' }}>
+                      Script saved: <strong>{editorSavedScript.name}</strong> — Go to <strong>Scripts</strong> tab in Dashboard to enhance with AI
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -890,6 +1094,35 @@ const BDDTesting: React.FC = () => {
                 />
               </div>
             )}
+          </div>
+
+          {/* CSV → Scenario Outline Generator */}
+          <div style={{ marginBottom: '20px', padding: '14px 16px', background: '#f5f7fa', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: 600 }}>CSV → Scenario Outline (Data-Driven)</h3>
+            <p style={{ fontSize: '12px', color: '#666', margin: '0 0 10px' }}>
+              Upload a CSV with test data rows → auto-generates a Scenario Outline with Examples table. Each CSV row becomes a test case.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+              <input type="text" placeholder="Feature name (optional)" value={csvFeatureName} onChange={e => setCsvFeatureName(e.target.value)}
+                style={{ flex: 1, minWidth: '150px', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '4px', fontSize: '13px' }} />
+              <input type="text" placeholder="Scenario name (optional)" value={csvScenarioName} onChange={e => setCsvScenarioName(e.target.value)}
+                style={{ flex: 1, minWidth: '150px', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '4px', fontSize: '13px' }} />
+            </div>
+            <div style={{ marginBottom: '10px' }}>
+              <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>Steps template (optional — auto-generated from CSV headers if empty). Use &lt;column_name&gt; as placeholders.</label>
+              <textarea value={csvSteps} onChange={e => setCsvSteps(e.target.value)} placeholder={'    Given I navigate to "<url>"\n    When I enter username "<username>"\n    And I enter password "<password>"\n    Then I should see "<expected>"'}
+                style={{ width: '100%', minHeight: '80px', padding: '8px 10px', border: '1px solid #d0d0d0', borderRadius: '4px', fontSize: '12px', fontFamily: 'monospace' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label className="bdd-btn bdd-btn-secondary" style={{ cursor: 'pointer' }}>
+                {csvFile ? csvFile.name : 'Choose CSV File'}
+                <input type="file" accept=".csv,.tsv,.txt" onChange={e => setCsvFile(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+              </label>
+              <button className="bdd-btn bdd-btn-primary" onClick={handleCsvToOutline} disabled={csvConverting || !csvFile}>
+                {csvConverting ? 'Converting...' : 'Generate Scenario Outline'}
+              </button>
+              {csvFile && <span style={{ fontSize: '12px', color: '#1565c0' }}>→ Will load into editor above</span>}
+            </div>
           </div>
 
           {/* Live Execution Output */}
@@ -965,6 +1198,28 @@ const BDDTesting: React.FC = () => {
           : features;
         return (
         <div>
+          {/* Bulk Import Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <label className="bdd-btn bdd-btn-primary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              {importing ? 'Importing...' : 'Import .feature Files'}
+              <input type="file" accept=".feature,.gherkin,.txt,text/plain" multiple onChange={handleBulkImport} disabled={importing} style={{ display: 'none' }} />
+            </label>
+            <span style={{ fontSize: '12px', color: '#888' }}>Upload one or more .feature files (max 20, 5MB each)</span>
+          </div>
+
+          {/* Import Results */}
+          {importResults && (
+            <div style={{ marginBottom: '12px', padding: '10px 14px', borderRadius: '6px', background: importResults.failed > 0 ? '#fff3e0' : '#e8f5e9', fontSize: '13px' }}>
+              <strong>Import complete:</strong> {importResults.imported} imported, {importResults.failed} failed out of {importResults.totalFiles} files.
+              {importResults.results.map((r: any, i: number) => (
+                <div key={i} style={{ marginTop: '4px', fontSize: '12px' }}>
+                  {r.featureId ? '✓' : '✗'} {r.filename} {r.featureId ? `(${r.scenarioCount} scenarios)` : `— ${r.error}`}
+                </div>
+              ))}
+              <button className="bdd-btn bdd-btn-sm" onClick={() => setImportResults(null)} style={{ marginTop: '6px', fontSize: '11px' }}>Dismiss</button>
+            </div>
+          )}
+
           {pm.selectedProjectId && (
             <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
               Showing features for <strong>{pm.projects.find(p => p.id === pm.selectedProjectId)?.name || 'selected project'}</strong> and unassigned features. {filteredFeatures.length} of {features.length} features.
@@ -1059,7 +1314,42 @@ const BDDTesting: React.FC = () => {
                 {runningFeatureId === selectedFeature.id ? 'Running...' : 'Run Feature'}
               </button>
               <button className="bdd-btn bdd-btn-secondary" onClick={() => handleEditFeature(selectedFeature)}>Edit in Editor</button>
+              <select value={generateLanguage} onChange={e => setGenerateLanguage(e.target.value as any)}
+                style={{ padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '4px', fontSize: '13px' }}>
+                <option value="typescript">TypeScript</option>
+                <option value="java">Java (Playwright)</option>
+                <option value="java-cucumber">Java (Cucumber BDD)</option>
+              </select>
+              <button className="bdd-btn bdd-btn-primary" onClick={() => handleGenerateCode(selectedFeature.id)} disabled={generatingCode}>
+                {generatingCode ? 'Generating...' : 'Generate Playwright Code'}
+              </button>
+              <button className="bdd-btn bdd-btn-success" onClick={() => handleSaveAsScript(selectedFeature.id)} disabled={savingAsScript || !!savedScriptInfo}>
+                {savingAsScript ? 'Saving...' : savedScriptInfo ? 'Saved as Script' : 'Save as Script'}
+              </button>
             </div>
+
+            {/* Saved Script Info */}
+            {savedScriptInfo && (
+              <div style={{ marginTop: '12px', padding: '10px 14px', background: '#e8f5e9', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '13px' }}>Script saved: <strong>{savedScriptInfo.name}</strong></span>
+                <span style={{ fontSize: '12px', color: '#666' }}>→ Go to <strong>Scripts</strong> tab in Dashboard to enhance with AI</span>
+              </div>
+            )}
+
+            {/* Generated Playwright Code Output */}
+            {generatedFeatureCode && (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '14px' }}>Generated Playwright Code ({generateLanguage})</h3>
+                  <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => { navigator.clipboard.writeText(generatedFeatureCode); }}>
+                    Copy to Clipboard
+                  </button>
+                </div>
+                <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '16px', borderRadius: '8px', overflow: 'auto', maxHeight: '500px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                  {generatedFeatureCode}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       )}
