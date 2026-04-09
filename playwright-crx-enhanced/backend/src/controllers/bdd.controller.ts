@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { fetchProjectConfig } from '../utils/projectHelpers';
 import pool from '../db';
 import multer from 'multer';
 import { bddService, bddEventEmitter } from '../services/bdd/bdd.service';
@@ -193,7 +194,7 @@ export const getFeature = asyncHandler(async (req: Request, res: Response) => {
 export const updateFeature = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { id } = req.params;
-  const { name, description, featureContent, tags, status } = req.body;
+  const { name, description, featureContent, tags, status, projectId } = req.body;
 
   const { rows: existing } = await pool.query(
     `SELECT * FROM "BDDFeature" WHERE id = $1 AND "userId" = $2`,
@@ -209,6 +210,7 @@ export const updateFeature = asyncHandler(async (req: Request, res: Response) =>
   if (description !== undefined) { updates.push(`description = $${idx}`); params.push(description); idx++; }
   if (tags !== undefined) { updates.push(`tags = $${idx}`); params.push(JSON.stringify(tags)); idx++; }
   if (status !== undefined) { updates.push(`status = $${idx}`); params.push(status); idx++; }
+  if (projectId !== undefined) { updates.push(`"projectId" = $${idx}`); params.push(projectId || null); idx++; }
 
   if (featureContent !== undefined) {
     updates.push(`"featureContent" = $${idx}`); params.push(featureContent); idx++;
@@ -345,6 +347,8 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
     retryCount, retryDelayMs, quarantineFailures,
     // Environment profile
     environment,
+    // Dynamic project selection
+    projectId,
   } = req.body;
 
   if (!VALID_BROWSERS.includes(browser)) {
@@ -371,18 +375,23 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
   const parsedParallelWorkers = parallelWorkers ? parseInt(parallelWorkers, 10) : 1;
   const parsedRetryCount = retryCount ? parseInt(retryCount, 10) : 0;
 
+  // Fetch project config if projectId provided
+  const projectConfig = await fetchProjectConfig(projectId);
+
   // Create run record
   const { rows: runRows } = await pool.query(
     `INSERT INTO "BDDRun" (
       id, "featureId", "scenarioId", "userId", "organizationId",
       status, "totalSteps", browser, "executionMode",
       tags, "parallelWorkers", "retryCount", "environmentName", "environmentProfile",
+      "projectId", "projectName", "projectBaseUrl",
       "createdAt", "updatedAt"
      )
      VALUES (
       gen_random_uuid()::text, $1, $2, $3, $4,
       'pending', $5, $6, $7,
       $8, $9, $10, $11, $12,
+      $13, $14, $15,
       now(), now()
      )
      RETURNING *`,
@@ -394,6 +403,9 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
       parsedRetryCount,
       environment?.name || null,
       environment ? JSON.stringify(environment) : null,
+      projectConfig?.id || null,
+      projectConfig?.name || null,
+      projectConfig?.baseUrl || null,
     ]
   );
 

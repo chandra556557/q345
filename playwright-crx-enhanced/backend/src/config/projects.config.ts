@@ -1,7 +1,9 @@
 /**
  * Project Configuration Manager
- * Dynamically loads project-specific settings from .env files
+ * Dynamically loads project-specific settings from .env files or database
  */
+
+import pool from '../db';
 
 export interface ProjectConfig {
   id: string;
@@ -55,6 +57,8 @@ export interface ProjectsRegistry {
   [key: string]: ProjectConfig;
 }
 
+// --- Env Parsing Helpers ---
+
 const parseBoolean = (value: string | undefined): boolean => {
   return value?.toLowerCase() === 'true';
 };
@@ -64,44 +68,19 @@ const parseArrayFromEnv = (value: string | undefined): string[] => {
   return value.split(',').map(s => s.trim()).filter(Boolean);
 };
 
+const parseIntEnv = (value: string | undefined, fallback: number): number => {
+  return parseInt(value || String(fallback), 10);
+};
+
 /**
- * Build project configuration from environment variables
+ * Build shared config sections that are identical between env-based and DB-based loading.
+ * These sections only come from env vars (never from DB project rows).
  */
-export function buildProjectConfig(projectName: string): ProjectConfig {
+function buildSharedEnvSections() {
   const env = process.env;
-
-  // Validate required environment variables
-  if (!env.DB_HOST) throw new Error('DB_HOST is required');
-  if (!env.DB_PORT) throw new Error('DB_PORT is required');
-  if (!env.DB_NAME) throw new Error('DB_NAME is required');
-  if (!env.DB_USER) throw new Error('DB_USER is required');
-  if (!env.DB_PASSWORD) throw new Error('DB_PASSWORD is required');
-
-  const dbPort = parseInt(env.DB_PORT || '5432', 10);
-  const redisPort = parseInt(env.REDIS_PORT || '6379', 10);
-  const serverPort = parseInt(env.PORT || '3001', 10);
-  const dbMaxClients = parseInt(env.DB_MAX_CLIENTS || '10', 10);
-  const dbMinClients = parseInt(env.DB_MIN_CLIENTS || '2', 10);
-  const workerPoolSize = parseInt(env.WORKER_POOL_SIZE || '3', 10);
-  const workerConcurrency = parseInt(env.WORKER_CONCURRENCY || '5', 10);
-
   return {
-    id: projectName,
-    name: env.PROJECT_DISPLAY_NAME || projectName,
-    environment: env.NODE_ENV || 'development',
-    database: {
-      host: env.DB_HOST,
-      port: dbPort,
-      name: env.DB_NAME,
-      user: env.DB_USER,
-      password: env.DB_PASSWORD,
-      schema: env.DB_SCHEMA || 'public',
-      url: env.DATABASE_URL || `postgresql://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_HOST}:${dbPort}/${env.DB_NAME}?schema=${env.DB_SCHEMA || 'public'}`,
-      maxClients: dbMaxClients,
-      minClients: dbMinClients,
-    },
     server: {
-      port: serverPort,
+      port: parseIntEnv(env.PORT, 3001),
       nodeEnv: env.NODE_ENV || 'development',
       allowedOrigins: parseArrayFromEnv(env.ALLOWED_ORIGINS),
     },
@@ -117,15 +96,15 @@ export function buildProjectConfig(projectName: string): ProjectConfig {
     },
     redis: {
       host: env.REDIS_HOST || 'localhost',
-      port: redisPort,
+      port: parseIntEnv(env.REDIS_PORT, 6379),
       password: env.REDIS_PASSWORD || '',
-      db: parseInt(env.REDIS_DB || '0', 10),
+      db: parseIntEnv(env.REDIS_DB, 0),
     },
     features: {
       enableQueue: parseBoolean(env.ENABLE_QUEUE),
       enableWorkerPool: parseBoolean(env.ENABLE_WORKER_POOL),
-      workerPoolSize,
-      workerConcurrency,
+      workerPoolSize: parseIntEnv(env.WORKER_POOL_SIZE, 3),
+      workerConcurrency: parseIntEnv(env.WORKER_CONCURRENCY, 5),
     },
     jwt: {
       accessSecret: env.JWT_ACCESS_SECRET || 'default-access-secret',
@@ -134,11 +113,79 @@ export function buildProjectConfig(projectName: string): ProjectConfig {
   };
 }
 
+// --- Config Builders ---
+
 /**
- * Dynamically load project configuration based on environment
+ * Build project configuration from environment variables
+ */
+export function buildProjectConfig(projectName: string): ProjectConfig {
+  const env = process.env;
+
+  if (!env.DB_HOST) throw new Error('DB_HOST is required');
+  if (!env.DB_PORT) throw new Error('DB_PORT is required');
+  if (!env.DB_NAME) throw new Error('DB_NAME is required');
+  if (!env.DB_USER) throw new Error('DB_USER is required');
+  if (!env.DB_PASSWORD) throw new Error('DB_PASSWORD is required');
+
+  const dbPort = parseIntEnv(env.DB_PORT, 5432);
+
+  return {
+    id: projectName,
+    name: env.PROJECT_DISPLAY_NAME || projectName,
+    environment: env.NODE_ENV || 'development',
+    database: {
+      host: env.DB_HOST,
+      port: dbPort,
+      name: env.DB_NAME,
+      user: env.DB_USER,
+      password: env.DB_PASSWORD,
+      schema: env.DB_SCHEMA || 'public',
+      url: env.DATABASE_URL || `postgresql://${env.DB_USER}:${env.DB_PASSWORD}@${env.DB_HOST}:${dbPort}/${env.DB_NAME}?schema=${env.DB_SCHEMA || 'public'}`,
+      maxClients: parseIntEnv(env.DB_MAX_CLIENTS, 10),
+      minClients: parseIntEnv(env.DB_MIN_CLIENTS, 2),
+    },
+    ...buildSharedEnvSections(),
+  };
+}
+
+/**
+ * Load project configuration from the database.
+ * Merges DB-stored values with env defaults as fallback.
+ */
+export async function loadProjectConfigFromDb(projectId: string): Promise<ProjectConfig> {
+  const { rows } = await pool.query('SELECT * FROM "Project" WHERE id = $1', [projectId]);
+  if (!rows[0]) throw new Error(`Project ${projectId} not found in database`);
+
+  const row = rows[0];
+  const env = process.env;
+  const dbPort = row.dbPort || parseIntEnv(env.DB_PORT, 5432);
+  const dbHost = row.dbHost || env.DB_HOST || 'localhost';
+  const dbName = row.dbName || env.DB_NAME || 'playwright_crx';
+  const dbUser = row.dbUser || env.DB_USER || 'postgres';
+  const dbPassword = row.dbPassword || env.DB_PASSWORD || '';
+
+  return {
+    id: row.id,
+    name: row.name,
+    environment: row.environment || env.NODE_ENV || 'development',
+    database: {
+      host: dbHost, port: dbPort, name: dbName, user: dbUser, password: dbPassword,
+      schema: env.DB_SCHEMA || 'public',
+      url: `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}?schema=${env.DB_SCHEMA || 'public'}`,
+      maxClients: parseIntEnv(env.DB_MAX_CLIENTS, 10),
+      minClients: parseIntEnv(env.DB_MIN_CLIENTS, 2),
+    },
+    ...buildSharedEnvSections(),
+  };
+}
+
+// --- Loaders ---
+
+/**
+ * Dynamically load project configuration based on ACTIVE_PROJECT env var
  */
 export function loadProjectConfig(): ProjectConfig {
-  const projectName = process.env.ACTIVE_PROJECT || 'default';
+  const projectName = process.env.ACTIVE_PROJECT;
 
   if (!projectName) {
     throw new Error(
@@ -149,7 +196,6 @@ export function loadProjectConfig(): ProjectConfig {
 
   const config = buildProjectConfig(projectName);
 
-  // Validate critical configuration
   if (!config.database.url) {
     throw new Error('Database URL could not be constructed from environment variables');
   }
@@ -158,14 +204,10 @@ export function loadProjectConfig(): ProjectConfig {
 }
 
 /**
- * Get all available project configurations
- * This would typically load from a projects directory
+ * Get all available project configurations from env
  */
 export function getAllProjectConfigs(): ProjectsRegistry {
   const registry: ProjectsRegistry = {};
-
-  // You can extend this to load from multiple .env.* files
-  // or from a configuration directory
   const projectNames = (process.env.AVAILABLE_PROJECTS || 'default').split(',');
 
   projectNames.forEach(projectName => {
@@ -180,11 +222,20 @@ export function getAllProjectConfigs(): ProjectsRegistry {
 }
 
 /**
- * Validate that all required environment variables are set
+ * Get all projects from database
+ */
+export async function getAllProjectsFromDb(): Promise<Array<{ id: string; name: string; baseUrl: string; apiBaseUrl: string; environment: string; tags: string }>> {
+  const { rows } = await pool.query(
+    'SELECT id, name, "baseUrl", "apiBaseUrl", environment, tags FROM "Project" ORDER BY name'
+  );
+  return rows;
+}
+
+/**
+ * Validate that all required fields are set in a project config
  */
 export function validateProjectConfig(config: ProjectConfig): void {
   const errors: string[] = [];
-
   if (!config.database.host) errors.push('Database host is required');
   if (!config.database.port) errors.push('Database port is required');
   if (!config.database.name) errors.push('Database name is required');

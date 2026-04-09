@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import './BDDTesting.css';
-
-const API_URL = 'http://localhost:3001/api';
+import ProjectSelector from './ProjectSelector';
+import { useProjectManager } from './useProjectManager';
+import { API_URL } from './apiConfig';
 
 interface BDDFeature {
   id: string;
@@ -13,6 +14,8 @@ interface BDDFeature {
   status: string;
   scenarioCount?: number;
   runCount?: number;
+  projectId?: string;
+  projectName?: string;
   createdAt: string;
   scenarios?: BDDScenario[];
 }
@@ -45,6 +48,9 @@ interface BDDRun {
   stepResults?: StepResult[];
   reportUrl?: string;
   screenshotUrls?: string[];
+  projectId?: string;
+  projectName?: string;
+  projectBaseUrl?: string;
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
@@ -195,6 +201,9 @@ const BDDTesting: React.FC = () => {
   const [runTags, setRunTags] = useState('');
   const [parallelWorkers, setParallelWorkers] = useState(1);
 
+  // Project config (extracted hook)
+  const pm = useProjectManager();
+
   // Detail state
   const [selectedFeature, setSelectedFeature] = useState<BDDFeature | null>(null);
   const [selectedRun, setSelectedRun] = useState<BDDRun | null>(null);
@@ -285,6 +294,7 @@ const BDDTesting: React.FC = () => {
   useEffect(() => {
     loadFeatures();
     loadRuns();
+    pm.loadProjects();
   }, []);
 
   // Parse feature content for preview
@@ -358,10 +368,10 @@ const BDDTesting: React.FC = () => {
       setError('');
       if (editingFeatureId) {
         // Update existing feature
-        await axios.put(`${API_URL}/bdd/features/${editingFeatureId}`, { name: featureName, featureContent }, { headers });
+        await axios.put(`${API_URL}/bdd/features/${editingFeatureId}`, { name: featureName, featureContent, projectId: pm.selectedProjectId || undefined }, { headers });
       } else {
         // Create new feature
-        await axios.post(`${API_URL}/bdd/features`, { name: featureName, featureContent }, { headers });
+        await axios.post(`${API_URL}/bdd/features`, { name: featureName, featureContent, projectId: pm.selectedProjectId || undefined }, { headers });
       }
       setFeatureName('');
       setFeatureContent(SAMPLE_FEATURE);
@@ -385,10 +395,15 @@ const BDDTesting: React.FC = () => {
       setLiveOutput([]);
       setLiveSteps([]);
       const stepDefinitions = customStepDefs.trim() ? { custom: customStepDefs } : {};
+
+      // Auto-merge project default tags with user-entered tags
+      const mergedTags = pm.mergeProjectTags(runTags || '');
+
       const res = await axios.post(`${API_URL}/bdd/features/${featureId}/run`, {
         stepDefinitions,
-        tags: runTags || undefined,
+        tags: mergedTags || undefined,
         parallelWorkers: parallelWorkers > 1 ? parallelWorkers : undefined,
+        projectId: pm.selectedProjectId || undefined,
       }, { headers });
 
       const runId = res.data.data?.id;
@@ -773,6 +788,24 @@ const BDDTesting: React.FC = () => {
         <button className={`bdd-tab ${activeTab === 'convert' ? 'active' : ''}`} onClick={() => setActiveTab('convert')}>Convert to Gherkin</button>
       </div>
 
+      {/* ===== Project Selector (visible on editor, features & runs tabs) ===== */}
+      {(activeTab === 'editor' || activeTab === 'features' || activeTab === 'runs') && (
+        <ProjectSelector
+          projects={pm.projects}
+          selectedProjectId={pm.selectedProjectId}
+          onSelectProject={pm.setSelectedProjectId}
+          selectedProject={pm.selectedProject}
+          showForm={pm.showProjectForm}
+          editingProject={pm.editingProject}
+          savingProject={pm.savingProject}
+          onAddProject={pm.openAddForm}
+          onEditProject={pm.openEditForm}
+          onDeleteProject={pm.deleteProject}
+          onSaveProject={pm.saveProject}
+          onCloseForm={pm.closeForm}
+        />
+      )}
+
       {/* ===== Feature Editor Tab ===== */}
       {activeTab === 'editor' && (
         <div>
@@ -926,9 +959,18 @@ const BDDTesting: React.FC = () => {
       )}
 
       {/* ===== Features List Tab ===== */}
-      {activeTab === 'features' && !selectedFeature && (
+      {activeTab === 'features' && !selectedFeature && (() => {
+        const filteredFeatures = pm.selectedProjectId
+          ? features.filter(f => f.projectId === pm.selectedProjectId || !f.projectId)
+          : features;
+        return (
         <div>
-          {features.length === 0 ? (
+          {pm.selectedProjectId && (
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+              Showing features for <strong>{pm.projects.find(p => p.id === pm.selectedProjectId)?.name || 'selected project'}</strong> and unassigned features. {filteredFeatures.length} of {features.length} features.
+            </div>
+          )}
+          {filteredFeatures.length === 0 ? (
             <div className="bdd-empty">
               <h3>No BDD Features Yet</h3>
               <p>Create your first feature in the Feature Editor tab</p>
@@ -936,14 +978,23 @@ const BDDTesting: React.FC = () => {
             </div>
           ) : (
             <div className="bdd-feature-list">
-              {features.map(feature => (
+              {filteredFeatures.map(feature => (
                 <div key={feature.id} className="bdd-feature-card">
                   <div className="bdd-feature-card-header">
                     <div>
                       <h3>{feature.name}</h3>
                       {feature.description && <p style={{ margin: '4px 0 0', color: '#666', fontSize: '13px' }}>{feature.description}</p>}
                     </div>
-                    <span className={`bdd-status ${feature.status}`}>{feature.status}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {feature.projectId ? (
+                        <span style={{ fontSize: '11px', background: '#e3f2fd', color: '#1565c0', padding: '2px 8px', borderRadius: '4px', fontWeight: 500 }}>
+                          {pm.projects.find(p => p.id === feature.projectId)?.name || 'Project'}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '11px', background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: '4px' }}>Unassigned</span>
+                      )}
+                      <span className={`bdd-status ${feature.status}`}>{feature.status}</span>
+                    </div>
                   </div>
                   <div className="bdd-feature-meta">
                     <span>Scenarios: {feature.scenarioCount || 0}</span>
@@ -970,7 +1021,8 @@ const BDDTesting: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* Feature Detail View */}
       {activeTab === 'features' && selectedFeature && (
@@ -1032,6 +1084,11 @@ const BDDTesting: React.FC = () => {
                     <span className={`bdd-run-status ${run.status}`}>{run.status}</span>
                   </div>
                   <div className="bdd-feature-meta">
+                    {run.projectName && (
+                      <span style={{ color: '#1565c0', fontWeight: 500 }}>
+                        {run.projectName} {run.projectBaseUrl ? `(${run.projectBaseUrl})` : ''}
+                      </span>
+                    )}
                     <span>Steps: {run.passedSteps}/{run.totalSteps} passed</span>
                     {run.failedSteps > 0 && <span style={{ color: '#c62828' }}>{run.failedSteps} failed</span>}
                     <span>Duration: {formatDuration(run.duration)}</span>
