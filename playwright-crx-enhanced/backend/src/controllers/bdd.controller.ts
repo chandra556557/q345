@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { asyncHandler } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import { fetchProjectConfig } from '../utils/projectHelpers';
@@ -678,8 +680,9 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
   const parsedParallelWorkers = parallelWorkers ? parseInt(parallelWorkers, 10) : 1;
   const parsedRetryCount = retryCount ? parseInt(retryCount, 10) : 0;
 
-  // Fetch project config if projectId provided
-  const projectConfig = await fetchProjectConfig(projectId);
+  // Fetch project config — use request projectId, fallback to feature's projectId
+  const effectiveProjectId = projectId || feature.projectId;
+  const projectConfig = await fetchProjectConfig(effectiveProjectId);
 
   // Create run record
   const { rows: runRows } = await pool.query(
@@ -809,37 +812,28 @@ export const getRun = asyncHandler(async (req: Request, res: Response) => {
  */
 export const getRunReport = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const reportType = req.query.type as string; // 'serenity' for actual Serenity BDD report
 
   const { rows } = await pool.query(
-    `SELECT "reportHtml", "reportUrl", "serenityReportUrl", status FROM "BDDRun" WHERE id = $1`,
+    `SELECT "reportUrl", status FROM "BDDRun" WHERE id = $1`,
     [id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'Run not found' });
 
   const run = rows[0];
 
-  // If requesting the actual Serenity BDD report, redirect to the static file
-  if (reportType === 'serenity') {
-    if (run.serenityReportUrl) {
-      return res.redirect(run.serenityReportUrl);
-    }
-    if (run.reportHtml) {
-      return res.redirect(`/api/bdd/runs/${id}/report`);
-    }
-    return res.status(404).json({
-      error: 'Serenity BDD report not available.',
-      fallbackReportUrl: `/api/bdd/runs/${id}/report`,
-    });
+  // Redirect to BDD report if available
+  if (run.reportUrl && run.reportUrl.startsWith('/playwright-crx-reports/')) {
+    return res.redirect(run.reportUrl);
   }
 
-  // Default: return the custom Serenity-style report (always available)
-  if (!run.reportHtml) {
-    return res.status(404).json({ error: 'Report not yet generated or unavailable' });
+  // Fallback: try report path by convention
+  const reportPath = `/playwright-crx-reports/${id}/index.html`;
+  const reportFile = path.join(process.cwd(), reportPath);
+  if (fs.existsSync(reportFile)) {
+    return res.redirect(reportPath);
   }
 
-  res.setHeader('Content-Type', 'text/html');
-  return res.send(run.reportHtml);
+  return res.status(404).json({ error: 'BDD report not yet generated or unavailable' });
 });
 
 /**

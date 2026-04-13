@@ -6,9 +6,8 @@ import * as path from 'path';
 import * as os from 'os';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
-import { generateSerenityReport, SerenityReportData, SerenityReportResult } from './serenityReport.service';
 import { screenplayService } from './screenplay.service';
-import { allureService } from '../allure.service';
+import { bddReportService } from '../bdd-report.service';
 
 const execAsync = promisify(exec);
 
@@ -37,7 +36,7 @@ function killProcessTree(child: ChildProcess): void {
 }
 
 // Report output directory (same as other reports, served by express.static)
-const BDD_REPORTS_DIR = path.join(process.cwd(), 'playwright-crx-reports');
+// Reports are generated via bddReportService — stored in playwright-crx-reports/
 
 // Screenshots/artifacts directory (served statically)
 const BDD_ARTIFACTS_DIR = path.join(process.cwd(), 'playwright-crx-reports', 'bdd-artifacts');
@@ -276,7 +275,8 @@ class BDDService {
     lines.push(`import { test, expect } from '@playwright/test';`);
     lines.push('');
     lines.push(`// Base URL from environment or fallback — configure per project`);
-    lines.push(`const BASE_URL = process.env.BASE_URL || '${this.extractBaseUrl(feature)}';`);
+    const featureBaseUrl = this.extractBaseUrl(feature);
+    lines.push(`const BASE_URL = process.env.BASE_URL || '${featureBaseUrl}';`);
     lines.push('');
     lines.push(`test.describe('${this.escapeString(feature.name)}', () => {`);
 
@@ -294,7 +294,7 @@ class BDDService {
               stepText = stepText.replace(new RegExp(`<${key}>`, 'g'), value);
             }
             lines.push(`    // ${step.keyword} ${stepText}`);
-            lines.push(`    ${this.generateStepCode(step.keyword, stepText)}`);
+            lines.push(`    ${this.generateStepCode(step.keyword, stepText, 'preview', featureBaseUrl)}`);
           }
           lines.push('  });');
           lines.push('');
@@ -303,7 +303,7 @@ class BDDService {
         lines.push(`  test('${this.escapeString(scenario.name)}', async ({ page }) => {`);
         for (const step of scenario.steps) {
           lines.push(`    // ${step.keyword} ${step.text}`);
-          lines.push(`    ${this.generateStepCode(step.keyword, step.text)}`);
+          lines.push(`    ${this.generateStepCode(step.keyword, step.text, 'preview', featureBaseUrl)}`);
         }
         lines.push('  });');
         lines.push('');
@@ -400,7 +400,7 @@ class BDDService {
         }
         return `page.navigate(System.getenv("BASE_URL") + "${url.startsWith('/') ? url : '/' + url}");`;
       }
-      return `page.navigate(System.getenv("BASE_URL") != null ? System.getenv("BASE_URL") : "/* URL */");`;
+      return `page.navigate(System.getenv("BASE_URL") != null ? System.getenv("BASE_URL") : "http://localhost:3000");`;
     }
 
     if (lower.includes('click')) {
@@ -1176,21 +1176,31 @@ class BDDService {
     return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
 
-  private generateStepCode(keyword: string, text: string): string {
+  private generateStepCode(keyword: string, text: string, context: 'preview' | 'execution' = 'preview', baseUrl?: string): string {
     const lower = text.toLowerCase();
-    const quotes = (text.match(/"([^"]+)"/g) || []).map(m => m.replace(/"/g, ''));
-
-    // Navigation / Launch — use BASE_URL for full URLs, resolve relative paths
+    const quotes = (text.match(/"([^"]*)"/g) || []).map(m => m.replace(/"/g, ''));
+    // Navigation / Launch
     if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit) /) || lower.includes('launch')) {
       const url = quotes[0] || '';
-      if (!url) return `await page.goto(BASE_URL);`;
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        // Full URL — use BASE_URL with fallback
-        return `await page.goto(BASE_URL || '${this.escapeString(url)}');`;
+      if (!url) {
+        if (context === 'execution') {
+          return `if (!ENV_PROFILE.baseUrl) throw new Error('No URL provided and baseUrl is not configured.');\n    await page.goto(ENV_PROFILE.baseUrl);`;
+        }
+        // Preview mode: resolve to literal URL for simple text-based executor
+        const resolved = baseUrl || 'http://localhost:3000';
+        return `await page.goto('${this.escapeString(resolved)}');`;
       }
-      // Relative path — append to BASE_URL
-      const path = url.startsWith('/') ? url : `/${url}`;
-      return `await page.goto(BASE_URL + '${this.escapeString(path)}');`;
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return `await page.goto('${this.escapeString(url)}');`;
+      }
+      // Relative path
+      const pathStr = url.startsWith('/') ? url : `/${url}`;
+      if (context === 'execution') {
+        return `if (!ENV_PROFILE.baseUrl) throw new Error('baseUrl is not configured for relative path "${this.escapeString(pathStr)}".');\n    await page.goto(ENV_PROFILE.baseUrl + '${this.escapeString(pathStr)}');`;
+      }
+      // Preview mode: resolve to literal URL for simple text-based executor
+      const resolved = (baseUrl || '') + pathStr;
+      return `await page.goto('${this.escapeString(resolved)}');`;
     }
     if (lower === 'i go back') return `await page.goBack();`;
     if (lower === 'i go forward') return `await page.goForward();`;
@@ -1203,12 +1213,12 @@ class BDDService {
       }
     }
     if (lower.match(/^i enter (username|email) /)) {
-      const val = quotes[0] || '/* value */';
+      const val = quotes[0]; if (!val) return `throw new Error('Missing quoted value in step: ${keyword} ${this.escapeString(text)}');`;
       const field = lower.includes('email') ? 'Email' : 'Username';
       return `await page.getByLabel('${field}').fill('${this.escapeString(val)}');`;
     }
     if (lower.match(/^i enter password /)) {
-      const val = quotes[0] || '/* value */';
+      const val = quotes[0]; if (!val) return `throw new Error('Missing quoted value in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByLabel('Password').fill('${this.escapeString(val)}');`;
     }
     if (lower.includes('login button') || lower.includes('submit the login')) {
@@ -1218,41 +1228,41 @@ class BDDService {
 
     // Click
     if (lower.includes('click on the') && lower.includes('tab')) {
-      const tab = quotes[0] || '/* tab */';
+      const tab = quotes[0]; if (!tab) return `throw new Error('Missing tab name in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByRole('tab', { name: '${this.escapeString(tab)}' }).click();`;
     }
     if (lower.includes('click on the') && lower.includes('menu')) {
-      const menu = quotes[0] || '/* menu */';
+      const menu = quotes[0]; if (!menu) return `throw new Error('Missing menu name in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByRole('menuitem', { name: '${this.escapeString(menu)}' }).click();`;
     }
     if (lower.includes('click') && lower.includes('button')) {
-      const btn = quotes[0] || '/* button */';
+      const btn = quotes[0]; if (!btn) return `throw new Error('Missing button name in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByRole('button', { name: '${this.escapeString(btn)}' }).click();`;
     }
     if (lower.includes('click') && lower.includes('link')) {
-      const link = quotes[0] || '/* link */';
+      const link = quotes[0]; if (!link) return `throw new Error('Missing link name in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByRole('link', { name: '${this.escapeString(link)}' }).click();`;
     }
     if (lower.includes('double click')) {
-      const target = quotes[0] || '/* target */';
+      const target = quotes[0]; if (!target) return `throw new Error('Missing target in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByText('${this.escapeString(target)}').first().dblclick();`;
     }
     if (lower.includes('right click')) {
-      const target = quotes[0] || '/* target */';
+      const target = quotes[0]; if (!target) return `throw new Error('Missing target in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByText('${this.escapeString(target)}').first().click({ button: 'right' });`;
     }
     if (lower.includes('click')) {
-      const target = quotes[0] || '/* target */';
+      const target = quotes[0]; if (!target) return `throw new Error('Missing target in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByRole('button', { name: '${this.escapeString(target)}' }).click();`;
     }
 
     // Hover / Focus
     if (lower.includes('hover')) {
-      const target = quotes[0] || '/* target */';
+      const target = quotes[0]; if (!target) return `throw new Error('Missing target in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByText('${this.escapeString(target)}').first().hover();`;
     }
     if (lower.includes('focus')) {
-      const target = quotes[0] || '/* target */';
+      const target = quotes[0]; if (!target) return `throw new Error('Missing target in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByLabel('${this.escapeString(target)}').focus();`;
     }
 
@@ -1261,7 +1271,7 @@ class BDDService {
     if (lower === 'i press tab') return `await page.keyboard.press('Tab');`;
     if (lower === 'i press escape') return `await page.keyboard.press('Escape');`;
     if (lower.includes('press')) {
-      const key = quotes[0] || '/* key */';
+      const key = quotes[0]; if (!key) return `throw new Error('Missing key in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.keyboard.press('${this.escapeString(key)}');`;
     }
 
@@ -1271,7 +1281,7 @@ class BDDService {
         return `await page.getByLabel('${this.escapeString(quotes[0])}').fill('${this.escapeString(quotes[1])}');`;
       }
       if (quotes.length === 1) {
-        return `await page.locator('/* field */').fill('${this.escapeString(quotes[0])}');`;
+        return `throw new Error('Cannot determine which field to fill. Use: When I fill "fieldname" with "value"');`;
       }
     }
 
@@ -1281,21 +1291,21 @@ class BDDService {
         return `await page.getByLabel('${this.escapeString(quotes[1])}').selectOption('${this.escapeString(quotes[0])}');`;
       }
       if (quotes.length === 1) {
-        return `await page.selectOption('/* selector */', '${this.escapeString(quotes[0])}');`;
+        return `throw new Error('Cannot determine which dropdown to select. Use: When I select "value" from "fieldname"');`;
       }
     }
 
     // Checkbox / Radio
     if (lower.includes('check') && !lower.includes('uncheck')) {
-      const label = quotes[0] || '/* label */';
+      const label = quotes[0]; if (!label) return `throw new Error('Missing label in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByLabel('${this.escapeString(label)}').check();`;
     }
     if (lower.includes('uncheck')) {
-      const label = quotes[0] || '/* label */';
+      const label = quotes[0]; if (!label) return `throw new Error('Missing label in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByLabel('${this.escapeString(label)}').uncheck();`;
     }
     if (lower.includes('radio')) {
-      const label = quotes[0] || '/* label */';
+      const label = quotes[0]; if (!label) return `throw new Error('Missing label in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByRole('radio', { name: '${this.escapeString(label)}' }).check();`;
     }
 
@@ -1351,7 +1361,7 @@ class BDDService {
 
     // Visibility assertions
     if (lower.includes('should not see') || lower.includes('should not be visible')) {
-      const target = quotes[0] || '/* text */';
+      const target = quotes[0]; if (!target) return `throw new Error('Missing text in step: ${keyword} ${this.escapeString(text)}');`;
       return `await expect(page.getByText('${this.escapeString(target)}')).toBeHidden();`;
     }
     if (lower.includes('see') || lower.includes('visible') || lower.includes('displayed') || lower.includes('shown')) {
@@ -1371,37 +1381,37 @@ class BDDService {
 
     // URL assertions
     if (lower.includes('url should contain')) {
-      const val = quotes[0] || '/* url part */';
+      const val = quotes[0]; if (!val) return `throw new Error('Missing URL part in step: ${keyword} ${this.escapeString(text)}');`;
       return `await expect(page).toHaveURL(new RegExp('${this.escapeString(val)}'));`;
     }
     if (lower.includes('url should be')) {
-      const val = quotes[0] || '/* url */';
+      const val = quotes[0]; if (!val) return `throw new Error('Missing URL in step: ${keyword} ${this.escapeString(text)}');`;
       return `await expect(page).toHaveURL('${this.escapeString(val)}');`;
     }
 
     // Title
     if (lower.includes('title should be')) {
-      const val = quotes[0] || '/* title */';
+      const val = quotes[0]; if (!val) return `throw new Error('Missing title in step: ${keyword} ${this.escapeString(text)}');`;
       return `await expect(page).toHaveTitle('${this.escapeString(val)}');`;
     }
     if (lower.includes('title should contain')) {
-      const val = quotes[0] || '/* title */';
+      const val = quotes[0]; if (!val) return `throw new Error('Missing title in step: ${keyword} ${this.escapeString(text)}');`;
       return `await expect(page).toHaveTitle(new RegExp('${this.escapeString(val)}'));`;
     }
 
     // Contain text
     if (lower.includes('contain') || lower.includes('have text')) {
-      const target = quotes[0] || '/* text */';
+      const target = quotes[0]; if (!target) return `throw new Error('Missing text in step: ${keyword} ${this.escapeString(text)}');`;
       return `await expect(page.locator('body')).toContainText('${this.escapeString(target)}');`;
     }
 
     // Disabled / Enabled
     if (lower.includes('disabled')) {
-      const val = quotes[0] || '/* name */';
+      const val = quotes[0]; if (!val) return `throw new Error('Missing name in step: ${keyword} ${this.escapeString(text)}');`;
       return `await expect(page.getByRole('button', { name: '${this.escapeString(val)}' })).toBeDisabled();`;
     }
     if (lower.includes('enabled')) {
-      const val = quotes[0] || '/* name */';
+      const val = quotes[0]; if (!val) return `throw new Error('Missing name in step: ${keyword} ${this.escapeString(text)}');`;
       return `await expect(page.getByRole('button', { name: '${this.escapeString(val)}' })).toBeEnabled();`;
     }
 
@@ -1523,7 +1533,7 @@ class BDDService {
     const cucumberBin = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
     const cucumberExists = fs.existsSync(cucumberBin);
     const playwrightExists = fs.existsSync(path.join(SHARED_BDD_DIR, 'node_modules', 'playwright'));
-    const serenityExists = fs.existsSync(path.join(SHARED_BDD_DIR, 'node_modules', '@serenity-js', 'core'));
+    const serenityExists = true; // Serenity removed — only Allure used
 
     let needsReinstall = false;
     if (cucumberExists) {
@@ -1558,10 +1568,6 @@ class BDDService {
         '@cucumber/cucumber': '^9.1.0',
         'playwright': '^1.49.0',
         '@playwright/test': '^1.49.0',
-        // Serenity BDD integration (actual Serenity CLI for rich reports)
-        '@serenity-js/core': '^3.29.0',
-        '@serenity-js/cucumber': '^3.29.0',
-        '@serenity-js/serenity-bdd': '^3.29.0',
       },
     };
     fs.writeFileSync(path.join(SHARED_BDD_DIR, 'package.json'), JSON.stringify(pkgJson, null, 2));
@@ -1710,45 +1716,17 @@ class BDDService {
 
       logger.info(`BDD Run ${runId}: Generated step defs:\n${stepDefCode.substring(0, 2000)}`);
 
-      // Serenity BDD output directory (intermediate JSON for Serenity CLI)
-      const serenityOutputDir = path.join(runDir, 'target', 'site', 'serenity');
-      fs.mkdirSync(serenityOutputDir, { recursive: true });
-
-      // Write Serenity-JS configuration for this run
-      const serenityConfigPath = path.join(runDir, 'serenity.config.js');
-      const serenityConfig = `
-const { SerenityBDDReporter } = require('@serenity-js/serenity-bdd');
-const { ArtifactArchiver } = require('@serenity-js/core');
-
-module.exports = {
-  crew: [
-    ArtifactArchiver.storingArtifactsAt('${serenityOutputDir.replace(/\\/g, '/')}'),
-    new SerenityBDDReporter(),
-  ],
-};
-`;
-      fs.writeFileSync(serenityConfigPath, serenityConfig);
-
       // Build cucumber command args as array (avoids shell quoting issues with spawn)
       const cucumberEntry = path.join(SHARED_BDD_DIR, 'node_modules', '@cucumber', 'cucumber', 'bin', 'cucumber-js');
       const resultsPath = path.join(runDir, 'results.json');
 
       const parallelWorkers = options.parallelWorkers || 1;
-      const isParallelRun = parallelWorkers > 1;
 
       const spawnArgs: string[] = [
         cucumberEntry,
         '--require', stepsPath,
         '--format', `json:"${resultsPath}"`,
       ];
-
-      // Serenity-JS formatter is incompatible with Cucumber --parallel mode
-      // (it can't coordinate across forked worker processes)
-      if (!isParallelRun) {
-        spawnArgs.push('--format', `@serenity-js/cucumber`);
-      } else {
-        logger.info(`BDD Run ${runId}: Serenity formatter disabled in parallel mode`);
-      }
 
       spawnArgs.push(featuresPath);
 
@@ -1787,7 +1765,6 @@ module.exports = {
             env: {
               ...process.env,
               NODE_PATH: path.join(SHARED_BDD_DIR, 'node_modules'),
-              SERENITY_OUTPUT_DIR: serenityOutputDir,
             },
             stdio: ['pipe', 'pipe', 'pipe'],
             detached: process.platform !== 'win32',
@@ -1879,6 +1856,7 @@ module.exports = {
       let retryInfo: { totalRetries: number; flakyScenarios: string[]; retriedScenarios: string[] } = {
         totalRetries: 0, flakyScenarios: [], retriedScenarios: [],
       };
+      const scenarioAttempts = new Map<string, { attempts: number; finalStatus: string; tags: string[] }>();
 
       const resultsFile = path.join(runDir, 'results.json');
       if (fs.existsSync(resultsFile)) {
@@ -1889,7 +1867,6 @@ module.exports = {
           const results = JSON.parse(resultsRaw);
 
           // Track scenario attempts for flaky detection
-          const scenarioAttempts = new Map<string, { attempts: number; finalStatus: string; tags: string[] }>();
 
           for (const feature of results) {
             for (const element of feature.elements || []) {
@@ -1994,78 +1971,23 @@ module.exports = {
       // Collect screenshot URLs
       const screenshotUrls = this.collectScreenshots(runId, screenshotDir);
 
-      // ========================================
-      // SERENITY BDD CLI — Generate actual Serenity report
-      // ========================================
-      let serenityReportUrl = '';
-      const serenityReportDir = path.join(BDD_REPORTS_DIR, `serenity-${runId}`);
-      try {
-        // Copy Cucumber JSON results to Serenity source dir (Serenity reads from here)
-        const serenitySourceDir = path.join(runDir, 'target', 'site', 'serenity');
-        fs.mkdirSync(serenitySourceDir, { recursive: true });
-
-        // Serenity BDD CLI can work with Cucumber JSON directly
-        // Copy results.json as a Cucumber-compatible source
-        if (fs.existsSync(resultsFile)) {
-          fs.copyFileSync(resultsFile, path.join(serenitySourceDir, `cucumber-results-${runId}.json`));
-        }
-
-        // Run Serenity BDD CLI to generate the full HTML report
-        const serenityBddCli = path.join(SHARED_BDD_DIR, 'node_modules', '.bin', 'serenity-bdd');
-        const serenityBin = fs.existsSync(serenityBddCli) ? serenityBddCli : 'npx serenity-bdd';
-
-        fs.mkdirSync(serenityReportDir, { recursive: true });
-
-        const serenityCmd = `"${serenityBin}" run --source "${serenitySourceDir}" --destination "${serenityReportDir}" --features "${path.join(runDir, 'features')}"`;
-        logger.info(`BDD Run ${runId}: Running Serenity BDD CLI: ${serenityCmd}`);
-
-        await execAsync(serenityCmd, {
-          cwd: SHARED_BDD_DIR,
-          timeout: 120000,
-          env: { ...process.env, NODE_PATH: path.join(SHARED_BDD_DIR, 'node_modules') },
-        });
-
-        // Verify the report was generated
-        const serenityIndexPath = path.join(serenityReportDir, 'index.html');
-        if (fs.existsSync(serenityIndexPath)) {
-          serenityReportUrl = `/playwright-crx-reports/serenity-${runId}/index.html`;
-          logger.info(`BDD Run ${runId}: Serenity BDD report generated at ${serenityReportUrl}`);
-        } else {
-          logger.warn(`BDD Run ${runId}: Serenity BDD index.html not found after CLI run`);
-        }
-      } catch (serenityErr: any) {
-        logger.warn(`BDD Run ${runId}: Serenity BDD CLI report generation failed (Java may not be installed): ${serenityErr.message}`);
-        // Non-fatal — we still have the custom Serenity-style report as fallback
-      }
-
       // Parse feature for narrative and scenario info
       const parsedForReport = this.parseFeatureContent(featureContent);
 
-      // Generate custom Serenity-style HTML report (always works, no Java needed)
-      const serenityData: SerenityReportData = {
-        runId,
-        featureName: parsedForReport.name || 'BDD Test',
-        featureDescription: parsedForReport.description,
-        featureContent,
-        featureTags: parsedForReport.tags,
-        scenarios: [],  // will be auto-grouped from stepResults
-        stepResults,
-        summary: {
-          status: overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps, errorMsg,
-          ...(retryInfo.totalRetries > 0 ? { retryInfo } : {}),
-        },
-        screenshotUrls,
-      };
-      const reportResult: SerenityReportResult = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
-
-      // Write Allure results for this BDD run (bridges BDD into Allure reports)
+      // ========================================
+      // BDD REPORT — Generate HTML report from BDD results
+      // ========================================
+      let bddReportUrl = '';
       try {
         // Group stepResults by scenario
-        const scenarioMap = new Map<string, { steps: typeof stepResults; duration: number; status: string }>();
+        const scenarioMap = new Map<string, { steps: typeof stepResults; duration: number; status: string; tags: string[] }>();
         for (const sr of stepResults) {
           const sName = sr.scenario || 'Unknown Scenario';
           if (!scenarioMap.has(sName)) {
-            scenarioMap.set(sName, { steps: [], duration: 0, status: 'passed' });
+            // Look up tags from scenarioAttempts
+            const attemptKey = Array.from(scenarioAttempts.keys()).find(k => k.endsWith(`::${sName}`));
+            const tags = attemptKey ? scenarioAttempts.get(attemptKey)?.tags || [] : [];
+            scenarioMap.set(sName, { steps: [], duration: 0, status: 'passed', tags });
           }
           const entry = scenarioMap.get(sName)!;
           entry.steps.push(sr);
@@ -2074,68 +1996,99 @@ module.exports = {
           else if (sr.status !== 'passed' && entry.status !== 'failed') entry.status = sr.status;
         }
 
-        await allureService.writeBDDResults({
-          runId,
-          featureName: parsedForReport.name || 'BDD Feature',
-          scenarios: Array.from(scenarioMap.entries()).map(([name, data]) => ({
-            name,
-            status: data.status,
-            duration: data.duration,
-            tags: [],
-            steps: data.steps.map(s => ({
-              keyword: s.keyword,
-              name: s.name,
-              status: s.status,
-              duration: s.duration || undefined,
-              errorMessage: s.errorMessage || undefined,
-            })),
-          })),
-          environment: options.environment?.name,
-          browser: options.browser,
-        });
-
-        // Generate Allure report for this BDD run
-        await allureService.generateReport(runId);
-        const allureReportUrl = await allureService.getReportUrl(runId);
-        if (allureReportUrl) {
-          logger.info(`BDD Run ${runId}: Allure report generated at ${allureReportUrl}`);
+        // Build screenshot map: "sc{scenario}-step-{index}" -> screenshot file path
+        const screenshotFiles = fs.existsSync(screenshotDir)
+          ? fs.readdirSync(screenshotDir).filter(f => f.endsWith('.png') || f.endsWith('.jpg'))
+          : [];
+        const stepScreenshotMap = new Map<string, string>();
+        for (const file of screenshotFiles) {
+          // Match patterns: sc{sc}-step-{index}-PASSED-{ts}.png, sc{sc}-step-fail-{index}-{ts}.png
+          const passMatch = file.match(/^sc(\d+)-step-(\d+)-(?:PASSED|FAILED|done)/);
+          const failMatch = file.match(/^sc(\d+)-step-fail-(\d+)/);
+          const match = passMatch || failMatch;
+          if (match) {
+            const key = `${match[1]}-${match[2]}`;
+            // Prefer fail screenshots over pass screenshots
+            if (!stepScreenshotMap.has(key) || file.includes('fail')) {
+              stepScreenshotMap.set(key, path.join(screenshotDir, file));
+            }
+          }
         }
-      } catch (allureErr: any) {
-        logger.warn(`BDD Run ${runId}: Allure integration failed (non-fatal): ${allureErr.message}`);
+
+        // Extract browser console errors from stdout
+        const consoleErrors: string[] = [];
+        for (const line of cucumberStdout.split('\n')) {
+          if (line.includes('[BROWSER ERROR]')) {
+            consoleErrors.push(line.replace('[BROWSER ERROR]', '').trim());
+          }
+        }
+
+        let scenarioIdx = 0;
+        bddReportUrl = await bddReportService.generateBDDReport(
+          runId,
+          Array.from(scenarioMap.entries()).map(([name, data]) => {
+            scenarioIdx++;
+            return {
+              name,
+              status: data.status,
+              duration: data.duration,
+              tags: data.tags,
+              steps: data.steps.map((s, i) => ({
+                keyword: s.keyword,
+                name: s.name,
+                status: s.status as any,
+                duration: s.duration || undefined,
+                errorMessage: s.errorMessage || undefined,
+                screenshotPath: stepScreenshotMap.get(`${scenarioIdx}-${i + 1}`) || undefined,
+              })),
+            };
+          }),
+          {
+            featureName: parsedForReport.name || 'BDD Feature',
+            description: parsedForReport.description || undefined,
+            environment: options.environment?.name,
+            browser: options.browser,
+            retryInfo: retryInfo.totalRetries > 0 ? retryInfo : undefined,
+            consoleErrors: consoleErrors.length > 0 ? consoleErrors : undefined,
+            executionStartTime: new Date(startTime).toISOString(),
+          }
+        );
+        if (bddReportUrl) {
+          logger.info(`BDD Run ${runId}: BDD report generated at ${bddReportUrl}`);
+        }
+      } catch (reportErr: any) {
+        logger.warn(`BDD Run ${runId}: Report generation failed (non-fatal): ${reportErr.message}`);
       }
 
-      // Update run in DB (store both reports)
+      const reportUrl = bddReportUrl || `/api/bdd/runs/${runId}/report`;
+
+      // Update run in DB
       await pool.query(
         `UPDATE "BDDRun" SET
           status = $1, duration = $2,
           "totalSteps" = $3, "passedSteps" = $4, "failedSteps" = $5, "skippedSteps" = $6,
           "stepResults" = $7, "errorMsg" = $8, "reportUrl" = $10, "screenshotUrls" = $11,
-          "reportHtml" = $12,
-          "retryCount" = $13, "retryInfo" = $14,
-          tags = $15, "parallelWorkers" = $16,
-          "environmentName" = $17, "environmentProfile" = $18,
-          "serenityReportUrl" = $19,
+          "retryCount" = $12, "retryInfo" = $13,
+          tags = $14, "parallelWorkers" = $15,
+          "environmentName" = $16, "environmentProfile" = $17,
           "completedAt" = now(), "updatedAt" = now()
          WHERE id = $9`,
         [overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
-          JSON.stringify(stepResults), errorMsg || null, runId, reportResult.reportUrl, JSON.stringify(screenshotUrls),
-          reportResult.reportHtml,
+          JSON.stringify(stepResults), errorMsg || null, runId, reportUrl, JSON.stringify(screenshotUrls),
           retryCount, JSON.stringify(retryInfo),
           options.tags || null, parallelWorkers,
-          options.environment?.name || null, options.environment ? JSON.stringify(options.environment) : null,
-          serenityReportUrl || null]
+          options.environment?.name || null, options.environment ? JSON.stringify(options.environment) : null]
       );
 
       // Emit live event: completed
       this.emitEvent(runId, 'completed', {
         status: overallStatus, duration, totalSteps, passedSteps, failedSteps, skippedSteps,
-        reportUrl: reportResult.reportUrl, screenshotUrls,
-        ...(serenityReportUrl ? { serenityReportUrl } : {}),
+        reportUrl, screenshotUrls,
         ...(retryInfo.totalRetries > 0 ? { retryInfo } : {}),
         ...(options.environment?.name ? { environment: options.environment.name } : {}),
       });
 
-      logger.info(`BDD Run ${runId}: Completed - ${overallStatus} (${passedSteps}/${totalSteps} passed), screenshots: ${screenshotUrls.length}, report: ${reportResult.reportUrl}`);
+      logger.info(`BDD Run ${runId}: Completed - ${overallStatus} (${passedSteps}/${totalSteps} passed), screenshots: ${screenshotUrls.length}, report: ${reportUrl}`);
     } catch (error: any) {
       if (error?.message === 'Run was cancelled') {
         logger.info(`BDD Run ${runId}: Cancelled`);
@@ -2150,29 +2103,21 @@ module.exports = {
       logger.error(`BDD Run ${runId}: Execution error: ${error.message}`);
       this.emitEvent(runId, 'error', { message: error.message });
 
-      // Generate report even for errored runs
-      let errorReportResult: SerenityReportResult = { reportUrl: '', reportHtml: '' };
+      // Generate BDD report even for errored runs
+      let errorReportUrl = '';
       try {
-        const parsedForReport = this.parseFeatureContent(featureContent);
-        const serenityData: SerenityReportData = {
+        errorReportUrl = await bddReportService.generateBDDReport(
           runId,
-          featureName: parsedForReport.name || 'BDD Test',
-          featureDescription: parsedForReport.description,
-          featureContent,
-          featureTags: parsedForReport.tags,
-          scenarios: [],
-          stepResults: [],
-          summary: { status: 'failed', duration: 0, totalSteps: 0, passedSteps: 0, failedSteps: 0, skippedSteps: 0, errorMsg: error.message },
-          screenshotUrls: [],
-        };
-        errorReportResult = await generateSerenityReport(serenityData, BDD_REPORTS_DIR);
+          [{ name: 'Execution Error', status: 'failed', duration: 0, tags: [], steps: [] }],
+          { featureName: 'BDD Test (Failed)', browser: options.browser }
+        );
       } catch (reportErr: any) {
         logger.warn(`BDD Run ${runId}: Failed to generate error report: ${reportErr.message}`);
       }
 
       await pool.query(
-        `UPDATE "BDDRun" SET status = 'failed', "errorMsg" = $1, "reportUrl" = $3, "reportHtml" = $4, "completedAt" = now(), "updatedAt" = now() WHERE id = $2`,
-        [error.message, runId, errorReportResult.reportUrl || null, errorReportResult.reportHtml || null]
+        `UPDATE "BDDRun" SET status = 'failed', "errorMsg" = $1, "reportUrl" = $3, "completedAt" = now(), "updatedAt" = now() WHERE id = $2`,
+        [error.message, runId, errorReportUrl || null]
       );
     } finally {
       if (slotAcquired) {
@@ -2430,6 +2375,26 @@ module.exports = {
     lines.push(`  this.page = await this.context.newPage();`);
     lines.push(`  this.page.setDefaultTimeout(${stepTimeout}); // ${stepTimeout / 1000}s default for Playwright actions (fill, click, etc.)`);
     lines.push('');
+    lines.push(`  // Guard: wrap page.locator and page.waitForSelector to catch empty selectors`);
+    lines.push(`  const _origLocator = this.page.locator.bind(this.page);`);
+    lines.push(`  this.page.locator = function(selector, options) {`);
+    lines.push(`    if (!selector || (typeof selector === 'string' && !selector.trim())) {`);
+    lines.push(`      const stack = new Error().stack || '';`);
+    lines.push(`      const caller = stack.split('\\n').slice(1, 4).join(' <- ').replace(/\\s+/g, ' ').substring(0, 200);`);
+    lines.push(`      throw new Error('Empty CSS selector passed to page.locator(). Caller: ' + caller);`);
+    lines.push(`    }`);
+    lines.push(`    return _origLocator(selector, options);`);
+    lines.push(`  };`);
+    lines.push(`  const _origWaitForSelector = this.page.waitForSelector.bind(this.page);`);
+    lines.push(`  this.page.waitForSelector = function(selector, options) {`);
+    lines.push(`    if (!selector || (typeof selector === 'string' && !selector.trim())) {`);
+    lines.push(`      const stack = new Error().stack || '';`);
+    lines.push(`      const caller = stack.split('\\n').slice(1, 4).join(' <- ').replace(/\\s+/g, ' ').substring(0, 200);`);
+    lines.push(`      throw new Error('Empty CSS selector passed to page.waitForSelector(). Caller: ' + caller);`);
+    lines.push(`    }`);
+    lines.push(`    return _origWaitForSelector(selector, options);`);
+    lines.push(`  };`);
+    lines.push('');
     lines.push(`  // Enable console log capture`);
     lines.push(`  this.page.on('console', msg => {`);
     lines.push(`    if (msg.type() === 'error') console.log('[BROWSER ERROR]', msg.text());`);
@@ -2441,7 +2406,7 @@ module.exports = {
     lines.push(`      console.log('[WARN] Auto-navigation to ' + ENV_PROFILE.baseUrl + ' failed: ' + e.message);`);
     lines.push(`    });`);
     lines.push(`    // Capture initial page screenshot after navigation`);
-    lines.push(`    await this.takeScreenshot('initial-page').catch(() => {});`);
+    lines.push(`    await this.takeScreenshot('sc' + scenarioCount + '-initial-page').catch(() => {});`);
     lines.push(`  }`);
     lines.push('});');
     lines.push('');
@@ -2485,10 +2450,10 @@ module.exports = {
     lines.push(`  if (!this.page) return;`);
     lines.push(`  try {`);
     lines.push(`    if (step.result && step.result.status === 'FAILED') {`);
-    lines.push(`      await this.takeScreenshot('step-fail-' + this.stepIndex);`);
+    lines.push(`      await this.takeScreenshot('sc' + scenarioCount + '-step-fail-' + this.stepIndex);`);
     lines.push(`    } else {`);
     lines.push(`      // Capture screenshot on every step (pass/fail) for full traceability`);
-    lines.push(`      await this.takeScreenshot('step-' + this.stepIndex + '-' + (step.result?.status || 'done'));`);
+    lines.push(`      await this.takeScreenshot('sc' + scenarioCount + '-step-' + this.stepIndex + '-' + (step.result?.status || 'done'));`);
     lines.push(`    }`);
     lines.push(`  } catch (e) { /* ignore screenshot errors */ }`);
     lines.push(`});`);
@@ -2575,12 +2540,19 @@ module.exports = {
       lines.push(`// ========================================`);
       lines.push(`const { expect } = require('@playwright/test');`);
       lines.push('');
+      lines.push(`// Guard against empty selectors — gives a clear error instead of cryptic CSS parse failure`);
+      lines.push(`function safeLocator(page, selector, stepName) {`);
+      lines.push(`  if (!selector || !selector.trim()) throw new Error(\`Empty selector passed to step "\${stepName || 'unknown'}". Check your feature file for empty "" parameters.\`);`);
+      lines.push(`  return page.locator(selector);`);
+      lines.push(`}`);
+      lines.push('');
 
       // ========================================
       // Smart locator helpers
       // ========================================
       lines.push(`// Smart locator helpers`);
       lines.push(`async function findInput(page, field) {`);
+      lines.push(`  if (!field) throw new Error('Empty field name passed to findInput()');`);
       lines.push(`  // Wait for DOM ready (skip networkidle — it hangs on sites with analytics)`);
       lines.push(`  await page.waitForLoadState('domcontentloaded').catch(() => {});`);
       lines.push('');
@@ -2610,6 +2582,7 @@ module.exports = {
       lines.push('}');
       lines.push('');
       lines.push(`async function findElement(page, target) {`);
+      lines.push(`  if (!target) throw new Error('Empty target passed to findElement()');`);
       lines.push(`  // If target looks like a CSS selector (starts with . # [ or contains > ~ +), use locator directly`);
       lines.push(`  if (/^[.#\\[]|[>~+]/.test(target)) {`);
       lines.push(`    const loc = page.locator(target).first();`);
@@ -2675,12 +2648,8 @@ module.exports = {
       lines.push(`    await this.page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });`);
       lines.push(`  }`);
       lines.push('});');
-      // When versions of navigation (steps can appear as When after a Given)
-      lines.push(`When('I navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
+      // When versions of navigation (only steps NOT already registered as Given)
       lines.push(`When('Navigate to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
-      lines.push(`When('I go to {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
-      lines.push(`When('I open the url {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
-      lines.push(`When('I visit {string}', async function (url) { await this.page.goto(resolveUrl(url), { waitUntil: 'domcontentloaded', timeout: 30000 }); });`);
       lines.push(`When('I go back', async function () { await this.page.goBack(); });`);
       lines.push(`When('I go forward', async function () { await this.page.goForward(); });`);
       lines.push(`When('I refresh the page', async function () { await this.page.reload(); });`);
@@ -3056,7 +3025,7 @@ module.exports = {
       lines.push(`  const el = await findElement(this.page, name); await el.click();`);
       lines.push('});');
       lines.push(`When('I click the {string} element', async function (selector) {`);
-      lines.push(`  await this.page.locator(selector).first().click();`);
+      lines.push(`  await safeLocator(this.page, selector, 'I click the {string} element').first().click();`);
       lines.push('});');
       lines.push(`When('I click the first {string}', async function (target) {`);
       lines.push(`  await this.page.getByText(target).first().click();`);
@@ -3158,7 +3127,7 @@ module.exports = {
       lines.push(`When('I wait for navigation', async function () { await this.page.waitForLoadState('networkidle'); });`);
       lines.push(`When('I wait until the page is ready', async function () { await this.page.waitForLoadState('domcontentloaded'); });`);
       lines.push(`When('I wait for the {string} element to appear', async function (selector) {`);
-      lines.push(`  await this.page.locator(selector).first().waitFor({ state: 'visible', timeout: 15000 });`);
+      lines.push(`  await safeLocator(this.page, selector, 'I wait for the {string} element to appear').first().waitFor({ state: 'visible', timeout: 15000 });`);
       lines.push('});');
       lines.push('');
 
@@ -3287,10 +3256,10 @@ module.exports = {
       // ========================================
       lines.push(`// --- Text / Visibility Assertions ---`);
       lines.push(`Then('I should see {string}', async function (text) {`);
-      lines.push(`  await expect(this.page.getByText(text, { exact: true }).first()).toBeVisible({ timeout: 10000 });`);
+      lines.push(`  await expect(this.page.getByText(text, { exact: false }).first()).toBeVisible({ timeout: 10000 });`);
       lines.push('});');
       lines.push(`Then('I should not see {string}', async function (text) {`);
-      lines.push(`  await expect(this.page.getByText(text, { exact: true })).toBeHidden({ timeout: 5000 });`);
+      lines.push(`  await expect(this.page.getByText(text, { exact: false })).toBeHidden({ timeout: 5000 });`);
       lines.push('});');
       lines.push(`Then('I should see text containing {string}', async function (text) {`);
       lines.push(`  await expect(this.page.locator('body')).toContainText(text);`);
@@ -3370,9 +3339,9 @@ module.exports = {
       // ========================================
       lines.push(`// --- Count Assertions ---`);
       lines.push(`Then('I should see {int} {string} elements', async function (count, role) { await expect(this.page.getByRole(role)).toHaveCount(count); });`);
-      lines.push(`Then('there should be {int} {string}', async function (count, selector) { await expect(this.page.locator(selector)).toHaveCount(count); });`);
+      lines.push(`Then('there should be {int} {string}', async function (count, selector) { await expect(safeLocator(this.page, selector, 'there should be {int} {string}')).toHaveCount(count); });`);
       lines.push(`Then('I should see at least {int} {string}', async function (count, selector) {`);
-      lines.push(`  const n = await this.page.locator(selector).count(); expect(n).toBeGreaterThanOrEqual(count);`);
+      lines.push(`  const n = await safeLocator(this.page, selector, 'I should see at least {int} {string}').count(); expect(n).toBeGreaterThanOrEqual(count);`);
       lines.push('});');
       lines.push('');
 
@@ -3381,13 +3350,13 @@ module.exports = {
       // ========================================
       lines.push(`// --- Attribute / CSS ---`);
       lines.push(`Then('the element {string} should have attribute {string} with value {string}', async function (selector, attr, value) {`);
-      lines.push(`  await expect(this.page.locator(selector)).toHaveAttribute(attr, value);`);
+      lines.push(`  await expect(safeLocator(this.page, selector, 'element should have attribute')).toHaveAttribute(attr, value);`);
       lines.push('});');
       lines.push(`Then('{string} should have class {string}', async function (selector, className) {`);
-      lines.push(`  await expect(this.page.locator(selector)).toHaveClass(new RegExp(className));`);
+      lines.push(`  await expect(safeLocator(this.page, selector, 'should have class')).toHaveClass(new RegExp(className));`);
       lines.push('});');
       lines.push(`Then('the element {string} should have CSS {string} with value {string}', async function (selector, prop, value) {`);
-      lines.push(`  await expect(this.page.locator(selector)).toHaveCSS(prop, value);`);
+      lines.push(`  await expect(safeLocator(this.page, selector, 'element should have CSS')).toHaveCSS(prop, value);`);
       lines.push('});');
       lines.push('');
 
@@ -3406,7 +3375,7 @@ module.exports = {
       // ========================================
       lines.push(`// --- State Sharing ---`);
       lines.push(`When('I store the text of {string} as {string}', async function (selector, key) {`);
-      lines.push(`  const text = await this.page.locator(selector).first().textContent(); this.set(key, text);`);
+      lines.push(`  const text = await safeLocator(this.page, selector, 'I store the text of {string}').first().textContent(); this.set(key, text);`);
       lines.push('});');
       lines.push(`When('I store the value of {string} as {string}', async function (field, key) {`);
       lines.push(`  const input = await findInput(this.page, field); this.set(key, await input.inputValue());`);
@@ -3622,7 +3591,7 @@ module.exports = {
 
           // Generate meaningful Playwright code based on the step text
           // Note: generateStepCode uses "page." but Cucumber World uses "this.page."
-          const rawStepCode = this.generateStepCode(step.keyword, step.text);
+          const rawStepCode = this.generateStepCode(step.keyword, step.text, 'execution');
           const stepCode = rawStepCode ? rawStepCode.replace(/\bawait page\./g, 'await this.page.').replace(/\bpage\.once\(/g, 'this.page.once(').replace(/\bexpect\(page\)/g, 'expect(this.page)').replace(/\bexpect\(page\./g, 'expect(this.page.') : null;
           if (stepCode) {
             lines.push(`  ${stepCode}`);

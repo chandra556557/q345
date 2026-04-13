@@ -14,7 +14,7 @@ import scriptRoutes from './routes/script.routes';
 import projectRoutes from './routes/project.routes';
 import testRunRoutes from './routes/testRun.routes';
 import extensionRoutes from './routes/extension.routes';
-import allureRoutes from './routes/allure.routes';
+import reportRoutes from './routes/report.routes';
 import apiTestingRoutes from './routes/apiTesting.routes';
 import apiRequestRoutes from './routes/apiRequest.routes';
 import mlEnhancementRoutes from './routes/ml-enhancement.routes';
@@ -75,6 +75,7 @@ if (isDev) {
         'frame-ancestors': ["'self'", 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
         'frame-src': ["'self'"],
         'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        'script-src-attr': ["'self'", "'unsafe-inline'"],
         'style-src': ["'self'", "'unsafe-inline'"],
         'img-src': ["'self'", 'data:', 'https:'],
         'connect-src': ["'self'"]
@@ -163,7 +164,7 @@ app.get('/api', (_req, res) => {
       '/api/api-requests/*',
       '/api/api-testing/*',
       '/api/extensions/*',
-      '/api/allure',
+      '/api/reports/*',
       '/api/ml/*',
       '/api/ai-enhancement/*',
       '/api/ai-analysis/*',
@@ -189,7 +190,6 @@ app.get('/api', (_req, res) => {
 app.get('/api-docs.json', (_req, res) => { res.json(swaggerSpec); });
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use('/allure-reports', express.static(path.join(process.cwd(), 'allure-reports')));
 app.use('/playwright-crx-reports', express.static(path.join(process.cwd(), 'playwright-crx-reports')));
 
 app.use('/api/auth', authRoutes);
@@ -197,7 +197,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/scripts', scriptRoutes);
 app.use('/api/test-runs', testRunRoutes);
 app.use('/api/extensions', extensionRoutes);
-app.use('/api/allure', allureRoutes);
+app.use('/api/allure', reportRoutes);  // keep /api/allure path for backward compat
+app.use('/api/reports', reportRoutes);
 app.use('/api/api-testing', apiTestingRoutes);
 app.use('/api/api-requests', apiRequestRoutes);
 app.use('/api/ml', mlEnhancementRoutes);
