@@ -49,6 +49,11 @@ interface GeneratedTestData {
   [key: string]: any;
 }
 
+interface CsvDataRow {
+  index: number;
+  values: Record<string, string>;
+}
+
 interface Placeholder {
   name: string;
   line: number;
@@ -93,6 +98,7 @@ const DataDrivenTesting = () => {
   const [showPreview, setShowPreview] = useState(true);
   const [uploadedScript, setUploadedScript] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [csvUploading, setCsvUploading] = useState(false);
 
   // Step 3: Field Binding
   const [placeholders, setPlaceholders] = useState<Placeholder[]>([]);
@@ -229,6 +235,49 @@ const DataDrivenTesting = () => {
       alert(`Failed to generate test data: ${error.response?.data?.error || error.message}`);
     } finally {
       setGeneratingData(false);
+    }
+  };
+
+  const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedScript) return;
+    setCsvUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('scriptId', selectedScript.id);
+      const res = await axios.post(`${API_URL}/testdata/csv/upload-and-bind`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data.success) {
+        const rows: CsvDataRow[] = res.data.csv?.rows || [];
+        const csvData: GeneratedTestData[] = rows.map((r: CsvDataRow, i: number) => ({
+          _testDataType: 'csv-upload',
+          _index: i + 1,
+          ...r.values
+        }));
+        setGeneratedData(csvData);
+        setShowPreview(true);
+
+        // Auto-bind from API response
+        const mapped = res.data.analysis?.fieldBindings?.mapped || [];
+        const bindings: Record<string, string> = {};
+        const phs: Placeholder[] = [];
+        mapped.forEach((fb: any) => {
+          if (fb.confidence !== 'none') {
+            bindings[fb.placeholder] = fb.csvHeader;
+            phs.push({ name: fb.placeholder, line: 0, context: `Bound to CSV column: ${fb.csvHeader}` });
+          }
+        });
+        setPlaceholders(phs);
+        setFieldBindings(bindings);
+        setActiveStep(phs.length > 0 ? 3 : 2);
+      }
+    } catch (error: any) {
+      alert(`CSV upload failed: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setCsvUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -412,6 +461,16 @@ const DataDrivenTesting = () => {
                 <button onClick={generateTestData} disabled={generatingData} className="btn-primary w-full">
                   {generatingData ? <><RefreshCw size={16} className="spinning" /> Generating...</> : <><Wand2 size={16} /> Generate Test Data</>}
                 </button>
+
+                <div className="ddt-divider"><span>OR</span></div>
+
+                <label className={`btn-secondary w-full ddt-csv-upload-btn ${csvUploading ? 'disabled' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: csvUploading ? 'not-allowed' : 'pointer' }}>
+                  <Upload size={16} /> {csvUploading ? 'Uploading...' : 'Upload CSV File'}
+                  <input type="file" accept=".csv" onChange={handleCsvUpload} style={{ display: 'none' }} disabled={csvUploading} />
+                </label>
+                <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px', textAlign: 'center' }}>
+                  CSV headers auto-bind to script {'{{placeholders}}'}
+                </p>
               </div>
 
               {generatedData.length > 0 && (
