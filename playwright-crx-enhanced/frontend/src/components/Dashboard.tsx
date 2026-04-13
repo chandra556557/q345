@@ -21,8 +21,7 @@ import ImportScriptModal from './ImportScriptModal';
 import ScriptValidationModal from './ScriptValidationModal';
 import ScriptCueCards from './ScriptCueCards';
 import TestDataManager from './TestDataManager';
-// DISABLED: DataDrivenTesting is now integrated into TestDataManager
-// import DataDrivenTesting from './DataDrivenTesting';
+import DataDrivenTesting from './DataDrivenTesting';
 import BDDTesting from './BDDTesting';
 // import ErrorAnalysis from './ErrorAnalysis';
 import './Dashboard.css';
@@ -50,7 +49,6 @@ interface TestRun {
   status: string;
   duration?: number;
   startedAt: string;
-  allureReportUrl?: string;
   executionReportUrl?: string;
   script: { name: string };
 }
@@ -69,7 +67,8 @@ type ActiveView =
   | 'apitesting'
   | 'databasetesting'
   | 'bdd'
-  | 'allure'
+  | 'datadriven'
+  | 'reports'
   | 'analytics'
   | 'settings';
 
@@ -112,7 +111,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const scriptsCount = scripts.length;
   const runsCount = testRuns.length;
-  const reportsCount = testRuns.filter(r => r.executionReportUrl || r.allureReportUrl).length;
+  const reportsCount = testRuns.filter(r => r.executionReportUrl || r.executionReportUrl).length;
 
   useEffect(() => {
     const storedRole = (localStorage.getItem('userRole') as 'admin' | 'editor' | 'user') || 'user';
@@ -245,16 +244,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       if (testRun?.executionReportUrl) {
         // Report already exists, just open it
         setSelectedReport(testRun.executionReportUrl);
-        setActiveView('allure');
+        setActiveView('reports');
         setGeneratingReport(null);
         return;
       }
 
       // Generate new report
-      const response = await axios.post(`${API_URL}/allure/generate/${testRunId}`, {}, { headers });
+      const response = await axios.post(`${API_URL}/reports/generate/${testRunId}`, {}, { headers });
       await loadData();
       setSelectedReport(response.data.reportUrl);
-      setActiveView('allure');
+      setActiveView('reports');
     } catch (error: any) {
       console.error('Error generating report:', error);
       alert('Failed to generate report: ' + (error.response?.data?.error || error.message));
@@ -361,8 +360,9 @@ Navigating to Test Runs...`);
     { id: 'apitesting', icon: '🔌', label: 'API Testing', category: 'Testing Tools' },
     { id: 'databasetesting', icon: '🗃️', label: 'Database Testing', category: 'Testing Tools' },
     { id: 'bdd', icon: '🥒', label: 'BDD Testing', category: 'Testing Tools' },
+    { id: 'datadriven', icon: '📋', label: 'Data-Driven Testing', category: 'Testing Tools' },
     { id: 'mcp-testing', icon: '🤖', label: 'MCP Testing', category: 'Testing Tools' },
-    { id: 'allure', icon: '📈', label: 'Test Execution Reports', category: 'Reports' },
+    { id: 'reports', icon: '📈', label: 'Test Execution Reports', category: 'Reports' },
     { id: 'analytics', icon: '📉', label: 'Analytics', category: 'Reports' },
     { id: 'settings', icon: '⚙️', label: 'Settings', category: 'System' }
   ];
@@ -448,7 +448,7 @@ Navigating to Test Runs...`);
                   {item.id === 'runs' && runsCount > 0 && (
                     <span className="nav-badge">{runsCount}</span>
                   )}
-                  {item.id === 'allure' && reportsCount > 0 && (
+                  {item.id === 'reports' && reportsCount > 0 && (
                     <span className="nav-badge">{reportsCount}</span>
                   )}
                 </button>
@@ -893,13 +893,13 @@ Navigating to Test Runs...`);
                           </div>
                         </div>
                         <div className="run-actions">
-                          {(run.executionReportUrl || run.allureReportUrl) ? (
+                          {(run.executionReportUrl || run.executionReportUrl) ? (
                             <>
                               <button
                                 className="btn-secondary"
                                 onClick={() => {
-                                  setSelectedReport((run.executionReportUrl || run.allureReportUrl)!);
-                                  setActiveView('allure');
+                                  setSelectedReport((run.executionReportUrl || run.executionReportUrl)!);
+                                  setActiveView('reports');
                                 }}
                                 title="View report in dashboard"
                               >
@@ -907,7 +907,7 @@ Navigating to Test Runs...`);
                               </button>
                               <button
                                 className="btn-primary"
-                                onClick={() => window.open(`http://localhost:3001${run.executionReportUrl || run.allureReportUrl}` , '_blank')}
+                                onClick={() => window.open(`http://localhost:3001${run.executionReportUrl || run.executionReportUrl}` , '_blank')}
                                 title="Open report in new tab (recommended for RedHat)"
                                 style={{ marginLeft: '8px' }}
                               >
@@ -945,12 +945,15 @@ Navigating to Test Runs...`);
 
           {/* BDD Testing */}
           {activeView === 'bdd' && <BDDTesting />}
-          
+
+          {/* Data-Driven Testing */}
+          {activeView === 'datadriven' && <DataDrivenTesting />}
+
           {/* MCP Testing */}
-          {activeView === 'mcp-testing' && <MCPTesting />}
+          {activeView === ('mcp-testing' as ActiveView) && <MCPTesting />}
 
           {/* Execution Reports */}
-          {activeView === 'allure' && (
+          {activeView === 'reports' && (
             <div className="view-container full-height">
               <h1 className="view-title">Test Execution Reports</h1>
               {selectedReport ? (
