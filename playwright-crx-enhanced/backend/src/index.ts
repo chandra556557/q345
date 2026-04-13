@@ -29,7 +29,7 @@ import visualRegressionRoutes from './routes/visual-regression.routes';
 import organizationRoutes from './routes/organization.routes';
 import queueRoutes from './routes/queue.routes';
 // DISABLED: Data-driven testing is now integrated into test data management
-// import dataDrivenRoutes from './routes/dataDriven.routes';
+import dataDrivenRoutes from './routes/dataDriven.routes';
 import bddRoutes from './routes/bdd.routes';
 import screenplayRoutes from './routes/screenplay.routes';
 import mcpRoutes from './routes/mcp.routes';
@@ -212,7 +212,7 @@ app.use('/api/testing-strategies', testingStrategiesRoutes);
 app.use('/api/visual-regression', visualRegressionRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/queue', queueRoutes);
-// DISABLED: app.use('/api/data-driven-runs', dataDrivenRoutes);
+app.use('/api/data-driven-runs', dataDrivenRoutes);
 app.use('/api/bdd', bddRoutes);
 app.use('/api/screenplay', screenplayRoutes);
 app.use('/api/mcp', mcpRoutes);
