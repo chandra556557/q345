@@ -4,6 +4,7 @@ import pool from '../db';
 import { randomUUID } from 'crypto';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { generateTestDataWithChatGPT, extractScriptContext } from '../services/chatgpt.service';
 
 dotenv.config();
 
@@ -365,13 +366,52 @@ const generateLocalTestData = (fields: string[], testDataType: string, count: nu
  * Reads token from .env file and forwards to external Genie API
  */
 const forwardToExternalAPI = async (testDataType: string, req: Request, res: Response): Promise<void> => {
-  try {
-    const { script_code, scriptCode, template, count, options } = req.body;
-    
-    // Support both script_code and scriptCode (prioritize scriptCode)
-    const actualScriptCode = scriptCode || script_code;
+  const { script_code, scriptCode, template, count, options } = req.body;
+  const actualScriptCode = scriptCode || script_code;
+  const requestedCount = count || 10;
 
-    // Get external API URL and token from .env
+  if (!actualScriptCode) {
+    res.status(400).json({ success: false, error: 'scriptCode is required' });
+    return;
+  }
+
+  // ========================================
+  // PRIORITY 1: ChatGPT 4o (if API key configured)
+  // ========================================
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      console.log(`🤖 ChatGPT: Generating ${requestedCount} ${testDataType} test data rows...`);
+      const result = await generateTestDataWithChatGPT(actualScriptCode, testDataType, requestedCount);
+
+      console.log(`✅ ChatGPT: Generated ${result.data.length} rows (${result.source})`);
+      console.log(`📋 Context: ${result.context.appType} form, ${result.context.fields.length} fields, URL: ${result.context.url}`);
+
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        metadata: {
+          count: result.data.length,
+          testDataType,
+          generated_at: new Date().toISOString(),
+          source: result.source,
+          context: {
+            appType: result.context.appType,
+            url: result.context.url,
+            fields: result.context.fields.map(f => ({ name: f.name, type: f.type })),
+            assertions: result.context.assertions,
+          }
+        }
+      });
+      return;
+    } catch (chatgptError: any) {
+      console.warn(`⚠️ ChatGPT failed (falling back): ${chatgptError.message}`);
+    }
+  }
+
+  // ========================================
+  // PRIORITY 2: External Genie API
+  // ========================================
+  try {
     const apiUrlMap: Record<string, string | undefined> = {
       'security': process.env.EXTERNAL_SECURITY_API_URL,
       'boundary': process.env.EXTERNAL_BOUNDARY_API_URL,
@@ -383,137 +423,84 @@ const forwardToExternalAPI = async (testDataType: string, req: Request, res: Res
     const externalApiUrl = apiUrlMap[testDataType];
     const externalToken = process.env.EXTERNAL_API_TOKEN;
 
-    if (!externalApiUrl) {
-      res.status(400).json({
-        success: false,
-        error: `External API URL for ${testDataType} not configured in .env file`
-      });
-      return;
-    }
+    if (externalApiUrl && externalToken) {
+      console.log(`📤 Forwarding to external API: ${externalApiUrl}`);
 
-    if (!externalToken) {
-      res.status(400).json({
-        success: false,
-        error: 'EXTERNAL_API_TOKEN not configured in .env file'
-      });
-      return;
-    }
-
-    console.log(`📤 Forwarding to external API: ${externalApiUrl}`);
-    console.log(`🔑 Using token from .env`);
-    console.log(`📝 Script length: ${actualScriptCode?.length || 0} characters`);
-    console.log(`📋 Template:`, JSON.stringify(template || {}));
-    console.log(`🔢 Count: ${count || 10}`);
-    console.log(`⚙️ Options:`, JSON.stringify(options || {}));
-    
-    // Debug: Log first 200 chars of script to verify what's being sent
-    if (actualScriptCode) {
-      console.log(`📜 Script preview:`, actualScriptCode.substring(0, 200) + '...');
-    } else {
-      console.warn(`⚠️ WARNING: No scriptCode provided!`);
-    }
-
-    // Forward request to external API using Swagger format
-    const response = await axios.post(externalApiUrl, {
-      scriptCode: actualScriptCode,  // Use camelCase as per Swagger docs
-      template: template || {},
-      count: count || 10,
-      testDataType: testDataType,
-      options: options || {}
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${externalToken}`
-      }
-    });
-
-    console.log(`✅ External API response received`);
-    console.log(`📦 Response structure:`, JSON.stringify(response.data, null, 2).substring(0, 500) + '...');
-    console.log(`📊 Data array length:`, Array.isArray(response.data?.data) ? response.data.data.length : 'not an array');
-    
-    // Log first record to see structure
-    if (response.data?.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
-      console.log(`🔍 First record:`, JSON.stringify(response.data.data[0], null, 2));
-    }
-    
-    // Check if external API returned only metadata (no actual field data)
-    const dataArray = Array.isArray(response.data?.data) ? response.data.data : [];
-    const hasOnlyMetadata = dataArray.length > 0 && dataArray.every((record: any) => {
-      const keys = Object.keys(record);
-      return keys.every(key => key.startsWith('_'));
-    });
-    
-    if (hasOnlyMetadata) {
-      console.warn(`⚠️ External API returned only metadata - generating local fallback data`);
-      
-      // Extract field names from script using regex
-      const fieldPattern = /getByLabel\(['"]([^'"]+)['"]\)|fill\(['"]|placeholder:\s*['"]([^'"]+)['"]|name:\s*['"]([^'"]+)['"]/g;
-      const fields: Set<string> = new Set();
-      let match;
-      
-      while ((match = fieldPattern.exec(actualScriptCode || '')) !== null) {
-        const fieldName = match[1] || match[2] || match[3];
-        if (fieldName) {
-          fields.add(fieldName.toLowerCase());
-        }
-      }
-      
-      console.log(`📋 Detected fields from script:`, Array.from(fields));
-      
-      // Generate boundary test data based on detected fields and type
-      const enrichedData = generateLocalTestData(Array.from(fields), testDataType, count || 10);
-      
-      console.log(`✅ Generated ${enrichedData.length} local test data records`);
-      console.log(`🔍 First enriched record:`, JSON.stringify(enrichedData[0], null, 2));
-      
-      res.status(200).json({
-        success: true,
-        data: {
-          success: true,
-          data: enrichedData,
-          metadata: {
-            count: enrichedData.length,
-            testDataType: testDataType,
-            template: template || {},
-            generated_at: new Date().toISOString(),
-            source: 'local_fallback',
-            fields_detected: Array.from(fields)
-          }
+      const response = await axios.post(externalApiUrl, {
+        scriptCode: actualScriptCode,
+        template: template || {},
+        count: requestedCount,
+        testDataType,
+        options: options || {}
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${externalToken}`
         },
-        metadata: {
-          external_endpoint: externalApiUrl,
-          test_data_type: testDataType,
-          source: 'local_fallback'
-        }
+        timeout: 30000,
       });
-      return;
+
+      const dataArray = Array.isArray(response.data?.data) ? response.data.data : [];
+      const hasOnlyMetadata = dataArray.length > 0 && dataArray.every((record: any) => {
+        return Object.keys(record).every(key => key.startsWith('_'));
+      });
+
+      if (!hasOnlyMetadata && dataArray.length > 0) {
+        console.log(`✅ External API: ${dataArray.length} rows`);
+        res.status(200).json({
+          success: true,
+          data: response.data,
+          metadata: { test_data_type: testDataType, source: 'external_api' }
+        });
+        return;
+      }
+      console.warn(`⚠️ External API returned only metadata — falling back to local`);
+    }
+  } catch (extError: any) {
+    console.warn(`⚠️ External API failed (falling back): ${extError.message}`);
+  }
+
+  // ========================================
+  // PRIORITY 3: Local rule-based generation
+  // ========================================
+  try {
+    console.log(`🔧 Local: Generating ${requestedCount} ${testDataType} test data rows...`);
+
+    // Use ChatGPT service's field extraction (smarter than regex-only)
+    const context = extractScriptContext(actualScriptCode);
+    const fieldNames = context.fields.map(f => f.name);
+
+    if (fieldNames.length === 0) {
+      // Fallback regex extraction
+      const fieldPattern = /getByLabel\(['"]([^'"]+)['"]\)|fill\(['"]([^'"]+)['"],|placeholder:\s*['"]([^'"]+)['"]|name:\s*['"]([^'"]+)['"]/g;
+      let match;
+      while ((match = fieldPattern.exec(actualScriptCode)) !== null) {
+        const name = (match[1] || match[2] || match[3] || match[4] || '').replace(/[#.\[\]>~+]/g, '').trim();
+        if (name && !fieldNames.includes(name.toLowerCase())) fieldNames.push(name.toLowerCase());
+      }
     }
 
-    // Return external API response
+    const enrichedData = generateLocalTestData(fieldNames, testDataType, requestedCount);
+
+    console.log(`✅ Local: Generated ${enrichedData.length} rows (${fieldNames.length} fields: ${fieldNames.join(', ')})`);
+
     res.status(200).json({
       success: true,
-      data: response.data,
+      data: enrichedData,
       metadata: {
-        external_endpoint: externalApiUrl,
-        test_data_type: testDataType,
-        source: 'external_api'
+        count: enrichedData.length,
+        testDataType,
+        generated_at: new Date().toISOString(),
+        source: 'local_fallback',
+        fields_detected: fieldNames,
       }
     });
-  } catch (error: any) {
-    console.error(`❌ External API Error:`, error.message);
-    if (error.response) {
-      console.error(`👉 Status:`, error.response.status);
-      console.error(`👉 Response:`, error.response.data);
-    }
-
-    res.status(error.response?.status || 500).json({
+  } catch (localError: any) {
+    console.error(`❌ All generation methods failed:`, localError.message);
+    res.status(500).json({
       success: false,
-      error: error.response?.data || error.message,
-      metadata: {
-        external_endpoint: error.config?.url,
-        test_data_type: testDataType,
-        source: 'external_api_error'
-      }
+      error: 'All test data generation methods failed',
+      details: localError.message,
     });
   }
 };
