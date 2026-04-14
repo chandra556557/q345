@@ -318,9 +318,20 @@ const DataDrivenTesting = () => {
             phs.push({ name: fb.placeholder, line: 0, context: `Bound to CSV column: ${fb.csvHeader}` });
           }
         });
+
+        // If no bindings from API, self-bind CSV headers (each header = placeholder)
+        if (phs.length === 0 && csvData.length > 0) {
+          const csvHeaders = Object.keys(csvData[0]).filter(k => !k.startsWith('_'));
+          csvHeaders.forEach((h, i) => {
+            phs.push({ name: h, line: i + 1, context: `CSV column: ${h}` });
+            bindings[h] = h;
+          });
+        }
+
         setPlaceholders(phs);
         setFieldBindings(bindings);
-        setActiveStep(phs.length > 0 ? 3 : 2);
+        setDataSource('csv-upload');
+        setActiveStep(phs.length > 0 ? 4 : 2); // Skip to config if bindings ready
       }
     } catch (error: any) {
       alert(`CSV upload failed: ${error.response?.data?.error || error.message}`);
@@ -332,17 +343,28 @@ const DataDrivenTesting = () => {
 
   const downloadTestData = (format: 'json' | 'csv') => {
     if (generatedData.length === 0) return;
+    // Filter out internal fields (_testDataType, _index)
+    const cleanData = generatedData.map(row => {
+      const clean: Record<string, any> = {};
+      Object.entries(row).forEach(([k, v]) => { if (!k.startsWith('_')) clean[k] = v; });
+      return clean;
+    });
+
     if (format === 'json') {
       const link = document.createElement('a');
-      link.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(generatedData, null, 2)));
+      link.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(cleanData, null, 2)));
       link.setAttribute('download', `test-data-${Date.now()}.json`);
       link.click();
     } else {
-      const h = Object.keys(generatedData[0]);
-      const csv = [h.join(','), ...generatedData.map(row => h.map(k => `"${typeof row[k] === 'string' ? row[k] : JSON.stringify(row[k])}"`).join(','))].join('\n');
+      const h = Object.keys(cleanData[0]);
+      const csv = [h.join(','), ...cleanData.map(row => h.map(k => {
+        const val = typeof row[k] === 'string' ? row[k] : JSON.stringify(row[k]);
+        // Escape quotes and wrap in quotes
+        return `"${(val || '').replace(/"/g, '""')}"`;
+      }).join(','))].join('\n');
       const link = document.createElement('a');
       link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv));
-      link.setAttribute('download', `test-data-${Date.now()}.csv`);
+      link.setAttribute('download', `test-data-${selectedScript?.name || 'testdata'}-${testDataType}.csv`);
       link.click();
     }
   };
@@ -605,9 +627,14 @@ const DataDrivenTesting = () => {
                   </div>
                   {showPreview && (
                     <div className="ddt-data-preview">
-                      <div className="ddt-data-actions">
+                      <div className="ddt-data-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                        <button onClick={() => downloadTestData('csv')} className="btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Download size={14} /> Export CSV
+                        </button>
                         <button onClick={() => downloadTestData('json')} className="btn-secondary btn-sm"><Download size={14} /> JSON</button>
-                        <button onClick={() => downloadTestData('csv')} className="btn-secondary btn-sm"><Download size={14} /> CSV</button>
+                        <button onClick={() => { if (Object.keys(fieldBindings).length > 0) setActiveStep(4); else setActiveStep(3); }} className="btn-primary btn-sm" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Play size={14} /> Bind & Execute
+                        </button>
                       </div>
                       {/* Table view for generated data */}
                       <div style={{ overflowX: 'auto' }}>
