@@ -2,7 +2,7 @@ import { WebSocketServer } from 'ws';
 import { logger } from '../../utils/logger';
 import pool from '../../db';
 import { chromium, firefox, webkit, Browser, Page } from 'playwright-core';
-import { playwrightCrxService } from '../allure.service';
+import { bddReportService as playwrightCrxService } from '../bdd-report.service';
 
 interface TestRunContext {
   testRunId: string;
@@ -42,25 +42,20 @@ export class TestRunnerService {
       // Use browserType from request parameter, then from script, then default to firefox
       const effectiveBrowserType = browserType || script.browserType || 'firefox';
 
-      // Start Allure test tracking
-      await playwrightCrxService.startTest(testRunId, script.name);
-      logger.info('📊 Allure test tracking started');
-
       const startTime = Date.now();
-      
+
       // Execute script with Playwright
       await this.executeScriptWithPlaywright(context, script.code, effectiveBrowserType);
-      
+
       const duration = Date.now() - startTime;
 
-      // End Allure test as passed
-      await playwrightCrxService.endTest(testRunId, 'passed');
-      logger.info('📊 Allure test marked as passed');
-
-      // Generate Allure report
-      await playwrightCrxService.generateReport(testRunId);
-      const reportUrl = await playwrightCrxService.getReportUrl(testRunId);
-      logger.info('📊 Allure report generated:', reportUrl);
+      // Generate BDD report
+      const reportUrl = await playwrightCrxService.generateTestRunReport(
+        testRunId, script.name,
+        [{ action: 'Execute script', status: 'passed', duration }],
+        'passed', { browser: effectiveBrowserType }
+      );
+      logger.info('📊 Report generated:', reportUrl);
 
       await pool.query(
         `UPDATE "TestRun" SET status = 'passed', "completedAt" = now(), duration = $2, "executionReportUrl" = $3 WHERE id = $1`,
@@ -78,19 +73,21 @@ export class TestRunnerService {
       const startTime = Date.now();
       const duration = context ? Date.now() - startTime : 0;
 
-      // End Allure test as failed
+      // Generate report for failed test
       try {
-        await playwrightCrxService.endTest(testRunId, 'failed', error.message);
-        await playwrightCrxService.generateReport(testRunId);
-        const reportUrl = await playwrightCrxService.getReportUrl(testRunId);
-        logger.info('📊 Allure report generated for failed test:', reportUrl);
+        const reportUrl = await playwrightCrxService.generateTestRunReport(
+          testRunId, 'Test Run',
+          [{ action: 'Execute script', status: 'failed', duration, errorMessage: error.message }],
+          'failed'
+        );
+        logger.info('📊 Report generated for failed test:', reportUrl);
 
         await pool.query(
           `UPDATE "TestRun" SET status = 'failed', "errorMsg" = $2, "completedAt" = now(), duration = $3, "executionReportUrl" = $4 WHERE id = $1`,
           [testRunId, error.message, duration, reportUrl]
         );
-      } catch (allureError: any) {
-        logger.error('Failed to generate Allure report:', allureError.message);
+      } catch (reportError: any) {
+        logger.error('Failed to generate report:', reportError.message);
         await pool.query(
           `UPDATE "TestRun" SET status = 'failed', "errorMsg" = $2, "completedAt" = now(), duration = $3 WHERE id = $1`,
           [testRunId, error.message, duration]
@@ -205,7 +202,18 @@ export class TestRunnerService {
 
   private async executePlaywrightCode(context: TestRunContext, page: Page, code: string): Promise<void> {
     // Parse and execute Playwright commands from the code
-    const lines = code.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//')); 
+    const lines = code.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//'));
+
+    // Extract BASE_URL from script: const BASE_URL = process.env.BASE_URL || 'https://...';
+    let scriptBaseUrl = '';
+    for (const line of lines) {
+      const baseUrlMatch = line.match(/(?:const|let|var)\s+BASE_URL\s*=\s*.*\|\|\s*['"]([^'"]+)['"]/);
+      if (baseUrlMatch) { scriptBaseUrl = baseUrlMatch[1]; break; }
+      const simpleMatch = line.match(/(?:const|let|var)\s+BASE_URL\s*=\s*['"]([^'"]+)['"]/);
+      if (simpleMatch) { scriptBaseUrl = simpleMatch[1]; break; }
+    }
+    if (!scriptBaseUrl) scriptBaseUrl = process.env.BASE_URL || '';
+    logger.info(`Script BASE_URL resolved to: "${scriptBaseUrl}"`);
 
     let stepNumber = 1;
 
@@ -218,7 +226,26 @@ export class TestRunnerService {
         // Parse and execute different Playwright commands
         if (line.includes('page.goto(')) {
           action = 'navigate';
-          const url = this.extractParameter(line, 'page.goto(') || '';
+          let url = this.extractParameter(line, 'page.goto(') || '';
+
+          // Resolve variable references: "BASE_URL + /path" or "BASE_URL || http://..."
+          if (url.includes('BASE_URL') || url.includes('ENV_PROFILE')) {
+            // Extract the path part after + if present
+            const plusMatch = url.match(/(?:BASE_URL|ENV_PROFILE\.baseUrl)\s*\+\s*(.*)/);
+            if (plusMatch) {
+              url = scriptBaseUrl + plusMatch[1].replace(/['"]/g, '').trim();
+            } else {
+              // "BASE_URL || fallback" or just "BASE_URL"
+              url = scriptBaseUrl || url.replace(/BASE_URL\s*\|\|\s*/, '').replace(/ENV_PROFILE\.baseUrl\s*\|\|\s*/, '').replace(/['"]/g, '').trim();
+            }
+          }
+
+          // Skip non-URL lines (variable declarations, if statements)
+          if (!url || url.startsWith('if') || url.startsWith('const') || url.startsWith('throw')) {
+            stepNumber++;
+            continue;
+          }
+
           selector = url;
           
           logger.info(`Step ${stepNumber}: Navigate to ${url}`);
@@ -235,35 +262,39 @@ export class TestRunnerService {
         } else if (line.includes('page.click(')) {
           action = 'click';
           selector = this.extractParameter(line, 'page.click(') || '';
-          
+          if (!selector) { logger.warn(`Step ${stepNumber}: Skipping click — empty selector`); stepNumber++; continue; }
+
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
           await page.click(selector);
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
-          
+
         } else if (line.includes('page.fill(')) {
           action = 'fill';
           const params = this.extractParameters(line, 'page.fill(');
           selector = params[0] || '';
           value = params[1] || '';
-          
+          if (!selector) { logger.warn(`Step ${stepNumber}: Skipping fill — empty selector`); stepNumber++; continue; }
+
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
           await page.fill(selector, value);
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
-          
+
         } else if (line.includes('page.press(')) {
           action = 'press';
           const params = this.extractParameters(line, 'page.press(');
           selector = params[0] || '';
           value = params[1] || '';
-          
+          if (!selector) { logger.warn(`Step ${stepNumber}: Skipping press — empty selector`); stepNumber++; continue; }
+
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
           await page.press(selector, value);
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
-          
+
         } else if (line.includes('page.waitForSelector(')) {
           action = 'wait';
           selector = this.extractParameter(line, 'page.waitForSelector(') || '';
-          
+          if (!selector) { logger.warn(`Step ${stepNumber}: Skipping waitForSelector — empty selector`); stepNumber++; continue; }
+
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
           await page.waitForSelector(selector, { timeout: 30000 });
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
@@ -271,26 +302,66 @@ export class TestRunnerService {
         } else if (line.includes('expect(') && line.includes('toBeVisible')) {
           action = 'assert_visible';
           selector = this.extractExpectSelector(line);
-          
-          await this.recordStep(context, stepNumber, action, selector, value, 'running');
-          const element = page.locator(selector);
-          await element.waitFor({ state: 'visible', timeout: 10000 });
-          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
-          
+
+          await this.recordStep(context, stepNumber, action, selector || '(page element)', value, 'running');
+          const element = this.resolveLocator(page, line) || (selector ? page.locator(selector) : null);
+          if (!element) { logger.warn(`Step ${stepNumber}: Cannot resolve locator for visibility check`); stepNumber++; continue; }
+          await element.first().waitFor({ state: 'visible', timeout: 10000 });
+          await this.recordStep(context, stepNumber, action, selector || '(page element)', value, 'passed');
+
         } else if (line.includes('expect(') && line.includes('toHaveText')) {
           action = 'assert_text';
           selector = this.extractExpectSelector(line);
           const expectedText = this.extractExpectedText(line);
           value = expectedText;
-          
-          await this.recordStep(context, stepNumber, action, selector, value, 'running');
-          const element = page.locator(selector);
-          await element.waitFor({ state: 'visible' });
-          const actualText = await element.textContent();
+
+          await this.recordStep(context, stepNumber, action, selector || '(page element)', value, 'running');
+          const element = this.resolveLocator(page, line) || (selector ? page.locator(selector) : null);
+          if (!element) { logger.warn(`Step ${stepNumber}: Cannot resolve locator for text check`); stepNumber++; continue; }
+          await element.first().waitFor({ state: 'visible' });
+          const actualText = await element.first().textContent();
           if (!actualText?.includes(expectedText)) {
             throw new Error(`Expected text "${expectedText}" not found. Actual: "${actualText}"`);
           }
-          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          await this.recordStep(context, stepNumber, action, selector || '(page element)', value, 'passed');
+
+        } else if (line.includes('page.getByLabel(') || line.includes('page.getByRole(') || line.includes('page.getByText(') || line.includes('page.getByPlaceholder(') || line.includes('page.getByTestId(') || line.includes('page.locator(')) {
+          // Handle modern Playwright locator API calls: getByLabel('X').fill('Y'), getByPlaceholder('X').fill('Y'), getByRole('button', {name: 'X'}).click()
+          const locator = this.resolveLocator(page, line);
+          if (!locator) { stepNumber++; continue; }
+
+          if (line.includes('.fill(')) {
+            action = 'fill';
+            const fillMatch = line.match(/\.fill\(['"]([^'"]*)['"]\)/);
+            value = fillMatch ? fillMatch[1] : '';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().fill(value);
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.click(')) {
+            action = 'click';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().click();
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.check(')) {
+            action = 'check';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().check();
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.selectOption(')) {
+            action = 'select';
+            const optMatch = line.match(/\.selectOption\(['"]([^'"]*)['"]\)/);
+            value = optMatch ? optMatch[1] : '';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().selectOption(value);
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else {
+            // Unknown action on locator — skip
+            stepNumber++; continue;
+          }
         } else {
           // Skip unrecognized lines (imports, comments, etc.)
           continue;
@@ -344,17 +415,7 @@ export class TestRunnerService {
         );
       }
 
-      // Record step in Allure when completed (passed or failed)
-      if (status === 'passed' || status === 'failed') {
-        const stepName = `${action} ${selector || value || ''}`;
-        await playwrightCrxService.recordStep(
-          context.testRunId,
-          stepName,
-          status,
-          300
-        );
-        logger.info(`📊 Allure step recorded: ${stepName} - ${status}`);
-      }
+      // Step recorded in DB — report generated at end of test run
 
       if (context.ws) {
         this.sendWebSocketMessage(context.ws, { 
@@ -375,6 +436,59 @@ export class TestRunnerService {
     }
   }
 
+  /**
+   * Resolve a Playwright locator from a code line containing getByLabel, getByRole, getByText, or locator calls.
+   */
+  private resolveLocator(page: Page, line: string): ReturnType<Page['locator']> | null {
+    try {
+      // page.getByText('text', { exact: false })
+      const getByTextMatch = line.match(/getByText\(['"]([^'"]+)['"]/);
+      if (getByTextMatch) return page.getByText(getByTextMatch[1], { exact: false });
+
+      // page.getByLabel('label')
+      const getByLabelMatch = line.match(/getByLabel\(['"]([^'"]+)['"]/);
+      if (getByLabelMatch) return page.getByLabel(getByLabelMatch[1]);
+
+      // page.getByRole('role', { name: 'text' }) or page.getByRole('role', { name: /regex/i })
+      const getByRoleMatch = line.match(/getByRole\(['"]([^'"]+)['"](?:,\s*\{\s*name:\s*(?:['"]([^'"]+)['"]|\/([^/]+)\/\w*)\s*\})?/);
+      if (getByRoleMatch) {
+        const role = getByRoleMatch[1] as any;
+        const nameStr = getByRoleMatch[2];
+        const nameRegex = getByRoleMatch[3];
+        if (nameRegex) return page.getByRole(role, { name: new RegExp(nameRegex, 'i') });
+        if (nameStr) return page.getByRole(role, { name: nameStr });
+        return page.getByRole(role);
+      }
+
+      // page.getByPlaceholder('text')
+      const getByPlaceholderMatch = line.match(/getByPlaceholder\(['"]([^'"]+)['"]/);
+      if (getByPlaceholderMatch) return page.getByPlaceholder(getByPlaceholderMatch[1]);
+
+      // page.locator('selector')
+      const locatorMatch = line.match(/(?:page\.)?locator\(['"]([^'"]+)['"]/);
+      if (locatorMatch && locatorMatch[1]) return page.locator(locatorMatch[1]);
+    } catch (e: any) {
+      logger.warn(`Could not resolve locator from line: ${line.substring(0, 100)} — ${e.message}`);
+    }
+    return null;
+  }
+
+  private extractLocatorDescription(line: string): string {
+    const placeholderMatch = line.match(/getByPlaceholder\(['"]([^'"]+)['"]/);
+    if (placeholderMatch) return `placeholder:${placeholderMatch[1]}`;
+    const labelMatch = line.match(/getByLabel\(['"]([^'"]+)['"]/);
+    if (labelMatch) return `label:${labelMatch[1]}`;
+    const roleMatch = line.match(/getByRole\(['"]([^'"]+)['"](?:,\s*\{\s*name:\s*['"]([^'"]+)['"])?/);
+    if (roleMatch) return roleMatch[2] ? `${roleMatch[1]}:${roleMatch[2]}` : roleMatch[1];
+    const textMatch = line.match(/getByText\(['"]([^'"]+)['"]/);
+    if (textMatch) return `text:${textMatch[1]}`;
+    const testIdMatch = line.match(/getByTestId\(['"]([^'"]+)['"]/);
+    if (testIdMatch) return `testid:${testIdMatch[1]}`;
+    const locatorMatch = line.match(/locator\(['"]([^'"]+)['"]/);
+    if (locatorMatch) return locatorMatch[1];
+    return line.substring(0, 60);
+  }
+
   private extractExpectSelector(line: string): string {
     // Extract selector from expect(page.locator('selector'))
     const match = line.match(/locator\(['"]([^'"]+)['"]/); 
@@ -391,20 +505,30 @@ export class TestRunnerService {
   private extractParameter(line: string, method: string): string | undefined {
     const startIndex = line.indexOf(method);
     if (startIndex === -1) return undefined;
-    const paramStart = startIndex + method.length;
-    const paramEnd = line.indexOf(')', paramStart);
-    if (paramEnd === -1) return undefined;
-    return line.substring(paramStart, paramEnd).replace(/['"]/g, '').trim();
+    const after = line.substring(startIndex + method.length);
+    // Extract first quoted string parameter
+    const quotedMatch = after.match(/^['"]([^'"]*)['"]/);
+    if (quotedMatch) return quotedMatch[1];
+    // Fallback: extract up to first comma or closing paren (for unquoted params like variables)
+    const fallbackMatch = after.match(/^([^,)]+)/);
+    return fallbackMatch ? fallbackMatch[1].replace(/['"]/g, '').trim() : undefined;
   }
 
   private extractParameters(line: string, method: string): string[] {
     const startIndex = line.indexOf(method);
     if (startIndex === -1) return [];
-    const paramStart = startIndex + method.length;
-    const paramEnd = line.indexOf(')', paramStart);
-    if (paramEnd === -1) return [];
-    const paramsString = line.substring(paramStart, paramEnd);
-    return paramsString.split(',').map(param => param.replace(/['"]/g, '').trim());
+    const after = line.substring(startIndex + method.length);
+    // Extract quoted string parameters separated by commas, stop at object literal { or )
+    const params: string[] = [];
+    const paramRegex = /['"]([^'"]*)['"]/g;
+    let match;
+    while ((match = paramRegex.exec(after)) !== null) {
+      // Stop if we hit an object literal
+      const before = after.substring(0, match.index);
+      if (before.includes('{')) break;
+      params.push(match[1]);
+    }
+    return params;
   }
 
   private sendWebSocketMessage(_ws: WebSocketServer, message: any): void {

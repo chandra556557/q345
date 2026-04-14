@@ -94,6 +94,8 @@ const DataDrivenTesting = () => {
   const [testDataType, setTestDataType] = useState<'all' | 'boundary' | 'positive' | 'negative' | 'security' | 'equivalence'>('all');
   const [dataCount, setDataCount] = useState(10);
   const [generatedData, setGeneratedData] = useState<GeneratedTestData[]>([]);
+  const [dataSource, setDataSource] = useState<string>('');
+  const [dataContext, setDataContext] = useState<any>(null);
   const [generatingData, setGeneratingData] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [uploadedScript, setUploadedScript] = useState('');
@@ -229,6 +231,8 @@ const DataDrivenTesting = () => {
       const response = await axios.post(endpoints[testDataType] || endpoints.all, { scriptCode, count: dataCount, testDataType: testDataType === 'all' ? undefined : testDataType }, { headers });
       const data = response.data?.data || [];
       setGeneratedData(data);
+      setDataSource(response.data?.source || '');
+      setDataContext(response.data?.context || null);
       setShowPreview(true);
       if (data.length > 0) setActiveStep(3);
     } catch (error: any) {
@@ -476,7 +480,7 @@ const DataDrivenTesting = () => {
               {generatedData.length > 0 && (
                 <div className="ddt-section">
                   <div className="ddt-collapsible-header" onClick={() => setShowPreview(!showPreview)}>
-                    <div className="ddt-collapsible-title"><Eye size={16} /><span>Generated Data ({generatedData.length} records)</span></div>
+                    <div className="ddt-collapsible-title"><Eye size={16} /><span>Generated Data ({generatedData.length} records){dataSource && <span style={{ marginLeft: '8px', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', background: dataSource.startsWith('chatgpt') ? '#e0f2fe' : '#f0fdf4', color: dataSource.startsWith('chatgpt') ? '#0369a1' : '#166534' }}>{dataSource.startsWith('chatgpt') ? 'AI: ' + dataSource : dataSource}</span>}</span></div>
                     {showPreview ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
                   {showPreview && (
@@ -505,6 +509,13 @@ const DataDrivenTesting = () => {
                         ))}
                         {generatedData.length > 5 && <div className="ddt-more-records">+ {generatedData.length - 5} more records</div>}
                       </div>
+                      {dataContext && (
+                        <div style={{ marginTop: '12px', padding: '10px', background: '#f8fafc', borderRadius: '6px', fontSize: '0.8rem', color: '#64748b' }}>
+                          <strong>AI Context:</strong> {dataContext.appType} app
+                          {dataContext.url && <> at {dataContext.url}</>}
+                          {dataContext.fields && <> | Fields: {dataContext.fields.map((f: any) => `${f.name}(${f.type})`).join(', ')}</>}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

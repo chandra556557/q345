@@ -113,14 +113,16 @@ export function extractScriptContext(scriptCode: string): ScriptContext {
     }
   }
 
-  // Also extract {{placeholder}} fields
+  // Extract {{placeholder}} fields — these are the actual data-driven keys
+  const placeholderFields: ExtractedField[] = [];
+  const placeholderSeen = new Set<string>();
   for (const line of lines) {
     const placeholderMatches = line.matchAll(/\{\{(\w+)\}\}/g);
     for (const m of placeholderMatches) {
       const name = m[1];
-      if (!seen.has(name.toLowerCase())) {
-        seen.add(name.toLowerCase());
-        fields.push({
+      if (!placeholderSeen.has(name.toLowerCase())) {
+        placeholderSeen.add(name.toLowerCase());
+        placeholderFields.push({
           name,
           type: inferFieldType(name),
           selector: `{{${name}}}`,
@@ -132,10 +134,14 @@ export function extractScriptContext(scriptCode: string): ScriptContext {
     }
   }
 
-  const appType = detectAppType(url, fields, assertions);
-  const flowDescription = buildFlowDescription(appType, fields, assertions, url);
+  // If {{placeholder}} fields exist, use ONLY those (they're what data-driven runner substitutes)
+  // Otherwise fall back to selector-derived fields
+  const finalFields = placeholderFields.length > 0 ? placeholderFields : fields;
 
-  return { url, appType, fields, assertions, flowDescription };
+  const appType = detectAppType(url, finalFields, assertions);
+  const flowDescription = buildFlowDescription(appType, finalFields, assertions, url);
+
+  return { url, appType, fields: finalFields, assertions, flowDescription };
 }
 
 function inferFieldType(name: string): string {
@@ -166,6 +172,7 @@ function inferFieldType(name: string): string {
 }
 
 function detectAppType(_url: string, fields: ExtractedField[], assertions: string[]): string {
+  void _url;
   const fieldNames = fields.map(f => f.name.toLowerCase()).join(' ');
   const assertionText = assertions.join(' ').toLowerCase();
 
