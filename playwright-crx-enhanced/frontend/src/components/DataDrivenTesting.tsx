@@ -142,7 +142,15 @@ const DataDrivenTesting = () => {
     }
   };
 
+  const loadScriptCode = async (scriptId: string): Promise<string> => {
+    try {
+      const res = await axios.get(`${API_URL}/scripts/${scriptId}`, { headers });
+      return res.data?.data?.code || res.data?.code || '';
+    } catch { return ''; }
+  };
+
   const extractFieldsWithAI = async (scriptCode: string) => {
+    if (!scriptCode) { setExtractedFields([]); return; }
     setExtractingFields(true);
     setExtractedFields([]);
     try {
@@ -157,6 +165,7 @@ const DataDrivenTesting = () => {
   };
 
   const extractFieldsManually = (code: string): ExtractedField[] => {
+    if (!code) return [];
     const fields: ExtractedField[] = [];
     const patterns = [/fill\(['"]#?([^'"`]+)['"]/, /fill\(['"]\.([^'"`]+)['"]/, /getByPlaceholder\(['"]([^'"`]+)['"]/, /getByLabel\(['"]([^'"`]+)['"]/];
     patterns.forEach(pattern => {
@@ -411,7 +420,7 @@ const DataDrivenTesting = () => {
           <div className="ddt-section">
             <label className="ddt-label">Select from Database</label>
             <select className="ddt-select" value={selectedScript?.id || ''} disabled={loadingScripts}
-              onChange={(e) => { const s = scripts.find(s => s.id === e.target.value); if (s) { setSelectedScript(s); setUploadedScript(''); extractFieldsWithAI(s.code); setActiveStep(2); } }}>
+              onChange={async (e) => { const s = scripts.find(s => s.id === e.target.value); if (s) { const code = await loadScriptCode(s.id); setSelectedScript({ ...s, code }); setUploadedScript(''); extractFieldsWithAI(code); setActiveStep(2); } }}>
               <option value="">-- Select a script --</option>
               {scripts.map(s => <option key={s.id} value={s.id}>{s.name} ({s.language})</option>)}
             </select>
