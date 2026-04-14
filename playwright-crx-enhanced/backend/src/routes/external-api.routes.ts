@@ -16,6 +16,7 @@ import {
 import { authMiddleware } from '../middleware/auth.middleware';
 // import { TestDataService } from '../services/testdata.service';
 import { logger } from '../utils/logger';
+import { generateTestDataWithChatGPT } from '../services/chatgpt.service';
 
 const router = Router();
 
@@ -247,10 +248,35 @@ async function handleTestDataGeneration(req: Request, res: Response) {
 
     const recordCount = Math.min(Math.max(1, Number(count)), 50);
 
+    // Priority 1: ChatGPT 4o (if API key configured)
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        logger.info(`ChatGPT: Generating ${recordCount} ${type} test data rows...`);
+        const result = await generateTestDataWithChatGPT(scriptCode, type, recordCount);
+        logger.info(`ChatGPT: Generated ${result.data.length} rows (${result.source})`);
+
+        return res.json({
+          success: true,
+          data: result.data,
+          count: result.data.length,
+          testDataType: type,
+          source: result.source,
+          context: {
+            appType: result.context.appType,
+            url: result.context.url,
+            fields: result.context.fields.map(f => ({ name: f.name, type: f.type })),
+            assertions: result.context.assertions,
+          }
+        });
+      } catch (chatgptError: any) {
+        logger.warn(`ChatGPT failed (falling back to local): ${chatgptError.message}`);
+      }
+    }
+
+    // Priority 2: Local rule-based generation (fallback)
     let data: any[] = [];
 
     if (type === 'all') {
-      // Generate a mix of all types
       const types = ['boundary', 'positive', 'negative', 'security', 'equivalence'];
       const perType = Math.max(1, Math.ceil(recordCount / types.length));
       for (const t of types) {
@@ -262,10 +288,9 @@ async function handleTestDataGeneration(req: Request, res: Response) {
       data = generateTestDataFromScript(scriptCode, type, recordCount);
     }
 
-    // Re-index
     data.forEach((rec, i) => { rec._index = i + 1; });
 
-    return res.json({ success: true, data, count: data.length, testDataType: type });
+    return res.json({ success: true, data, count: data.length, testDataType: type, source: 'local' });
   } catch (error: any) {
     logger.error('Test data generation error:', error.message);
     return res.status(500).json({ error: error.message || 'Failed to generate test data' });
