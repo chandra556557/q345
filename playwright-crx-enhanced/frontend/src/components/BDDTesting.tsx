@@ -1152,10 +1152,14 @@ const BDDTesting: React.FC = () => {
                 <div key={idx} className="bdd-scenario-item">
                   <h4>
                     {scenario.type === 'Scenario Outline' ? 'Scenario Outline' : 'Scenario'}: {scenario.name}
-                    {scenario.tags?.map((tag: string, i: number) => (
-                      <span key={i} className="bdd-tag">{tag}</span>
-                    ))}
                   </h4>
+                  {scenario.tags?.length > 0 && (
+                    <div className="bdd-tags-row">
+                      {scenario.tags.filter((t: string) => t && t.trim()).map((tag: string, i: number) => (
+                        <span key={i} className="bdd-tag">{tag.trim()}</span>
+                      ))}
+                    </div>
+                  )}
                   {scenario.steps?.map((step: any, sIdx: number) => (
                     <div key={sIdx} className="bdd-step">
                       <span className="keyword">{step.keyword}</span> {step.text}
@@ -1257,9 +1261,9 @@ const BDDTesting: React.FC = () => {
                     <span>Created: {formatDate(feature.createdAt)}</span>
                   </div>
                   {feature.tags && Array.isArray(feature.tags) && feature.tags.length > 0 && (
-                    <div style={{ marginTop: '8px' }}>
-                      {feature.tags.map((tag: string, i: number) => (
-                        <span key={i} className="bdd-tag">{tag}</span>
+                    <div className="bdd-tags-row">
+                      {feature.tags.filter((t: string) => t && t.trim()).map((tag: string, i: number) => (
+                        <span key={i} className="bdd-tag">{tag.trim()}</span>
                       ))}
                     </div>
                   )}
@@ -1297,10 +1301,14 @@ const BDDTesting: React.FC = () => {
                 <div key={idx} className="bdd-scenario-item">
                   <h4>
                     {scenario.scenarioType}: {scenario.name}
-                    {scenario.tags?.map((tag: string, i: number) => (
-                      <span key={i} className="bdd-tag">{tag}</span>
-                    ))}
                   </h4>
+                  {scenario.tags?.length > 0 && (
+                    <div className="bdd-tags-row">
+                      {scenario.tags.filter((t: string) => t && t.trim()).map((tag: string, i: number) => (
+                        <span key={i} className="bdd-tag">{tag.trim()}</span>
+                      ))}
+                    </div>
+                  )}
                   {scenario.steps?.map((step, sIdx) => (
                     <div key={sIdx} className="bdd-step">
                       <span className="keyword">{step.keyword}</span> {step.text}

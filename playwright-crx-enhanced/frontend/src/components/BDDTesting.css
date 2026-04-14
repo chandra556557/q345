@@ -154,13 +154,21 @@
 }
 
 .bdd-tag {
-  display: inline-block;
+  display: inline-flex;
   padding: 2px 8px;
   background: #e8f0fe;
   color: #4a90d9;
   border-radius: 12px;
   font-size: 11px;
-  margin-right: 4px;
+  margin: 0 4px 4px 0;
+  white-space: nowrap;
+}
+
+.bdd-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
 }
 
 .bdd-status {
