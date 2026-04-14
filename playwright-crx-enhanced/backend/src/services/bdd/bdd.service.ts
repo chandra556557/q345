@@ -1180,7 +1180,7 @@ class BDDService {
     const lower = text.toLowerCase();
     const quotes = (text.match(/"([^"]*)"/g) || []).map(m => m.replace(/"/g, ''));
     // Navigation / Launch
-    if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit) /) || lower.includes('launch')) {
+    if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit) /) || lower.includes('launch') || lower.match(/^(i am on|user is on|the user is on|user should launch)/) || lower.includes('application is open')) {
       const url = quotes[0] || '';
       if (!url) {
         if (context === 'execution') {
