@@ -498,26 +498,40 @@ const DataDrivenTesting = () => {
                         <button onClick={() => downloadTestData('json')} className="btn-secondary btn-sm"><Download size={14} /> JSON</button>
                         <button onClick={() => downloadTestData('csv')} className="btn-secondary btn-sm"><Download size={14} /> CSV</button>
                       </div>
-                      <div className="ddt-data-table">
-                        {generatedData.slice(0, 5).map((rec, idx) => (
-                          <div key={idx} className="ddt-data-record">
-                            <div className="ddt-record-header">
-                              <span className="ddt-record-index">#{rec._index || idx + 1}</span>
-                              <span className="ddt-record-type">{rec._testDataType}</span>
-                              <button onClick={() => navigator.clipboard.writeText(JSON.stringify(rec, null, 2))} className="ddt-icon-btn" title="Copy"><Copy size={14} /></button>
-                            </div>
-                            <div className="ddt-record-fields">
-                              {Object.entries(rec).filter(([k]) => !k.startsWith('_')).map(([k, v]) => (
-                                <div key={k} className="ddt-field-pair">
-                                  <span className="ddt-field-key">{k}:</span>
-                                  <span className="ddt-field-value">{typeof v === 'string' && v.length > 30 ? v.substring(0, 30) + '...' : JSON.stringify(v)}</span>
-                                </div>
+                      {/* Table view for generated data */}
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                          <thead>
+                            <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #e2e8f0' }}>
+                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>#</th>
+                              <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Type</th>
+                              {generatedData.length > 0 && Object.keys(generatedData[0]).filter(k => !k.startsWith('_')).map(k => (
+                                <th key={k} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>{k}</th>
                               ))}
-                            </div>
-                          </div>
-                        ))}
-                        {generatedData.length > 5 && <div className="ddt-more-records">+ {generatedData.length - 5} more records</div>}
+                              <th style={{ padding: '10px 8px', width: '40px' }}></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {generatedData.slice(0, 10).map((rec, idx) => (
+                              <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                <td style={{ padding: '8px 12px', fontWeight: 600, color: '#374151' }}>{rec._index || idx + 1}</td>
+                                <td style={{ padding: '8px 12px' }}>
+                                  <span style={{ padding: '2px 8px', background: '#ddd6fe', color: '#6b21a8', borderRadius: '4px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' as const }}>{rec._testDataType}</span>
+                                </td>
+                                {Object.entries(rec).filter(([k]) => !k.startsWith('_')).map(([k, v]) => (
+                                  <td key={k} style={{ padding: '8px 12px', fontFamily: "'Monaco','Courier New',monospace", fontSize: '12px', color: '#334155', maxWidth: '250px', wordBreak: 'break-word' as const }}>
+                                    {typeof v === 'string' ? v : JSON.stringify(v)}
+                                  </td>
+                                ))}
+                                <td style={{ padding: '8px' }}>
+                                  <button onClick={() => navigator.clipboard.writeText(JSON.stringify(rec, null, 2))} className="ddt-icon-btn" title="Copy"><Copy size={14} /></button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
+                      {generatedData.length > 10 && <div className="ddt-more-records">Showing 10 of {generatedData.length} records</div>}
                       {dataContext && (
                         <div style={{ marginTop: '12px', padding: '10px', background: '#f8fafc', borderRadius: '6px', fontSize: '0.8rem', color: '#64748b' }}>
                           <strong>AI Context:</strong> {dataContext.appType} app
