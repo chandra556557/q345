@@ -347,16 +347,91 @@ const DataDrivenTesting = () => {
     }
   };
 
+  /**
+   * Auto-parameterize script: replace hardcoded fill/waitForSelector values with {{placeholder}} patterns.
+   * This allows data-driven execution on scripts that were not originally written with placeholders.
+   */
+  const parameterizeScript = (code: string, bindings: Record<string, string>): string => {
+    let result = code;
+    // For each binding, find the hardcoded value in fill() calls and replace with {{placeholder}}
+    for (const [placeholder, dataField] of Object.entries(bindings)) {
+      // Match: page.fill("#selector", "hardcoded_value") — replace the value part
+      // Also match: page.fill('#selector', 'hardcoded_value')
+      const fillPatterns = [
+        // CSS selector fills: page.fill("#user-name", "value")
+        new RegExp(`(fill\\(['""][^'"]*['""],[\\s]*)['""](.*?)['""]`, 'g'),
+        // waitForSelector: page.waitForSelector("text=value")
+        new RegExp(`(waitForSelector\\(['""]text=)(.*?)(['""]\\.*)`, 'g'),
+      ];
+      // Simple approach: if the script doesn't already have {{placeholder}}, inject them
+      if (!result.includes(`{{${placeholder}}}`)) {
+        // Find the first fill() that matches the selector pattern for this field
+        const selectorMap: Record<string, string[]> = {};
+        // Build selector-to-field mapping from context
+        placeholders.forEach(ph => {
+          const ctx = ph.context.toLowerCase();
+          if (ctx.includes('user') || ctx.includes('#user')) selectorMap['user'] = [...(selectorMap['user'] || []), ph.name];
+          if (ctx.includes('pass') || ctx.includes('#pass')) selectorMap['pass'] = [...(selectorMap['pass'] || []), ph.name];
+        });
+      }
+    }
+    // If no placeholders were added, create a templatized version
+    if (!result.includes('{{')) {
+      const lines = result.split('\n');
+      const fieldNames = Object.keys(bindings);
+      let fieldIdx = 0;
+      result = lines.map(line => {
+        if (line.includes('.fill(') && fieldIdx < fieldNames.length) {
+          const name = fieldNames[fieldIdx];
+          // Replace the second quoted parameter (the value) with {{placeholder}}
+          const replaced = line.replace(
+            /(\.fill\(['""][^'"]*['""]\s*,\s*)['""]([^'"]*)['""]/,
+            `$1"{{${name}}}"`
+          );
+          if (replaced !== line) fieldIdx++;
+          return replaced;
+        }
+        if (line.includes('waitForSelector') && line.includes('text=') && fieldIdx < fieldNames.length) {
+          const name = fieldNames[fieldIdx];
+          const replaced = line.replace(
+            /(waitForSelector\(['""]text=)([^'"]*)(["'"])/,
+            `$1{{${name}}}$3`
+          );
+          if (replaced !== line) fieldIdx++;
+          return replaced;
+        }
+        return line;
+      }).join('\n');
+    }
+    return result;
+  };
+
   const startDataDrivenRun = async () => {
-    if (!selectedScript || generatedData.length === 0 || Object.keys(fieldBindings).length === 0) {
+    if ((!selectedScript && !uploadedScript) || generatedData.length === 0 || Object.keys(fieldBindings).length === 0) {
       alert('Please complete all steps before starting a run');
       return;
     }
     setIsExecuting(true);
     setRunStatus('starting');
     try {
+      // Auto-parameterize the script if it doesn't have {{placeholders}}
+      const originalCode = selectedScript?.code || uploadedScript || '';
+      const parameterizedCode = parameterizeScript(originalCode, fieldBindings);
+
+      // Create a temp script with parameterized code
+      let scriptId = selectedScript?.id;
+      if (parameterizedCode !== originalCode || !scriptId) {
+        const tempScript = await axios.post(`${API_URL}/scripts`, {
+          name: `DDR Temp: ${selectedScript?.name || 'Custom Script'}`,
+          language: selectedScript?.language || 'typescript',
+          code: parameterizedCode,
+        }, { headers });
+        scriptId = tempScript.data.data?.id;
+      }
+      if (!scriptId) { alert('Failed to create parameterized script'); setIsExecuting(false); return; }
+
       const createRes = await axios.post(`${API_URL}/data-driven-runs`, {
-        scriptId: selectedScript.id, dataRows: generatedData, fieldBindings,
+        scriptId, dataRows: generatedData, fieldBindings,
         browser: executionBrowser, executionMode,
         executionConfig: { stopOnFirstFailure, delayBetweenRows, maxParallel: executionMode === 'parallel' ? 3 : 1 }
       }, { headers });
