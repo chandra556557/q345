@@ -122,8 +122,8 @@ function injectNavigationStep(featureContent: string): string {
       continue;
     }
 
-    // Detect first step line (Given/When/Then) inside scenario
-    if (insideScenario && !firstStepFound && /^\s*(Given|When|Then)\s+/.test(line)) {
+    // Detect first step line (Given/When/Then/And/But) inside scenario
+    if (insideScenario && !firstStepFound && /^\s*(Given|When|Then|And|But)\s+/.test(line)) {
       firstStepFound = true;
       // Match the indentation of the first step
       const stepIndentMatch = line.match(/^(\s*)/);
