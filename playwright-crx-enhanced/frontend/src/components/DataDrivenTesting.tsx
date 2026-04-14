@@ -371,60 +371,36 @@ const DataDrivenTesting = () => {
 
   /**
    * Auto-parameterize script: replace hardcoded fill/waitForSelector values with {{placeholder}} patterns.
-   * This allows data-driven execution on scripts that were not originally written with placeholders.
    */
   const parameterizeScript = (code: string, bindings: Record<string, string>): string => {
-    let result = code;
-    // For each binding, find the hardcoded value in fill() calls and replace with {{placeholder}}
-    for (const [placeholder, dataField] of Object.entries(bindings)) {
-      // Match: page.fill("#selector", "hardcoded_value") — replace the value part
-      // Also match: page.fill('#selector', 'hardcoded_value')
-      const fillPatterns = [
-        // CSS selector fills: page.fill("#user-name", "value")
-        new RegExp(`(fill\\(['""][^'"]*['""],[\\s]*)['""](.*?)['""]`, 'g'),
-        // waitForSelector: page.waitForSelector("text=value")
-        new RegExp(`(waitForSelector\\(['""]text=)(.*?)(['""]\\.*)`, 'g'),
-      ];
-      // Simple approach: if the script doesn't already have {{placeholder}}, inject them
-      if (!result.includes(`{{${placeholder}}}`)) {
-        // Find the first fill() that matches the selector pattern for this field
-        const selectorMap: Record<string, string[]> = {};
-        // Build selector-to-field mapping from context
-        placeholders.forEach(ph => {
-          const ctx = ph.context.toLowerCase();
-          if (ctx.includes('user') || ctx.includes('#user')) selectorMap['user'] = [...(selectorMap['user'] || []), ph.name];
-          if (ctx.includes('pass') || ctx.includes('#pass')) selectorMap['pass'] = [...(selectorMap['pass'] || []), ph.name];
-        });
+    if (code.includes('{{')) return code; // Already has placeholders
+
+    const lines = code.split('\n');
+    const fieldNames = Object.keys(bindings);
+    let fieldIdx = 0;
+
+    const result = lines.map(line => {
+      // Replace fill() second parameter: page.fill("#selector", "value") → page.fill("#selector", "{{name}}")
+      if (line.includes('.fill(') && fieldIdx < fieldNames.length) {
+        const match = line.match(/(\.fill\(\s*["'][^"']*["']\s*,\s*)["']([^"']*)["']/);
+        if (match) {
+          const name = fieldNames[fieldIdx];
+          fieldIdx++;
+          return line.replace(match[0], `${match[1]}"{{${name}}}"`);
+        }
       }
-    }
-    // If no placeholders were added, create a templatized version
-    if (!result.includes('{{')) {
-      const lines = result.split('\n');
-      const fieldNames = Object.keys(bindings);
-      let fieldIdx = 0;
-      result = lines.map(line => {
-        if (line.includes('.fill(') && fieldIdx < fieldNames.length) {
+      // Replace waitForSelector text: page.waitForSelector("text=Products") → page.waitForSelector("text={{name}}")
+      if (line.includes('waitForSelector') && line.includes('text=') && fieldIdx < fieldNames.length) {
+        const match = line.match(/(waitForSelector\(\s*["']text=)([^"']*)(["'])/);
+        if (match) {
           const name = fieldNames[fieldIdx];
-          // Replace the second quoted parameter (the value) with {{placeholder}}
-          const replaced = line.replace(
-            /(\.fill\(['""][^'"]*['""]\s*,\s*)['""]([^'"]*)['""]/,
-            `$1"{{${name}}}"`
-          );
-          if (replaced !== line) fieldIdx++;
-          return replaced;
+          fieldIdx++;
+          return line.replace(match[0], `${match[1]}{{${name}}}${match[3]}`);
         }
-        if (line.includes('waitForSelector') && line.includes('text=') && fieldIdx < fieldNames.length) {
-          const name = fieldNames[fieldIdx];
-          const replaced = line.replace(
-            /(waitForSelector\(['""]text=)([^'"]*)(["'"])/,
-            `$1{{${name}}}$3`
-          );
-          if (replaced !== line) fieldIdx++;
-          return replaced;
-        }
-        return line;
-      }).join('\n');
-    }
+      }
+      return line;
+    }).join('\n');
+
     return result;
   };
 
@@ -452,8 +428,15 @@ const DataDrivenTesting = () => {
       }
       if (!scriptId) { alert('Failed to create parameterized script'); setIsExecuting(false); return; }
 
+      // Clean data rows: remove internal _ fields
+      const cleanRows = generatedData.map(row => {
+        const clean: Record<string, any> = {};
+        Object.entries(row).forEach(([k, v]) => { if (!k.startsWith('_')) clean[k] = v; });
+        return clean;
+      });
+
       const createRes = await axios.post(`${API_URL}/data-driven-runs`, {
-        scriptId, dataRows: generatedData, fieldBindings,
+        scriptId, dataRows: cleanRows, fieldBindings,
         browser: executionBrowser, executionMode,
         executionConfig: { stopOnFirstFailure, delayBetweenRows, maxParallel: executionMode === 'parallel' ? 3 : 1 }
       }, { headers });
