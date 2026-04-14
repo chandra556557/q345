@@ -628,8 +628,19 @@ export const generateCode = asyncHandler(async (req: Request, res: Response) => 
   );
   if (rows.length === 0) return res.status(404).json({ error: 'Feature not found' });
 
-  const parsed = bddService.parseFeatureContent(rows[0].featureContent);
-  const playwrightCode = bddService.generatePlaywrightCode(parsed, lang);
+  const feature = rows[0];
+  const projectConfig = await fetchProjectConfig(feature.projectId);
+
+  const parsed = bddService.parseFeatureContent(feature.featureContent);
+  let playwrightCode = bddService.generatePlaywrightCode(parsed, lang);
+
+  // Inject project baseUrl into BASE_URL fallback
+  if (projectConfig?.baseUrl && playwrightCode.includes("process.env.BASE_URL || ''")) {
+    playwrightCode = playwrightCode.replace(
+      "process.env.BASE_URL || ''",
+      `process.env.BASE_URL || '${projectConfig.baseUrl.replace(/'/g, "\\'")}'`
+    );
+  }
 
   return res.json({ success: true, data: { playwrightCode, language: lang } });
 });
@@ -669,9 +680,17 @@ export const saveAsScript = asyncHandler(async (req: Request, res: Response) => 
     });
   }
 
-  // Generate Playwright code
+  // Generate Playwright code — inject project baseUrl so "/" resolves correctly
   const parsed = bddService.parseFeatureContent(feature.featureContent);
-  const playwrightCode = bddService.generatePlaywrightCode(parsed, lang);
+  let playwrightCode = bddService.generatePlaywrightCode(parsed, lang);
+
+  // Replace empty BASE_URL fallback with project's baseUrl
+  if (projectConfig?.baseUrl && playwrightCode.includes("process.env.BASE_URL || ''")) {
+    playwrightCode = playwrightCode.replace(
+      "process.env.BASE_URL || ''",
+      `process.env.BASE_URL || '${projectConfig.baseUrl.replace(/'/g, "\\'")}'`
+    );
+  }
 
   // Create Script record
   const name = scriptName || feature.name;

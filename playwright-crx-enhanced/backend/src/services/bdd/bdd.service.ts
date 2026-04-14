@@ -1199,8 +1199,15 @@ class BDDService {
         return `if (!ENV_PROFILE.baseUrl) throw new Error('baseUrl is not configured for relative path "${this.escapeString(pathStr)}".');\n    await page.goto(ENV_PROFILE.baseUrl + '${this.escapeString(pathStr)}');`;
       }
       // Preview mode: resolve to literal URL for simple text-based executor
-      const resolved = (baseUrl || '') + pathStr;
-      return `await page.goto('${this.escapeString(resolved)}');`;
+      if (baseUrl) {
+        const resolved = baseUrl + pathStr;
+        return `await page.goto('${this.escapeString(resolved)}');`;
+      }
+      // No baseUrl — use BASE_URL variable (defined at top of generated script)
+      if (pathStr === '/') {
+        return `await page.goto(BASE_URL);`;
+      }
+      return `await page.goto(BASE_URL + '${this.escapeString(pathStr)}');`;
     }
     if (lower === 'i go back') return `await page.goBack();`;
     if (lower === 'i go forward') return `await page.goForward();`;
