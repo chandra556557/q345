@@ -190,15 +190,23 @@ const DataDrivenTesting = () => {
   };
 
   const doExtractPlaceholders = async () => {
-    if (!selectedScript) return;
+    const code = selectedScript?.code || uploadedScript || '';
+    if (!code) return;
     setLoadingPlaceholders(true);
     try {
-      const res = await axios.post(`${API_URL}/data-driven-runs/extract-placeholders`, { scriptId: selectedScript.id }, { headers });
-      const phs: Placeholder[] = res.data?.placeholders || [];
-      setPlaceholders(phs);
-      autoBindFields(phs);
+      // Try API first (if script exists in DB)
+      if (selectedScript?.id) {
+        const res = await axios.post(`${API_URL}/data-driven-runs/extract-placeholders`, { scriptId: selectedScript.id }, { headers });
+        const phs: Placeholder[] = res.data?.placeholders || [];
+        if (phs.length > 0) {
+          setPlaceholders(phs);
+          autoBindFields(phs);
+          return;
+        }
+      }
+      throw new Error('fallback to local');
     } catch {
-      const code = selectedScript.code || '';
+      // Local extraction: find {{placeholder}} patterns
       const phs: Placeholder[] = [];
       const seen = new Set<string>();
       code.split('\n').forEach((line, i) => {
@@ -206,6 +214,15 @@ const DataDrivenTesting = () => {
           if (!seen.has(match[1])) { seen.add(match[1]); phs.push({ name: match[1], line: i + 1, context: line.trim().substring(0, 80) }); }
         }
       });
+
+      // If no {{placeholders}} found, auto-create from generated data fields
+      if (phs.length === 0 && generatedData.length > 0) {
+        const dataFields = Object.keys(generatedData[0]).filter(k => !k.startsWith('_'));
+        dataFields.forEach((f, i) => {
+          phs.push({ name: f, line: i + 1, context: `Auto-detected from generated data field: ${f}` });
+        });
+      }
+
       setPlaceholders(phs);
       autoBindFields(phs);
     } finally {
@@ -218,10 +235,14 @@ const DataDrivenTesting = () => {
     const dataFields = Object.keys(generatedData[0]).filter(k => !k.startsWith('_'));
     const bindings: Record<string, string> = {};
     for (const ph of phs) {
+      // Exact match
       const exact = dataFields.find(f => f.toLowerCase() === ph.name.toLowerCase());
       if (exact) { bindings[ph.name] = exact; continue; }
+      // Fuzzy match
       const fuzzy = dataFields.find(f => f.toLowerCase().includes(ph.name.toLowerCase()) || ph.name.toLowerCase().includes(f.toLowerCase()));
-      if (fuzzy) bindings[ph.name] = fuzzy;
+      if (fuzzy) { bindings[ph.name] = fuzzy; continue; }
+      // Same field name = self-bind (for auto-created placeholders)
+      if (dataFields.includes(ph.name)) bindings[ph.name] = ph.name;
     }
     setFieldBindings(bindings);
   };
@@ -243,7 +264,22 @@ const DataDrivenTesting = () => {
       setDataSource(response.data?.source || '');
       setDataContext(response.data?.context || null);
       setShowPreview(true);
-      if (data.length > 0) setActiveStep(3);
+      if (data.length > 0) {
+        setActiveStep(3);
+        // Auto-bind: if context has fields, create bindings automatically
+        const ctxFields = response.data?.context?.fields || [];
+        if (ctxFields.length > 0) {
+          const dataFields = Object.keys(data[0]).filter((k: string) => !k.startsWith('_'));
+          const phs: Placeholder[] = ctxFields.map((f: any, i: number) => ({ name: f.name, line: i + 1, context: `${f.type} field` }));
+          setPlaceholders(phs);
+          const bindings: Record<string, string> = {};
+          phs.forEach(ph => {
+            const match = dataFields.find(df => df.toLowerCase() === ph.name.toLowerCase());
+            if (match) bindings[ph.name] = match;
+          });
+          setFieldBindings(bindings);
+        }
+      }
     } catch (error: any) {
       alert(`Failed to generate test data: ${error.response?.data?.error || error.message}`);
     } finally {
