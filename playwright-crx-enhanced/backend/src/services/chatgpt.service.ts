@@ -211,53 +211,65 @@ export async function generateTestDataWithChatGPT(
     throw new Error('No fillable fields detected in script');
   }
 
-  const fieldDescriptions = context.fields.map(f =>
-    `- "${f.name}" (type: ${f.type}, selector: ${f.selectorType}="${f.selector}")`
-  ).join('\n');
-
   const typeInstructions: Record<string, string> = {
-    all: 'Generate a comprehensive mix of valid, invalid, boundary, and security test data.',
-    positive: 'Generate valid, realistic data that should make the form submit successfully.',
-    negative: 'Generate invalid data that should trigger validation errors (wrong formats, empty required fields, type mismatches).',
-    boundary: 'Generate boundary value analysis data: empty strings, single char, max length, min/max numbers, edge dates.',
-    security: 'Generate security test payloads: SQL injection (\' OR 1=1--), XSS (<script>alert(1)</script>), path traversal (../../etc/passwd), LDAP injection, command injection.',
-    equivalence: 'Generate equivalence class partitioning data: one representative value from each valid/invalid partition.',
+    all: 'Generate a comprehensive mix: some valid (should pass), some invalid (should fail), some boundary (edge cases), some security (attack payloads).',
+    positive: 'Generate valid, realistic data that should make the form submit successfully. Use real-world values.',
+    negative: 'Generate invalid data that should trigger validation errors: wrong formats, empty required fields, type mismatches, too long/short values.',
+    boundary: 'Generate boundary value analysis data: empty strings, single char, exactly at min/max length, min/max numbers, edge dates (1900, 2099), unicode chars, leading/trailing spaces.',
+    security: 'Generate security test payloads: SQL injection (\' OR 1=1--), XSS (<script>alert(1)</script>), path traversal (../../etc/passwd), SSTI ({{7*7}}), LDAP injection (*)(uid=*)), command injection (`ls`), CRLF (\\r\\n), XXE.',
+    equivalence: 'Generate equivalence class partitioning data: one representative from each valid partition and each invalid partition.',
   };
 
-  const prompt = `You are a QA test data engineer. Analyze this Playwright test script and generate ${count} rows of ${testDataType} test data.
+  const prompt = `Analyze this Playwright test script and generate ${count} rows of ${testDataType} test data.
 
-## Script Context
-${context.flowDescription}
-
-## Application URL
-${context.url || 'Not specified'}
-
-## Application Type
-${context.appType}
-
-## Detected Form Fields
-${fieldDescriptions}
-
-## Expected Assertions
-${context.assertions.length > 0 ? context.assertions.join(', ') : 'None detected'}
-
-## Full Script Code
+## SCRIPT CODE (analyze every line carefully)
 \`\`\`
-${scriptCode.substring(0, 3000)}
+${scriptCode.substring(0, 4000)}
 \`\`\`
 
-## Instructions
+## YOUR TASK
+1. Scan the script for ALL user input actions — look for these patterns:
+   - page.fill("#selector", "value") — the "value" is test data
+   - page.fill('#selector', 'value') — same
+   - getByPlaceholder("Name").fill("value") — "Name" is the field, "value" is test data
+   - getByLabel("Name").fill("value") — "Name" is the field
+   - getByRole("textbox", { name: "Name" }).fill("value")
+   - getByTestId("id").fill("value")
+   - page.selectOption("#selector", "value")
+   - Any {{placeholder}} patterns — these are already parameterized
+
+2. For each input action found, extract:
+   - The FIELD NAME: Use the human-readable name from the locator:
+     * getByPlaceholder("Username") → field name = "Username"
+     * getByLabel("Email") → field name = "Email"
+     * page.fill("#user-name", ...) → field name = "user_name"
+     * page.fill("#password", ...) → field name = "password"
+     * {{myField}} → field name = "myField"
+   - The FIELD TYPE: Infer from name (email, password, phone, username, name, number, date, url, text, etc.)
+
+3. Also look for assertion/verification values:
+   - waitForSelector("text=Products") → field name = "expected" (type: assertion)
+   - expect(...getByText("Dashboard")).toBeVisible() → field name = "expected"
+   - These become data fields too (expected outcome per row)
+
+4. Generate exactly ${count} test data rows as a JSON array.
+
+## FIELD NAMING RULES (CRITICAL)
+- Use EXACTLY the names extracted from locators (case-sensitive)
+- getByPlaceholder("Username") → key MUST be "Username" (not "username" or "user_name")
+- getByLabel("Password") → key MUST be "Password"
+- page.fill("#user-name", ...) → key MUST be "user_name" (# removed, - replaced with _)
+- {{myPlaceholder}} → key MUST be "myPlaceholder"
+- For assertions → key MUST be "expected"
+
+## DATA GENERATION RULES
 ${typeInstructions[testDataType] || typeInstructions.all}
 
-Generate exactly ${count} test data rows. Each row MUST have these exact keys matching the field names: ${context.fields.map(f => `"${f.name}"`).join(', ')}
+${testDataType === 'positive' ? 'If the URL is a known app (saucedemo, github, etc.), use REAL credentials/values that actually work on that site.' : ''}
 
-Also include "_testDataType" (string: "${testDataType}") and "_index" (number: 1-based) in each row.
-
-${testDataType === 'security' ? 'Include varied attack vectors: SQL injection, XSS (reflected/stored/DOM), path traversal, SSTI, CRLF injection, XXE, command injection.' : ''}
-${testDataType === 'boundary' ? 'Include: empty string, null-like values, single character, maximum length (255+ chars), unicode, special characters, leading/trailing spaces.' : ''}
-${testDataType === 'negative' ? 'Include: wrong data types, invalid formats, SQL keywords, extremely long values, negative numbers for positive-only fields.' : ''}
-
-Return ONLY a valid JSON array. No explanation, no markdown, no code blocks.`;
+## OUTPUT FORMAT
+Return ONLY a valid JSON array. No explanation, no markdown code fences. Example:
+[{"Username":"user1","Password":"pass1","expected":"Dashboard"},{"Username":"user2","Password":"pass2","expected":"Error"}]`;
 
   logger.info(`ChatGPT: Generating ${count} ${testDataType} test data rows for ${context.appType} form (${context.fields.length} fields)`);
 
@@ -272,7 +284,18 @@ Return ONLY a valid JSON array. No explanation, no markdown, no code blocks.`;
       messages: [
         {
           role: 'system',
-          content: 'You are a senior QA test data engineer. You analyze Playwright test scripts to understand the application context and generate intelligent, realistic test data. Return ONLY valid JSON arrays. No markdown, no explanation.',
+          content: `You are a senior QA automation engineer who specializes in data-driven testing. You analyze Playwright test scripts to:
+1. Identify every user input field (fill, selectOption, check actions)
+2. Understand the application being tested (login form, signup, checkout, etc.)
+3. Generate intelligent, context-aware test data
+
+CRITICAL RULES:
+- Extract field names EXACTLY from the script's locators (case-sensitive)
+- getByPlaceholder("Username") → JSON key must be "Username"
+- page.fill("#user-name", ...) → JSON key must be "user_name"
+- For known apps (saucedemo.com, etc.), use REAL valid credentials
+- Include an "expected" field for what should appear after the action
+- Return ONLY valid JSON arrays — no explanation, no markdown, no code fences`,
         },
         { role: 'user', content: prompt },
       ],
