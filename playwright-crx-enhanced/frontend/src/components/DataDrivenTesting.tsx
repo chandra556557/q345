@@ -371,38 +371,92 @@ const DataDrivenTesting = () => {
 
   /**
    * Auto-parameterize script: replace hardcoded fill/waitForSelector values with {{placeholder}} patterns.
+   * Uses the binding keys (placeholder names) to inject {{placeholder}} into the correct lines.
    */
   const parameterizeScript = (code: string, bindings: Record<string, string>): string => {
     if (code.includes('{{')) return code; // Already has placeholders
 
-    const lines = code.split('\n');
-    const fieldNames = Object.keys(bindings);
-    let fieldIdx = 0;
+    let result = code;
+    const usedFields = new Set<string>();
 
-    const result = lines.map(line => {
-      // Replace fill() second parameter: page.fill("#selector", "value") → page.fill("#selector", "{{name}}")
-      if (line.includes('.fill(') && fieldIdx < fieldNames.length) {
-        const match = line.match(/(\.fill\(\s*["'][^"']*["']\s*,\s*)["']([^"']*)["']/);
-        if (match) {
-          const name = fieldNames[fieldIdx];
-          fieldIdx++;
-          return line.replace(match[0], `${match[1]}"{{${name}}}"`);
+    // For each binding, find and replace the matching fill/waitForSelector line
+    for (const [placeholder] of Object.entries(bindings)) {
+      const pl = placeholder.toLowerCase();
+
+      // 1. getByPlaceholder("Username").fill("value") → getByPlaceholder("Username").fill("{{Username}}")
+      const phPattern = new RegExp(
+        `(getByPlaceholder\\(\\s*["']${escapeRegex(placeholder)}["']\\)\\s*\\.fill\\(\\s*)["'][^"']*["']`,
+        'i'
+      );
+      if (phPattern.test(result)) {
+        result = result.replace(phPattern, `$1"{{${placeholder}}}"`);
+        usedFields.add(placeholder);
+        continue;
+      }
+
+      // 2. getByLabel("Username").fill("value")
+      const labelPattern = new RegExp(
+        `(getByLabel\\(\\s*["']${escapeRegex(placeholder)}["']\\)\\s*\\.fill\\(\\s*)["'][^"']*["']`,
+        'i'
+      );
+      if (labelPattern.test(result)) {
+        result = result.replace(labelPattern, `$1"{{${placeholder}}}"`);
+        usedFields.add(placeholder);
+        continue;
+      }
+
+      // 3. page.fill("#selector-matching-name", "value") — match selector containing the field name
+      const cssPattern = new RegExp(
+        `(page\\.fill\\(\\s*["'][^"']*${escapeRegex(pl)}[^"']*["']\\s*,\\s*)["'][^"']*["']`,
+        'i'
+      );
+      if (cssPattern.test(result)) {
+        result = result.replace(cssPattern, `$1"{{${placeholder}}}"`);
+        usedFields.add(placeholder);
+        continue;
+      }
+
+      // 4. waitForSelector("text=value") — for assertion fields like "expected"
+      if (pl.includes('expect') || pl.includes('assert') || pl.includes('result')) {
+        const waitPattern = /(waitForSelector\(\s*["']text=)([^"']*)(["'])/i;
+        if (waitPattern.test(result) && !usedFields.has('__wait__')) {
+          result = result.replace(waitPattern, `$1{{${placeholder}}}$3`);
+          usedFields.add('__wait__');
+          usedFields.add(placeholder);
+          continue;
         }
       }
-      // Replace waitForSelector text: page.waitForSelector("text=Products") → page.waitForSelector("text={{name}}")
-      if (line.includes('waitForSelector') && line.includes('text=') && fieldIdx < fieldNames.length) {
-        const match = line.match(/(waitForSelector\(\s*["']text=)([^"']*)(["'])/);
-        if (match) {
-          const name = fieldNames[fieldIdx];
-          fieldIdx++;
-          return line.replace(match[0], `${match[1]}{{${name}}}${match[3]}`);
+    }
+
+    // Fallback: if some fields weren't matched, do sequential fill replacement
+    const remaining = Object.keys(bindings).filter(k => !usedFields.has(k));
+    if (remaining.length > 0) {
+      let remIdx = 0;
+      const lines = result.split('\n');
+      result = lines.map(line => {
+        if (remIdx >= remaining.length) return line;
+        if (line.includes('.fill(') && !line.includes('{{')) {
+          const match = line.match(/(\.fill\(\s*["'][^"']*["']\s*,\s*)["']([^"']*)["']/);
+          if (match) {
+            const name = remaining[remIdx++];
+            return line.replace(match[0], `${match[1]}"{{${name}}}"`);
+          }
         }
-      }
-      return line;
-    }).join('\n');
+        if (line.includes('waitForSelector') && line.includes('text=') && !line.includes('{{')) {
+          const match = line.match(/(waitForSelector\(\s*["']text=)([^"']*)(["'])/);
+          if (match) {
+            const name = remaining[remIdx++];
+            return line.replace(match[0], `${match[1]}{{${name}}}${match[3]}`);
+          }
+        }
+        return line;
+      }).join('\n');
+    }
 
     return result;
   };
+
+  const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   const startDataDrivenRun = async () => {
     if ((!selectedScript && !uploadedScript) || generatedData.length === 0 || Object.keys(fieldBindings).length === 0) {
