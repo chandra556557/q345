@@ -87,18 +87,23 @@ const VALID_STATUSES = ['draft', 'active', 'archived'] as const;
 const VALID_RUN_STATUSES = ['pending', 'running', 'passed', 'failed', 'cancelled'] as const;
 
 /**
- * Inject 'Given I navigate to "/"' as the first step of every scenario
- * if the scenario doesn't already have a navigation step.
+ * Inject or replace navigation steps in every scenario.
+ * - If no navigation step exists → inject 'Given I navigate to "/"' as first step
+ * - If a custom navigation step exists (e.g., "Given I am on the pulse login page") → replace with 'Given I navigate to "/"'
+ * - If 'Given I navigate to "/"' already exists → leave as-is
  */
 function injectNavigationStep(featureContent: string): string {
-  const navPatterns = /^\s*(Given|When|And)\s+(I navigate to|I am on|I go to|I visit|I open the url|I am on the base URL|User should launch|the user launches|I launch the application|the application is open)/im;
+  // Pattern to detect any navigation-like step
+  const navPattern = /^(\s*)(Given|When|And|But)\s+(I navigate to|I am on|I go to|I visit|I open the url|I am on the base URL|User should launch|the user launches|I launch the application|the application is open|User is on|user is on|the user is on)\b/i;
+
+  // The exact standard line we want
+  const standardNav = 'Given I navigate to "/"';
 
   const lines = featureContent.split('\n');
   const result: string[] = [];
   let insideScenario = false;
-  let scenarioIndent = '';
   let firstStepFound = false;
-  let alreadyHasNav = false;
+  let navHandled = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -108,37 +113,49 @@ function injectNavigationStep(featureContent: string): string {
     if (/^\s*(Scenario|Scenario Outline):/.test(line)) {
       insideScenario = true;
       firstStepFound = false;
-      alreadyHasNav = false;
-      scenarioIndent = ''; // will be set from first step's indentation
-
-      // Look ahead to check if any navigation step already exists
-      for (let j = i + 1; j < lines.length; j++) {
-        const nextTrimmed = lines[j].trim();
-        if (/^(Scenario|Scenario Outline|Feature:|@)/.test(nextTrimmed)) break;
-        if (navPatterns.test(nextTrimmed)) { alreadyHasNav = true; break; }
-      }
-
+      navHandled = false;
       result.push(line);
       continue;
     }
 
-    // Detect first step line (Given/When/Then/And/But) inside scenario
-    if (insideScenario && !firstStepFound && /^\s*(Given|When|Then|And|But)\s+/.test(line)) {
-      firstStepFound = true;
-      // Match the indentation of the first step
-      const stepIndentMatch = line.match(/^(\s*)/);
-      scenarioIndent = stepIndentMatch ? stepIndentMatch[1] : '    ';
-
-      // Inject navigation step before the first step if not already present
-      if (!alreadyHasNav) {
-        result.push(`${scenarioIndent}Given I navigate to "/"`);
-      }
-    }
-
     // Reset on next scenario/feature/tag
-    if (firstStepFound && /^\s*(Scenario|Scenario Outline|Feature:|@)/.test(trimmed)) {
+    if (insideScenario && /^\s*(Scenario|Scenario Outline|Feature:|@)/.test(trimmed) && firstStepFound) {
       insideScenario = false;
       firstStepFound = false;
+    }
+
+    // Inside scenario — check each step line
+    if (insideScenario && /^\s*(Given|When|Then|And|But)\s+/.test(line)) {
+      const navMatch = line.match(navPattern);
+
+      if (navMatch && !navHandled) {
+        // This is a navigation step — replace it with standard nav
+        const indent = navMatch[1] || '    ';
+
+        // Check if it's already the exact standard line
+        if (trimmed === standardNav) {
+          // Already correct — keep as-is
+          navHandled = true;
+          result.push(line);
+        } else {
+          // Replace custom nav with standard nav
+          navHandled = true;
+          result.push(`${indent}${standardNav}`);
+        }
+        firstStepFound = true;
+        continue;
+      }
+
+      if (!firstStepFound) {
+        firstStepFound = true;
+        // No nav step found yet and this is the first step — inject before it
+        if (!navHandled) {
+          const stepIndentMatch = line.match(/^(\s*)/);
+          const indent = stepIndentMatch ? stepIndentMatch[1] : '    ';
+          result.push(`${indent}${standardNav}`);
+          navHandled = true;
+        }
+      }
     }
 
     result.push(line);
