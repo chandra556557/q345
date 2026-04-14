@@ -86,15 +86,78 @@ const VALID_BROWSERS = ['chromium', 'firefox', 'webkit'] as const;
 const VALID_STATUSES = ['draft', 'active', 'archived'] as const;
 const VALID_RUN_STATUSES = ['pending', 'running', 'passed', 'failed', 'cancelled'] as const;
 
+/**
+ * Inject 'Given I navigate to "/"' as the first step of every scenario
+ * if the scenario doesn't already have a navigation step.
+ */
+function injectNavigationStep(featureContent: string): string {
+  const navPatterns = /^\s*(Given|When|And)\s+(I navigate to|I am on|I go to|I visit|I open the url|I am on the base URL|User should launch|the user launches|I launch the application|the application is open)/im;
+
+  const lines = featureContent.split('\n');
+  const result: string[] = [];
+  let insideScenario = false;
+  let scenarioIndent = '';
+  let firstStepFound = false;
+  let alreadyHasNav = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Detect scenario start
+    if (/^\s*(Scenario|Scenario Outline):/.test(line)) {
+      insideScenario = true;
+      firstStepFound = false;
+      alreadyHasNav = false;
+      scenarioIndent = ''; // will be set from first step's indentation
+
+      // Look ahead to check if any navigation step already exists
+      for (let j = i + 1; j < lines.length; j++) {
+        const nextTrimmed = lines[j].trim();
+        if (/^(Scenario|Scenario Outline|Feature:|@)/.test(nextTrimmed)) break;
+        if (navPatterns.test(nextTrimmed)) { alreadyHasNav = true; break; }
+      }
+
+      result.push(line);
+      continue;
+    }
+
+    // Detect first step line (Given/When/Then) inside scenario
+    if (insideScenario && !firstStepFound && /^\s*(Given|When|Then)\s+/.test(line)) {
+      firstStepFound = true;
+      // Match the indentation of the first step
+      const stepIndentMatch = line.match(/^(\s*)/);
+      scenarioIndent = stepIndentMatch ? stepIndentMatch[1] : '    ';
+
+      // Inject navigation step before the first step if not already present
+      if (!alreadyHasNav) {
+        result.push(`${scenarioIndent}Given I navigate to "/"`);
+      }
+    }
+
+    // Reset on next scenario/feature/tag
+    if (firstStepFound && /^\s*(Scenario|Scenario Outline|Feature:|@)/.test(trimmed)) {
+      insideScenario = false;
+      firstStepFound = false;
+    }
+
+    result.push(line);
+  }
+
+  return result.join('\n');
+}
+
 export const createFeature = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const organizationId = req.tenant?.organizationId || null;
-  const { name, description, featureContent, tags, projectId } = req.body;
+  const { name, description, featureContent: rawContent, tags, projectId } = req.body;
 
-  if (!name || !featureContent) {
+  if (!name || !rawContent) {
     return res.status(400).json({ error: 'name and featureContent are required' });
   }
 
+  // Auto-inject navigation step as first step of each scenario
+  const featureContent = injectNavigationStep(rawContent);
   const parsed = bddService.parseFeatureContent(featureContent);
 
   const client = await pool.connect();
@@ -157,11 +220,14 @@ export const importFeatureFiles = asyncHandler(async (req: Request, res: Respons
   const results: Array<{ filename: string; featureId?: string; scenarioCount?: number; error?: string }> = [];
 
   for (const file of files) {
-    const featureContent = stripBom(file.buffer.toString('utf-8')).trim();
-    if (!featureContent) {
+    const rawContent = stripBom(file.buffer.toString('utf-8')).trim();
+    if (!rawContent) {
       results.push({ filename: file.originalname, error: 'Empty file' });
       continue;
     }
+
+    // Auto-inject navigation step as first step of each scenario
+    const featureContent = injectNavigationStep(rawContent);
 
     // Derive name from filename (remove extension)
     const name = file.originalname.replace(/\.(feature|gherkin)$/i, '').replace(/[-_]/g, ' ');
