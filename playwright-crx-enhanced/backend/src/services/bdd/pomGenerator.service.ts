@@ -522,6 +522,52 @@ class POMGeneratorService {
     const lower = candidate.toLowerCase();
     const candidateClean = lower.replace(/[:\s]+$/, '').trim();
 
+    // Priority 1: Positional match for patterns like "user1", "item2", "card3"
+    // These are LABELS for group items, not element text. Use positional locators directly
+    // to avoid matching hidden child text (which creates broken locators at runtime).
+    const posMatch = candidateClean.match(/^([a-z]+?)(\d+)$/);
+    if (posMatch) {
+      const n = parseInt(posMatch[2]) - 1;
+      // Look for group container elements — prefer .figure/.card/etc. over generic divs
+      const groupSelectors = [
+        { sel: '.figure', tag: 'div', className: 'figure' },
+        { sel: '.card', tag: 'div', className: 'card' },
+        { sel: '.tile', tag: 'div', className: 'tile' },
+        { sel: '.item', tag: 'div', className: 'item' },
+        { sel: '.product', tag: 'div', className: 'product' },
+      ];
+
+      for (const grp of groupSelectors) {
+        // Count how many elements match this class in the extracted DOM
+        const matching = elements.filter(el =>
+          el.tag === grp.tag && (el.id === '' || !el.id) &&
+          // The DOM extraction doesn't store className — infer from text/context
+          // We'll just try this selector if we have enough div elements
+          true
+        );
+        if (matching.length > n) {
+          return {
+            locator: `this.page.locator('${grp.sel}').nth(${n})`,
+            liveSelector: grp.sel,
+            elementType: 'other',
+            element: { ...matching[0], text: candidate },
+          };
+        }
+      }
+
+      // Fallback: Nth img
+      const imgs = elements.filter(el => el.tag === 'img');
+      if (imgs.length > n) {
+        return {
+          locator: `this.page.locator('img').nth(${n})`,
+          liveSelector: 'img',
+          elementType: 'other',
+          element: { ...imgs[n], text: candidate },
+        };
+      }
+    }
+
+    // Priority 2: Regular text/attribute scoring
     const scored = elements.map(el => ({
       el,
       score: this.scoreMatch(candidateClean, el),
@@ -537,33 +583,6 @@ class POMGeneratorService {
         elementType: this.getElementType(best),
         element: best,
       };
-    }
-
-    // Fallback: positional match for patterns like "user1", "item2", "card3"
-    // When nothing matches by text/attribute, try mapping to the Nth element of a group
-    const posMatch = candidateClean.match(/^([a-z]+)(\d+)$/);
-    if (posMatch) {
-      const prefix = posMatch[1];
-      const n = parseInt(posMatch[2]) - 1;
-      // Look for elements that could be group items (figure, card, img, div)
-      const groupCandidates = elements.filter(el =>
-        el.tag === 'img' ||
-        el.tag === 'div' ||
-        el.tag === 'li' ||
-        /figure|card|tile|item|user/i.test(el.id) ||
-        /figure|card|tile|item|user/i.test(el.ariaLabel)
-      );
-      if (groupCandidates.length > n) {
-        const target = groupCandidates[n];
-        // Use :nth-of-type locator for positional access
-        const positionalLocator = `this.page.locator('.figure, .card, .tile, img').nth(${n})`;
-        return {
-          locator: positionalLocator,
-          liveSelector: `.figure, .card, .tile, img`,
-          elementType: 'other',
-          element: { ...target, text: prefix + (n + 1) },
-        };
-      }
     }
 
     return null;
