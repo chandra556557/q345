@@ -1179,6 +1179,15 @@ class BDDService {
   private generateStepCode(keyword: string, text: string, context: 'preview' | 'execution' = 'preview', baseUrl?: string): string {
     const lower = text.toLowerCase();
     const quotes = (text.match(/"([^"]*)"/g) || []).map(m => m.replace(/"/g, ''));
+
+    // CSS/XPath passthrough: if quoted value looks like a selector, use page.locator directly
+    const isCssSelector = (s: string) => /^[#.\[]|^\/\/|^xpath=|^css=|^data-/.test(s);
+
+    // Frame/iframe support
+    if (lower.includes('switch to frame') || lower.includes('switch to iframe')) {
+      const frame = quotes[0]; if (!frame) return `throw new Error('Missing frame name');`;
+      return `const frame = page.frameLocator('${this.escapeString(frame)}');`;
+    }
     // Navigation / Launch
     if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit) /) || lower.includes('launch') || lower.match(/^(i am on|user is on|the user is on|user should launch)/) || lower.includes('application is open')) {
       const url = quotes[0] || '';
@@ -1258,8 +1267,30 @@ class BDDService {
       const target = quotes[0]; if (!target) return `throw new Error('Missing target in step: ${keyword} ${this.escapeString(text)}');`;
       return `await page.getByText('${this.escapeString(target)}').first().click({ button: 'right' });`;
     }
+    // Click with nth support: "I click the 2nd "Item""
+    if (lower.match(/click the (\d+)(?:st|nd|rd|th) /)) {
+      const nthMatch = lower.match(/click the (\d+)(?:st|nd|rd|th) /);
+      const target = quotes[0]; if (!target) return `throw new Error('Missing target in step: ${keyword} ${this.escapeString(text)}');`;
+      const idx = parseInt(nthMatch![1]) - 1;
+      return `await page.getByText('${this.escapeString(target)}').nth(${idx}).click();`;
+    }
+    // Click with first/last
+    if (lower.includes('click the first') && quotes[0]) {
+      return `await page.getByText('${this.escapeString(quotes[0])}').first().click();`;
+    }
+    if (lower.includes('click the last') && quotes[0]) {
+      return `await page.getByText('${this.escapeString(quotes[0])}').last().click();`;
+    }
     if (lower.includes('click')) {
       const target = quotes[0]; if (!target) return `throw new Error('Missing target in step: ${keyword} ${this.escapeString(text)}');`;
+      // CSS/XPath selector passthrough
+      if (isCssSelector(target)) {
+        return `await page.locator('${this.escapeString(target)}').first().click();`;
+      }
+      // Image click
+      if (lower.includes('image') || lower.includes('img') || lower.includes('icon')) {
+        return `await page.getByRole('img', { name: '${this.escapeString(target)}' }).click();`;
+      }
       return `await page.getByRole('button', { name: '${this.escapeString(target)}' }).click();`;
     }
 
@@ -1282,10 +1313,28 @@ class BDDService {
       return `await page.keyboard.press('${this.escapeString(key)}');`;
     }
 
+    // Clear field
+    if (lower.includes('clear') && !lower.includes('click')) {
+      const field = quotes[0]; if (!field) return `throw new Error('Missing field in step: ${keyword} ${this.escapeString(text)}');`;
+      const cleanField = field.replace(/[:\s]+$/, '').trim();
+      if (isCssSelector(cleanField)) return `await page.locator('${this.escapeString(cleanField)}').first().clear();`;
+      return `await page.getByLabel('${this.escapeString(cleanField)}').clear();`;
+    }
+
     // Fill / Type / Enter (form input) - must be after credentials check
     if (lower.includes('fill') || lower.includes('type') || lower.includes('enter') || lower.includes('set')) {
       if (quotes.length >= 2) {
-        return `await page.getByLabel('${this.escapeString(quotes[0])}').fill('${this.escapeString(quotes[1])}');`;
+        const cleanField = quotes[0].replace(/[:\s]+$/, '').trim();
+        const value = this.escapeString(quotes[1]);
+        // CSS/XPath selector passthrough
+        if (isCssSelector(cleanField)) {
+          return `await page.locator('${this.escapeString(cleanField)}').first().fill('${value}');`;
+        }
+        // "type slowly" / "type char by char" → pressSequentially
+        if (lower.includes('slowly') || lower.includes('char by char') || lower.includes('one by one')) {
+          return `await page.getByLabel('${this.escapeString(cleanField)}').pressSequentially('${value}', { delay: 100 });`;
+        }
+        return `await page.getByLabel('${this.escapeString(cleanField)}').fill('${value}');`;
       }
       if (quotes.length === 1) {
         return `throw new Error('Cannot determine which field to fill. Use: When I fill "fieldname" with "value"');`;
@@ -1364,6 +1413,40 @@ class BDDService {
       const pageMatch = text.match(/(?:to|on)\s+(?:the\s+)?(\w+)\s+page/i);
       if (pageMatch) return `await expect(page).toHaveURL(new RegExp('${this.escapeString(pageMatch[1].toLowerCase())}'));`;
       return `await page.waitForLoadState('domcontentloaded');`;
+    }
+
+    // Field value assertions: "Username" field should have value "admin"
+    if ((lower.includes('should have value') || lower.includes('should contain value') || lower.includes('value should be')) && quotes.length >= 2) {
+      const field = this.escapeString(quotes[0].replace(/[:\s]+$/, '').trim());
+      const value = this.escapeString(quotes[1]);
+      return `await expect(page.getByLabel('${field}')).toHaveValue('${value}');`;
+    }
+
+    // Count assertions: I should see 5 "items"
+    if (lower.match(/should see (\d+) /) && quotes.length >= 1) {
+      const countMatch = lower.match(/should see (\d+) /);
+      return `await expect(page.getByText('${this.escapeString(quotes[0])}')).toHaveCount(${countMatch![1]});`;
+    }
+
+    // Attribute assertions: "Submit" should have class "active"
+    if (lower.includes('should have class') && quotes.length >= 2) {
+      return `await expect(page.getByText('${this.escapeString(quotes[0])}').first()).toHaveClass(new RegExp('${this.escapeString(quotes[1])}'));`;
+    }
+    if (lower.includes('should have attribute') && quotes.length >= 3) {
+      return `await expect(page.getByText('${this.escapeString(quotes[0])}').first()).toHaveAttribute('${this.escapeString(quotes[1])}', '${this.escapeString(quotes[2])}');`;
+    }
+
+    // Placeholder assertion
+    if (lower.includes('placeholder should be') && quotes.length >= 2) {
+      return `await expect(page.getByLabel('${this.escapeString(quotes[0])}')).toHaveAttribute('placeholder', '${this.escapeString(quotes[1])}');`;
+    }
+
+    // Checked state assertion
+    if (lower.includes('should be checked') && quotes[0]) {
+      return `await expect(page.getByLabel('${this.escapeString(quotes[0])}')).toBeChecked();`;
+    }
+    if (lower.includes('should not be checked') && quotes[0]) {
+      return `await expect(page.getByLabel('${this.escapeString(quotes[0])}')).not.toBeChecked();`;
     }
 
     // Visibility assertions
@@ -2061,7 +2144,7 @@ class BDDService {
           }
         );
         if (bddReportUrl) {
-          logger.info(`BDD Run ${runId}: BDD report generated at ${bddReportUrl}`);
+          logger.info(`BDD Run ${runId}: BDD Cucumber report generated at ${bddReportUrl}`);
         }
       } catch (reportErr: any) {
         logger.warn(`BDD Run ${runId}: Report generation failed (non-fatal): ${reportErr.message}`);
@@ -2560,59 +2643,128 @@ class BDDService {
       lines.push(`// Smart locator helpers`);
       lines.push(`async function findInput(page, field) {`);
       lines.push(`  if (!field) throw new Error('Empty field name passed to findInput()');`);
-      lines.push(`  // Wait for DOM ready (skip networkidle — it hangs on sites with analytics)`);
+      lines.push(`  // Wait for DOM ready`);
       lines.push(`  await page.waitForLoadState('domcontentloaded').catch(() => {});`);
       lines.push('');
-      lines.push(`  // Build a combined CSS selector`);
-      lines.push(`  const cssSelector = \`input[name="\${field}" i], input[id="\${field}" i], textarea[name="\${field}" i], input[aria-label="\${field}" i], input[placeholder="\${field}" i]\`;`);
+      lines.push(`  // Clean field name: strip trailing colon/punctuation for matching`);
+      lines.push(`  const cleanField = field.replace(/[:\\s]+$/, '').trim();`);
+      lines.push(`  const lowerField = cleanField.toLowerCase();`);
       lines.push('');
-      lines.push(`  // Wait for matching input (10s max)`);
+      lines.push(`  // Build CSS selectors for both original and cleaned field names`);
+      lines.push(`  const cssSelector = \`input[name="\${cleanField}" i], input[id="\${cleanField}" i], textarea[name="\${cleanField}" i], input[aria-label="\${cleanField}" i], input[placeholder="\${cleanField}" i]\`;`);
+      lines.push('');
+      lines.push(`  // Wait for any inputs to appear`);
       lines.push(`  try {`);
       lines.push(`    await page.waitForSelector(cssSelector, { state: 'attached', timeout: 10000 });`);
       lines.push(`  } catch (e) {`);
-      lines.push(`    await page.waitForSelector('input, textarea', { state: 'attached', timeout: 5000 }).catch(() => {});`);
+      lines.push(`    await page.waitForSelector('input, textarea, select', { state: 'attached', timeout: 5000 }).catch(() => {});`);
       lines.push(`  }`);
       lines.push('');
-      lines.push(`  // Try smart selectors in priority order`);
-      lines.push(`  const byLabel = page.getByLabel(field);`);
-      lines.push(`  if (await byLabel.count() > 0) return byLabel.first();`);
-      lines.push(`  const byPlaceholder = page.getByPlaceholder(field);`);
-      lines.push(`  if (await byPlaceholder.count() > 0) return byPlaceholder.first();`);
-      lines.push(`  const byRole = page.getByRole('textbox', { name: field });`);
-      lines.push(`  if (await byRole.count() > 0) return byRole.first();`);
-      lines.push(`  const byTestId = page.getByTestId(field);`);
-      lines.push(`  if (await byTestId.count() > 0) return byTestId.first();`);
-      lines.push(`  // Fallback to CSS attribute selectors`);
+      lines.push(`  // Try both original and cleaned field names`);
+      lines.push(`  for (const f of [field, cleanField]) {`);
+      lines.push(`    const byLabel = page.getByLabel(f, { exact: false });`);
+      lines.push(`    if (await byLabel.count() > 0) return byLabel.first();`);
+      lines.push(`    const byPlaceholder = page.getByPlaceholder(f, { exact: false });`);
+      lines.push(`    if (await byPlaceholder.count() > 0) return byPlaceholder.first();`);
+      lines.push(`    const byRole = page.getByRole('textbox', { name: f });`);
+      lines.push(`    if (await byRole.count() > 0) return byRole.first();`);
+      lines.push(`    const byTestId = page.getByTestId(f);`);
+      lines.push(`    if (await byTestId.count() > 0) return byTestId.first();`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  // CSS attribute selectors (name, id, placeholder)`);
       lines.push(`  const fallback = page.locator(cssSelector).first();`);
-      lines.push(`  await fallback.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});`);
-      lines.push(`  return fallback;`);
+      lines.push(`  if (await fallback.count() > 0) return fallback;`);
+      lines.push('');
+      lines.push(`  // Text proximity: label, td, div, span containing field text near an input`);
+      lines.push(`  for (const f of [field, cleanField]) {`);
+      lines.push(`    const proxSelectors = [`);
+      lines.push(`      \`label:has-text("\${f}") + input\`, \`label:has-text("\${f}") input\`,`);
+      lines.push(`      \`td:has-text("\${f}") + td input\`, \`th:has-text("\${f}") + td input\`,`);
+      lines.push(`      \`div:has-text("\${f}") > input\`, \`span:has-text("\${f}") ~ input\`,`);
+      lines.push(`    ];`);
+      lines.push(`    for (const sel of proxSelectors) {`);
+      lines.push(`      const el = page.locator(sel).first();`);
+      lines.push(`      if (await el.count() > 0) return el;`);
+      lines.push(`    }`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  // XPath: find text node containing field name, then nearest following input`);
+      lines.push(`  const xpathEl = page.locator(\`xpath=//text()[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '\${lowerField}')]/ancestor::*[self::td or self::div or self::label or self::span or self::p][1]//following::input[1]\`).first();`);
+      lines.push(`  if (await xpathEl.count() > 0) return xpathEl;`);
+      lines.push('');
+      lines.push(`  // Final: match by scanning all visible inputs and checking nearby text`);
+      lines.push(`  const allInputs = page.locator('input:visible, textarea:visible');`);
+      lines.push(`  const inputCount = await allInputs.count();`);
+      lines.push(`  for (let i = 0; i < inputCount; i++) {`);
+      lines.push(`    const inp = allInputs.nth(i);`);
+      lines.push(`    const attrs = await inp.evaluate(el => ({ name: el.name, id: el.id, ph: el.placeholder, type: el.type }));`);
+      lines.push(`    if (attrs.name.toLowerCase().includes(lowerField) || attrs.id.toLowerCase().includes(lowerField) || attrs.ph.toLowerCase().includes(lowerField)) return inp;`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  throw new Error(\`Could not find input field: "\${field}". Available inputs: \` + await allInputs.evaluateAll(els => els.map(e => \`\${e.tagName}[name=\${e.name},id=\${e.id},ph=\${e.placeholder},type=\${e.type}]\`).join(', ')));`);
       lines.push('}');
       lines.push('');
       lines.push(`async function findElement(page, target) {`);
       lines.push(`  if (!target) throw new Error('Empty target passed to findElement()');`);
-      lines.push(`  // If target looks like a CSS selector (starts with . # [ or contains > ~ +), use locator directly`);
+      lines.push(`  // If target looks like a CSS selector, use locator directly`);
       lines.push(`  if (/^[.#\\[]|[>~+]/.test(target)) {`);
       lines.push(`    const loc = page.locator(target).first();`);
       lines.push(`    await loc.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});`);
       lines.push(`    return loc;`);
       lines.push(`  }`);
-      lines.push(`  // Wait for page to be stable before searching`);
+      lines.push(`  // Wait for page to be stable`);
       lines.push(`  await page.waitForLoadState('domcontentloaded').catch(() => {});`);
-      lines.push(`  // Try clickable roles: button, link, tab, menuitem`);
-      lines.push(`  for (const role of ['button', 'link', 'tab', 'menuitem']) {`);
-      lines.push(`    const el = page.getByRole(role, { name: target });`);
-      lines.push(`    const n = await el.count();`);
-      lines.push(`    if (n > 0) return el.first();`);
+      lines.push(`  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});`);
+      lines.push('');
+      lines.push(`  // Case-insensitive variants + trimmed target`);
+      lines.push(`  const cleanTarget = target.trim();`);
+      lines.push(`  const regex = new RegExp('^\\\\s*' + cleanTarget.replace(/[.*+?^$(){}|[\\]\\\\]/g, '\\\\$&') + '\\\\s*$', 'i');`);
+      lines.push('');
+      lines.push(`  // Retry loop: try all strategies, poll up to 15s for late-rendering elements`);
+      lines.push(`  const maxWait = 15000;`);
+      lines.push(`  const startTime = Date.now();`);
+      lines.push(`  while (Date.now() - startTime < maxWait) {`);
+      lines.push(`    // Clickable roles (exact then regex match for case-insensitive)`);
+      lines.push(`    for (const role of ['button', 'link', 'tab', 'menuitem', 'checkbox', 'radio']) {`);
+      lines.push(`      const exact = page.getByRole(role, { name: cleanTarget });`);
+      lines.push(`      if (await exact.count() > 0) { const v = exact.first(); if (await v.isVisible().catch(() => false)) return v; }`);
+      lines.push(`      const insensitive = page.getByRole(role, { name: regex });`);
+      lines.push(`      if (await insensitive.count() > 0) { const v = insensitive.first(); if (await v.isVisible().catch(() => false)) return v; }`);
+      lines.push(`    }`);
+      lines.push(`    // By text (exact, regex, partial)`);
+      lines.push(`    for (const opt of [{ exact: true }, { exact: false }]) {`);
+      lines.push(`      const byText = page.getByText(cleanTarget, opt);`);
+      lines.push(`      if (await byText.count() > 0) { const v = byText.first(); if (await v.isVisible().catch(() => false)) return v; }`);
+      lines.push(`    }`);
+      lines.push(`    // Regex case-insensitive text`);
+      lines.push(`    const byRegex = page.getByText(regex);`);
+      lines.push(`    if (await byRegex.count() > 0) { const v = byRegex.first(); if (await v.isVisible().catch(() => false)) return v; }`);
+      lines.push(`    // CSS fallback: anchor/button/input[type=submit]/image alt/value attribute`);
+      lines.push(`    const cssParts = [`);
+      lines.push(`      \`a:has-text("\${cleanTarget}")\`,`);
+      lines.push(`      \`button:has-text("\${cleanTarget}")\`,`);
+      lines.push(`      \`input[type="submit"][value="\${cleanTarget}" i]\`,`);
+      lines.push(`      \`input[type="button"][value="\${cleanTarget}" i]\`,`);
+      lines.push(`      \`img[alt="\${cleanTarget}" i]\`,`);
+      lines.push(`      \`[title="\${cleanTarget}" i]\`,`);
+      lines.push(`      \`[aria-label="\${cleanTarget}" i]\``);
+      lines.push(`    ].join(', ');`);
+      lines.push(`    const css = page.locator(cssParts).first();`);
+      lines.push(`    if (await css.count() > 0 && await css.isVisible().catch(() => false)) return css;`);
+      lines.push(`    // Wait a bit and retry`);
+      lines.push(`    await page.waitForTimeout(500);`);
       lines.push(`  }`);
-      lines.push(`  // Try by text (exact then partial)`);
-      lines.push(`  const exact = page.getByText(target, { exact: true });`);
-      lines.push(`  if (await exact.count() > 0) return exact.first();`);
-      lines.push(`  const partial = page.getByText(target, { exact: false });`);
-      lines.push(`  if (await partial.count() > 0) return partial.first();`);
-      lines.push(`  // Last resort: wait for any element with matching text`);
-      lines.push(`  const fallback = page.locator(\`a:has-text("\${target}"), button:has-text("\${target}"), [role="link"]:has-text("\${target}"), *:has-text("\${target}")\`).first();`);
-      lines.push(`  await fallback.waitFor({ state: 'visible', timeout: 10000 });`);
-      lines.push(`  return fallback;`);
+      lines.push('');
+      lines.push(`  // Build diagnostic error: list visible clickable elements so user can see what IS there`);
+      lines.push(`  const visible = await page.locator('a:visible, button:visible, input[type="submit"]:visible, input[type="button"]:visible, [role="link"]:visible, [role="button"]:visible').evaluateAll(els => els.slice(0, 20).map(e => {`);
+      lines.push(`    const text = (e.textContent || '').trim();`);
+      lines.push(`    const val = e.value || '';`);
+      lines.push(`    const alt = e.getAttribute('alt') || '';`);
+      lines.push(`    const aria = e.getAttribute('aria-label') || '';`);
+      lines.push(`    return e.tagName + ': "' + (text || val || alt || aria || '(no label)') + '"';`);
+      lines.push(`  }).join(', '));`);
+      lines.push(`  throw new Error('Element "' + target + '" not found on page ' + page.url() + '. Visible clickables: ' + visible);`);
       lines.push('}');
       lines.push('');
 
@@ -3064,11 +3216,101 @@ class BDDService {
       lines.push(`When('I right click {string}', async function (target) {`);
       lines.push(`  await this.page.getByText(target, { exact: true }).first().click({ button: 'right' });`);
       lines.push('});');
+      lines.push(`async function smartHover(page, target) {`);
+      lines.push(`  console.log('[smartHover] hovering over: ' + target);`);
+      lines.push(`  let hovered = null;`);
+      lines.push('');
+      lines.push(`  // Strategy 1: hover the <li> parent (CSS :hover menus like DemoQA, Bootstrap nav)`);
+      lines.push(`  const liParent = page.locator(\`li:has(a:has-text("\${target}")), li:has(span:has-text("\${target}")), li:has(button:has-text("\${target}"))\`).first();`);
+      lines.push(`  if (await liParent.count() > 0) {`);
+      lines.push(`    await liParent.hover({ force: true });`);
+      lines.push(`    hovered = liParent;`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  // Strategy 2: direct text match (for visible text)`);
+      lines.push(`  if (!hovered) {`);
+      lines.push(`    const byText = page.getByText(target, { exact: false }).first();`);
+      lines.push(`    if (await byText.count() > 0) {`);
+      lines.push(`      try {`);
+      lines.push(`        await byText.waitFor({ state: 'attached', timeout: 3000 });`);
+      lines.push(`        await byText.hover({ force: true });`);
+      lines.push(`        hovered = byText;`);
+      lines.push(`      } catch {}`);
+      lines.push(`    }`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  // Strategy 3: role-based match (button, link, etc.)`);
+      lines.push(`  if (!hovered) {`);
+      lines.push(`    for (const role of ['button', 'link', 'menuitem']) {`);
+      lines.push(`      const byRole = page.getByRole(role, { name: target });`);
+      lines.push(`      if (await byRole.count() > 0) {`);
+      lines.push(`        await byRole.first().hover({ force: true });`);
+      lines.push(`        hovered = byRole.first();`);
+      lines.push(`        break;`);
+      lines.push(`      }`);
+      lines.push(`    }`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  // Strategy 4: image/alt match (e.g., <img alt="user1">)`);
+      lines.push(`  if (!hovered) {`);
+      lines.push(`    const byAlt = page.locator(\`img[alt="\${target}" i], img[src*="\${target}" i]\`).first();`);
+      lines.push(`    if (await byAlt.count() > 0) {`);
+      lines.push(`      await byAlt.hover({ force: true });`);
+      lines.push(`      hovered = byAlt;`);
+      lines.push(`    }`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  // Strategy 5: positional fallback for patterns like "user1", "item2", "card3"`);
+      lines.push(`  // When text isn't found (because it's inside a hidden reveal), use the Nth group element`);
+      lines.push(`  if (!hovered) {`);
+      lines.push(`    const posMatch = target.toLowerCase().match(/^([a-z]+?)(\\d+)$/);`);
+      lines.push(`    if (posMatch) {`);
+      lines.push(`      const n = parseInt(posMatch[2]) - 1;`);
+      lines.push(`      // Try common group containers`);
+      lines.push(`      const groupSelectors = ['.figure', '.card', '.tile', '.item', '.product', 'figure', 'article'];`);
+      lines.push(`      for (const sel of groupSelectors) {`);
+      lines.push(`        const group = page.locator(sel);`);
+      lines.push(`        const count = await group.count();`);
+      lines.push(`        if (count > n) {`);
+      lines.push(`          const nth = group.nth(n);`);
+      lines.push(`          await nth.hover({ force: true });`);
+      lines.push(`          hovered = nth;`);
+      lines.push(`          console.log('[smartHover] positional match: ' + sel + ' nth(' + n + ')');`);
+      lines.push(`          break;`);
+      lines.push(`        }`);
+      lines.push(`      }`);
+      lines.push(`    }`);
+      lines.push(`  }`);
+      lines.push('');
+      lines.push(`  if (!hovered) {`);
+      lines.push(`    throw new Error('smartHover: could not find any element for "' + target + '" — tried text, role, alt, positional');`);
+      lines.push(`  }`);
+      lines.push(`  await page.waitForTimeout(400);`);
+      lines.push(`  // Strategy 2 (fail-safe): inject a CSS class that keeps submenus visible.`);
+      lines.push(`  // Cucumber steps may release mouse between steps, so we use a class-based approach that survives.`);
+      lines.push(`  await hovered.evaluate((el) => {`);
+      lines.push(`    // Walk up to the nearest LI (or self if already LI)`);
+      lines.push(`    let target = el;`);
+      lines.push(`    while (target && target.tagName !== 'LI') target = target.parentElement;`);
+      lines.push(`    if (!target) return;`);
+      lines.push(`    target.classList.add('__bdd_hovered__');`);
+      lines.push(`    // Inject a style tag once that forces submenu display for our class`);
+      lines.push(`    if (!document.getElementById('__bdd_hover_style__')) {`);
+      lines.push(`      const style = document.createElement('style');`);
+      lines.push(`      style.id = '__bdd_hover_style__';`);
+      lines.push(`      style.textContent = '.__bdd_hovered__ > ul, .__bdd_hovered__ > .dropdown-menu, .__bdd_hovered__ > .submenu { display: block !important; visibility: visible !important; opacity: 1 !important; }';`);
+      lines.push(`      document.head.appendChild(style);`);
+      lines.push(`    }`);
+      lines.push(`  });`);
+      lines.push(`  await page.waitForTimeout(200);`);
+      lines.push(`  return hovered;`);
+      lines.push(`}`);
+      lines.push('');
       lines.push(`When('I hover over {string}', async function (target) {`);
-      lines.push(`  await this.page.getByText(target, { exact: true }).first().hover();`);
+      lines.push(`  this.lastHoverTarget = await smartHover(this.page, target);`);
       lines.push('});');
       lines.push(`When('I hover on {string}', async function (target) {`);
-      lines.push(`  await this.page.getByText(target, { exact: true }).first().hover();`);
+      lines.push(`  this.lastHoverTarget = await smartHover(this.page, target);`);
       lines.push('});');
       lines.push(`When('I focus on {string}', async function (target) {`);
       lines.push(`  const input = await findInput(this.page, target); await input.focus();`);
@@ -3269,7 +3511,21 @@ class BDDService {
       // ========================================
       lines.push(`// --- Text / Visibility Assertions ---`);
       lines.push(`Then('I should see {string}', async function (text) {`);
-      lines.push(`  await expect(this.page.getByText(text, { exact: false }).first()).toBeVisible({ timeout: 10000 });`);
+      lines.push(`  const loc = this.page.getByText(text, { exact: false }).first();`);
+      lines.push(`  // If the element is present but hidden (e.g., hover submenu that collapsed),`);
+      lines.push(`  // try to re-trigger the last hover before asserting.`);
+      lines.push(`  try {`);
+      lines.push(`    await expect(loc).toBeVisible({ timeout: 3000 });`);
+      lines.push(`  } catch {`);
+      lines.push(`    // Element exists in DOM? Try re-hovering the last hovered element`);
+      lines.push(`    const count = await loc.count();`);
+      lines.push(`    if (count > 0 && this.lastHoverTarget) {`);
+      lines.push(`      try { await this.lastHoverTarget.hover(); } catch {}`);
+      lines.push(`      await expect(loc).toBeVisible({ timeout: 5000 });`);
+      lines.push(`    } else {`);
+      lines.push(`      await expect(loc).toBeVisible({ timeout: 7000 });`);
+      lines.push(`    }`);
+      lines.push(`  }`);
       lines.push('});');
       lines.push(`Then('I should not see {string}', async function (text) {`);
       lines.push(`  await expect(this.page.getByText(text, { exact: false })).toBeHidden({ timeout: 5000 });`);

@@ -30,6 +30,8 @@ import {
   importFeatureFiles,
   csvToScenarioOutline,
   saveAsScript,
+  generatePOM,
+  applyPOMToFeature,
 } from '../controllers/bdd.controller';
 import {
   runCucumberTests,
@@ -54,6 +56,8 @@ router.delete('/features/:id', authMiddleware, deleteFeature);
 router.post('/parse', authMiddleware, parseFeature);
 router.post('/features/:id/generate', authMiddleware, generateCode);
 router.post('/features/:id/save-as-script', authMiddleware, optionalTenantMiddleware, saveAsScript);
+router.post('/generate-pom', authMiddleware, generatePOM);
+router.post('/apply-pom', authMiddleware, applyPOMToFeature);
 
 // Run execution
 router.post('/features/:id/run', authMiddleware, optionalTenantMiddleware, runFeature);

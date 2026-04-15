@@ -1,8 +1,11 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { WebSocketServer } from 'ws';
 import { logger } from '../../utils/logger';
 import pool from '../../db';
 import { chromium, firefox, webkit, Browser, Page } from 'playwright-core';
-import { bddReportService as playwrightCrxService } from '../bdd-report.service';
+import { PlaywrightCrxService } from '../allure.service';
+const allureService = new PlaywrightCrxService();
 
 interface TestRunContext {
   testRunId: string;
@@ -49,13 +52,9 @@ export class TestRunnerService {
 
       const duration = Date.now() - startTime;
 
-      // Generate BDD report
-      const reportUrl = await playwrightCrxService.generateTestRunReport(
-        testRunId, script.name,
-        [{ action: 'Execute script', status: 'passed', duration }],
-        'passed', { browser: effectiveBrowserType }
-      );
-      logger.info('📊 Report generated:', reportUrl);
+      // Generate Allure report from recorded TestStep rows
+      const reportUrl = await this.generateAllureReport(testRunId, script.name, 'passed', effectiveBrowserType, duration);
+      logger.info('📊 Allure report generated:', reportUrl);
 
       await pool.query(
         `UPDATE "TestRun" SET status = 'passed', "completedAt" = now(), duration = $2, "executionReportUrl" = $3 WHERE id = $1`,
@@ -73,14 +72,10 @@ export class TestRunnerService {
       const startTime = Date.now();
       const duration = context ? Date.now() - startTime : 0;
 
-      // Generate report for failed test
+      // Generate Allure report for failed test
       try {
-        const reportUrl = await playwrightCrxService.generateTestRunReport(
-          testRunId, 'Test Run',
-          [{ action: 'Execute script', status: 'failed', duration, errorMessage: error.message }],
-          'failed'
-        );
-        logger.info('📊 Report generated for failed test:', reportUrl);
+        const reportUrl = await this.generateAllureReport(testRunId, 'Test Run', 'failed', 'chromium', duration, error.message);
+        logger.info('📊 Allure report generated for failed test:', reportUrl);
 
         await pool.query(
           `UPDATE "TestRun" SET status = 'failed', "errorMsg" = $2, "completedAt" = now(), duration = $3, "executionReportUrl" = $4 WHERE id = $1`,
@@ -325,10 +320,244 @@ export class TestRunnerService {
           }
           await this.recordStep(context, stepNumber, action, selector || '(page element)', value, 'passed');
 
+        } else if (line.includes('page.frameLocator(')) {
+          // Handle iframe: page.frameLocator('#frame') — store for subsequent locator calls
+          action = 'frame';
+          const frameMatch = line.match(/frameLocator\(['"]([^'"]+)['"]\)/);
+          selector = frameMatch ? frameMatch[1] : '';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          // Frame locator is resolved inline — just record and continue
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.keyboard.press(')) {
+          action = 'keypress';
+          const keyMatch = line.match(/press\(['"]([^'"]+)['"]\)/);
+          value = keyMatch ? keyMatch[1] : '';
+          selector = 'keyboard';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          await page.keyboard.press(value);
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.screenshot(')) {
+          action = 'screenshot';
+          const pathMatch = line.match(/path:\s*['"]([^'"]+)['"]/);
+          selector = pathMatch ? pathMatch[1] : 'screenshot.png';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          await page.screenshot({ path: selector, fullPage: line.includes('fullPage: true') });
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.goBack()')) {
+          action = 'navigate';
+          selector = 'back';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          await page.goBack();
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.goForward()')) {
+          action = 'navigate';
+          selector = 'forward';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          await page.goForward();
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.reload()')) {
+          action = 'navigate';
+          selector = 'reload';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          await page.reload();
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.waitForTimeout(')) {
+          action = 'wait';
+          const msMatch = line.match(/waitForTimeout\((\d+)\)/);
+          value = msMatch ? msMatch[1] : '1000';
+          selector = `${value}ms`;
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          await page.waitForTimeout(parseInt(value));
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.waitForLoadState(')) {
+          action = 'wait';
+          const stateMatch = line.match(/waitForLoadState\(['"]([^'"]+)['"]\)/);
+          selector = stateMatch ? stateMatch[1] : 'load';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          await page.waitForLoadState(selector as any);
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.waitForURL(')) {
+          action = 'wait';
+          const urlMatch = line.match(/waitForURL\((?:new RegExp\()?['"]([^'"]+)['"]/);
+          selector = urlMatch ? urlMatch[1] : '';
+          await this.recordStep(context, stepNumber, action, `url: ${selector}`, value, 'running');
+          if (line.includes('new RegExp')) {
+            await page.waitForURL(new RegExp(selector), { timeout: 15000 });
+          } else {
+            await page.waitForURL(selector, { timeout: 15000 });
+          }
+          await this.recordStep(context, stepNumber, action, `url: ${selector}`, value, 'passed');
+
+        } else if (line.includes('page.evaluate(')) {
+          action = 'evaluate';
+          selector = 'JavaScript';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          const evalMatch = line.match(/evaluate\(\(\)\s*=>\s*(.+)\)/);
+          if (evalMatch) {
+            await page.evaluate(evalMatch[1]);
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.once(') && line.includes('dialog')) {
+          action = 'dialog';
+          const isAccept = line.includes('accept');
+          selector = isAccept ? 'accept' : 'dismiss';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          page.once('dialog', async d => isAccept ? await d.accept() : await d.dismiss());
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && line.includes('toHaveURL')) {
+          action = 'assert_url';
+          const urlMatch = line.match(/toHaveURL\((?:new RegExp\()?['"]([^'"]+)['"]/);
+          selector = urlMatch ? urlMatch[1] : '';
+          value = selector;
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          if (line.includes('new RegExp')) {
+            await page.waitForURL(new RegExp(selector), { timeout: 15000 });
+          } else {
+            const currentUrl = page.url();
+            if (!currentUrl.includes(selector) && currentUrl !== selector) {
+              throw new Error(`URL mismatch: expected "${selector}", got "${currentUrl}"`);
+            }
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && line.includes('toHaveTitle')) {
+          action = 'assert_title';
+          const titleMatch = line.match(/toHaveTitle\((?:new RegExp\()?['"]([^'"]+)['"]/);
+          value = titleMatch ? titleMatch[1] : '';
+          selector = 'title';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          const actualTitle = await page.title();
+          if (line.includes('new RegExp')) {
+            if (!new RegExp(value).test(actualTitle)) {
+              throw new Error(`Title mismatch: expected /${value}/, got "${actualTitle}"`);
+            }
+          } else if (actualTitle !== value) {
+            throw new Error(`Title mismatch: expected "${value}", got "${actualTitle}"`);
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && line.includes('toContainText')) {
+          action = 'assert_text';
+          const textMatch = line.match(/toContainText\(['"]([^'"]+)['"]\)/);
+          value = textMatch ? textMatch[1] : '';
+          selector = 'body';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          const bodyText = await page.locator('body').textContent() || '';
+          if (!bodyText.includes(value)) {
+            throw new Error(`Text "${value}" not found on page`);
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && line.includes('toBeHidden')) {
+          action = 'assert_hidden';
+          const locator = this.resolveLocator(page, line);
+          selector = this.extractExpectSelector(line) || this.extractLocatorDescription(line);
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          if (locator) {
+            const count = await locator.first().count();
+            if (count > 0) {
+              const isVisible = await locator.first().isVisible();
+              if (isVisible) throw new Error(`Element "${selector}" is visible but should be hidden`);
+            }
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && line.includes('toHaveValue')) {
+          action = 'assert_value';
+          const locator = this.resolveLocator(page, line);
+          const valMatch = line.match(/toHaveValue\(['"]([^'"]*)['"]\)/);
+          value = valMatch ? valMatch[1] : '';
+          selector = this.extractLocatorDescription(line);
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          if (locator) {
+            const actual = await locator.first().inputValue();
+            if (actual !== value) throw new Error(`Value mismatch for "${selector}": expected "${value}", got "${actual}"`);
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && line.includes('toHaveCount')) {
+          action = 'assert_count';
+          const locator = this.resolveLocator(page, line);
+          const countMatch = line.match(/toHaveCount\((\d+)\)/);
+          value = countMatch ? countMatch[1] : '0';
+          selector = this.extractLocatorDescription(line);
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          if (locator) {
+            const actual = await locator.count();
+            if (actual !== parseInt(value)) throw new Error(`Count mismatch for "${selector}": expected ${value}, got ${actual}`);
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && line.includes('toHaveClass')) {
+          action = 'assert_class';
+          const locator = this.resolveLocator(page, line);
+          const classMatch = line.match(/toHaveClass\((?:new RegExp\()?['"]([^'"]+)['"]/);
+          value = classMatch ? classMatch[1] : '';
+          selector = this.extractLocatorDescription(line);
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          if (locator) {
+            const actual = await locator.first().getAttribute('class') || '';
+            if (!new RegExp(value).test(actual)) throw new Error(`Class mismatch for "${selector}": expected /${value}/, got "${actual}"`);
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && line.includes('toHaveAttribute')) {
+          action = 'assert_attribute';
+          const locator = this.resolveLocator(page, line);
+          const attrMatch = line.match(/toHaveAttribute\(['"]([^'"]+)['"],\s*['"]([^'"]+)['"]\)/);
+          selector = this.extractLocatorDescription(line);
+          const attrName = attrMatch ? attrMatch[1] : '';
+          value = attrMatch ? attrMatch[2] : '';
+          await this.recordStep(context, stepNumber, action, `${selector}[${attrName}]`, value, 'running');
+          if (locator) {
+            const actual = await locator.first().getAttribute(attrName) || '';
+            if (actual !== value) throw new Error(`Attribute "${attrName}" mismatch: expected "${value}", got "${actual}"`);
+          }
+          await this.recordStep(context, stepNumber, action, `${selector}[${attrName}]`, value, 'passed');
+
+        } else if (line.includes('expect(') && (line.includes('toBeChecked') || line.includes('not.toBeChecked'))) {
+          action = 'assert_checked';
+          const locator = this.resolveLocator(page, line);
+          const shouldBeChecked = !line.includes('not.toBeChecked');
+          selector = this.extractLocatorDescription(line);
+          value = shouldBeChecked ? 'checked' : 'unchecked';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          if (locator) {
+            const isChecked = await locator.first().isChecked();
+            if (isChecked !== shouldBeChecked) throw new Error(`Checkbox "${selector}" is ${isChecked ? 'checked' : 'unchecked'}, expected ${value}`);
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('expect(') && (line.includes('toBeDisabled') || line.includes('toBeEnabled'))) {
+          action = line.includes('toBeDisabled') ? 'assert_disabled' : 'assert_enabled';
+          const locator = this.resolveLocator(page, line);
+          const shouldBeDisabled = line.includes('toBeDisabled');
+          selector = this.extractLocatorDescription(line);
+          value = shouldBeDisabled ? 'disabled' : 'enabled';
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          if (locator) {
+            const isDisabled = await locator.first().isDisabled();
+            if (isDisabled !== shouldBeDisabled) throw new Error(`Element "${selector}" is ${isDisabled ? 'disabled' : 'enabled'}, expected ${value}`);
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
         } else if (line.includes('page.getByLabel(') || line.includes('page.getByRole(') || line.includes('page.getByText(') || line.includes('page.getByPlaceholder(') || line.includes('page.getByTestId(') || line.includes('page.locator(')) {
-          // Handle modern Playwright locator API calls: getByLabel('X').fill('Y'), getByPlaceholder('X').fill('Y'), getByRole('button', {name: 'X'}).click()
+          // Handle modern Playwright locator API calls
           const locator = this.resolveLocator(page, line);
           if (!locator) { stepNumber++; continue; }
+
+          // Wait for DOM stability before acting
+          await page.waitForLoadState('domcontentloaded').catch(() => {});
 
           if (line.includes('.fill(')) {
             action = 'fill';
@@ -336,19 +565,68 @@ export class TestRunnerService {
             value = fillMatch ? fillMatch[1] : '';
             selector = this.extractLocatorDescription(line);
             await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().scrollIntoViewIfNeeded().catch(() => {});
             await locator.first().fill(value);
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.pressSequentially(')) {
+            action = 'type';
+            const typeMatch = line.match(/\.pressSequentially\(['"]([^'"]*)['"]/);
+            value = typeMatch ? typeMatch[1] : '';
+            const delayMatch = line.match(/delay:\s*(\d+)/);
+            const delay = delayMatch ? parseInt(delayMatch[1]) : 50;
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().scrollIntoViewIfNeeded().catch(() => {});
+            await locator.first().pressSequentially(value, { delay });
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.clear()')) {
+            action = 'clear';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().clear();
             await this.recordStep(context, stepNumber, action, selector, value, 'passed');
           } else if (line.includes('.click(')) {
             action = 'click';
             selector = this.extractLocatorDescription(line);
             await this.recordStep(context, stepNumber, action, selector, value, 'running');
-            await locator.first().click();
+            await locator.first().scrollIntoViewIfNeeded().catch(() => {});
+            if (line.includes("button: 'right'")) {
+              await locator.first().click({ button: 'right' });
+            } else {
+              await locator.first().click();
+            }
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.dblclick(')) {
+            action = 'dblclick';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().scrollIntoViewIfNeeded().catch(() => {});
+            await locator.first().dblclick();
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.hover(')) {
+            action = 'hover';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().scrollIntoViewIfNeeded().catch(() => {});
+            await locator.first().hover();
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.focus(')) {
+            action = 'focus';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().focus();
             await this.recordStep(context, stepNumber, action, selector, value, 'passed');
           } else if (line.includes('.check(')) {
             action = 'check';
             selector = this.extractLocatorDescription(line);
             await this.recordStep(context, stepNumber, action, selector, value, 'running');
             await locator.first().check();
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.uncheck(')) {
+            action = 'uncheck';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().uncheck();
             await this.recordStep(context, stepNumber, action, selector, value, 'passed');
           } else if (line.includes('.selectOption(')) {
             action = 'select';
@@ -357,6 +635,37 @@ export class TestRunnerService {
             selector = this.extractLocatorDescription(line);
             await this.recordStep(context, stepNumber, action, selector, value, 'running');
             await locator.first().selectOption(value);
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.setInputFiles(')) {
+            action = 'upload';
+            const fileMatch = line.match(/\.setInputFiles\(['"]([^'"]*)['"]\)/);
+            value = fileMatch ? fileMatch[1] : '';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().setInputFiles(value);
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.dragTo(')) {
+            action = 'drag';
+            selector = this.extractLocatorDescription(line);
+            const targetLocator = this.resolveLocator(page, line.substring(line.indexOf('.dragTo(')));
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            if (targetLocator) {
+              await locator.first().dragTo(targetLocator.first());
+            }
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.scrollIntoViewIfNeeded(')) {
+            action = 'scroll';
+            selector = this.extractLocatorDescription(line);
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().scrollIntoViewIfNeeded();
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          } else if (line.includes('.waitFor(')) {
+            action = 'wait';
+            selector = this.extractLocatorDescription(line);
+            const stateMatch = line.match(/state:\s*['"]([^'"]+)['"]/);
+            value = stateMatch ? stateMatch[1] : 'visible';
+            await this.recordStep(context, stepNumber, action, selector, value, 'running');
+            await locator.first().waitFor({ state: value as any, timeout: 15000 });
             await this.recordStep(context, stepNumber, action, selector, value, 'passed');
           } else {
             // Unknown action on locator — skip
@@ -374,9 +683,88 @@ export class TestRunnerService {
         
       } catch (stepError: any) {
         logger.error(`Step ${stepNumber} failed:`, stepError.message);
+        // Take screenshot on failure for debugging
+        let screenshotPath = '';
+        try {
+          if (page) {
+            const screenshotDir = path.join(process.cwd(), 'playwright-crx-reports', 'failure-screenshots');
+            if (!fs.existsSync(screenshotDir)) fs.mkdirSync(screenshotDir, { recursive: true });
+            screenshotPath = path.join(screenshotDir, `${context.testRunId}-step${stepNumber}.png`);
+            await page.screenshot({ path: screenshotPath, fullPage: true });
+            logger.info(`Screenshot saved: ${screenshotPath}`);
+          }
+        } catch { /* ignore screenshot errors */ }
         await this.recordStep(context, stepNumber, 'unknown', '', '', 'failed', stepError.message);
         throw stepError;
       }
+    }
+  }
+
+  private async generateAllureReport(
+    testRunId: string,
+    scriptName: string,
+    status: 'passed' | 'failed',
+    browser: string,
+    duration: number,
+    errorMessage?: string
+  ): Promise<string> {
+    try {
+      // Fetch recorded steps from DB
+      const { rows: stepRows } = await pool.query(
+        `SELECT "stepNumber", action, selector, value, status, "errorMsg", duration FROM "TestStep" WHERE "testRunId" = $1 ORDER BY "stepNumber" ASC`,
+        [testRunId]
+      );
+
+      const scenarioSteps = stepRows.map(r => ({
+        keyword: r.action || 'Step',
+        name: `${r.action}${r.selector ? ` ${r.selector}` : ''}${r.value ? ` = "${r.value}"` : ''}`,
+        status: r.status === 'passed' ? 'passed' : r.status === 'failed' ? 'failed' : 'skipped',
+        duration: r.duration || 0,
+        errorMessage: r.errorMsg || undefined,
+      }));
+
+      // Look for failure screenshots for this run
+      const screenshotDir = path.join(process.cwd(), 'playwright-crx-reports', 'failure-screenshots');
+      if (fs.existsSync(screenshotDir)) {
+        const files = fs.readdirSync(screenshotDir).filter(f => f.startsWith(testRunId));
+        for (const file of files) {
+          const stepMatch = file.match(/step(\d+)\.png$/);
+          if (stepMatch) {
+            const stepIdx = parseInt(stepMatch[1]) - 1;
+            if (scenarioSteps[stepIdx]) {
+              (scenarioSteps[stepIdx] as any).screenshotPath = path.join(screenshotDir, file);
+            }
+          }
+        }
+      }
+
+      // Write Allure results for this test run
+      await allureService.writeBDDResults({
+        runId: testRunId,
+        featureName: scriptName,
+        scenarios: [{
+          name: scriptName,
+          status,
+          duration,
+          tags: [],
+          steps: scenarioSteps.length > 0 ? scenarioSteps : [{
+            keyword: 'Execute',
+            name: scriptName,
+            status,
+            duration,
+            errorMessage,
+          }],
+        }],
+        browser,
+      });
+
+      // Generate Allure HTML report
+      await allureService.generateReport(testRunId);
+      const reportUrl = await allureService.getReportUrl(testRunId);
+      return reportUrl || '';
+    } catch (err: any) {
+      logger.error('Allure report generation failed:', err.message);
+      return '';
     }
   }
 
@@ -445,28 +833,64 @@ export class TestRunnerService {
       const getByTextMatch = line.match(/getByText\(['"]([^'"]+)['"]/);
       if (getByTextMatch) return page.getByText(getByTextMatch[1], { exact: false });
 
-      // page.getByLabel('label')
+      // page.getByLabel('label') — with smart fallback chain
       const getByLabelMatch = line.match(/getByLabel\(['"]([^'"]+)['"]/);
-      if (getByLabelMatch) return page.getByLabel(getByLabelMatch[1]);
+      if (getByLabelMatch) {
+        const field = getByLabelMatch[1].replace(/[:\s]+$/, '').trim();
+        return page.getByLabel(field, { exact: false })
+          .or(page.getByPlaceholder(field, { exact: false }))
+          .or(page.getByRole('textbox', { name: field }))
+          .or(page.locator(`input[name="${field}" i], input[id="${field}" i], textarea[name="${field}" i], input[placeholder="${field}" i]`))
+          .or(page.locator(`label:has-text("${field}") + input, label:has-text("${field}") input, td:has-text("${field}") + td input`));
+      }
 
-      // page.getByRole('role', { name: 'text' }) or page.getByRole('role', { name: /regex/i })
+      // page.getByRole('role', { name: 'text' }) — with fallback to other roles
       const getByRoleMatch = line.match(/getByRole\(['"]([^'"]+)['"](?:,\s*\{\s*name:\s*(?:['"]([^'"]+)['"]|\/([^/]+)\/\w*)\s*\})?/);
       if (getByRoleMatch) {
         const role = getByRoleMatch[1] as any;
         const nameStr = getByRoleMatch[2];
         const nameRegex = getByRoleMatch[3];
-        if (nameRegex) return page.getByRole(role, { name: new RegExp(nameRegex, 'i') });
-        if (nameStr) return page.getByRole(role, { name: nameStr });
+        if (nameRegex) {
+          const regex = new RegExp(nameRegex, 'i');
+          return page.getByRole(role, { name: regex })
+            .or(page.getByRole('link', { name: regex }))
+            .or(page.getByRole('button', { name: regex }))
+            .or(page.getByText(regex));
+        }
+        if (nameStr) {
+          return page.getByRole(role, { name: nameStr })
+            .or(page.getByRole(role === 'button' ? 'link' : 'button', { name: nameStr }))
+            .or(page.getByRole('tab', { name: nameStr }))
+            .or(page.getByRole('menuitem', { name: nameStr }))
+            .or(page.getByText(nameStr, { exact: true }))
+            .or(page.locator(`a:has-text("${nameStr}"), button:has-text("${nameStr}"), input[type="submit"][value="${nameStr}" i]`));
+        }
         return page.getByRole(role);
       }
 
-      // page.getByPlaceholder('text')
+      // page.getByPlaceholder('text') — with fallback
       const getByPlaceholderMatch = line.match(/getByPlaceholder\(['"]([^'"]+)['"]/);
-      if (getByPlaceholderMatch) return page.getByPlaceholder(getByPlaceholderMatch[1]);
+      if (getByPlaceholderMatch) {
+        const ph = getByPlaceholderMatch[1];
+        return page.getByPlaceholder(ph, { exact: false })
+          .or(page.getByLabel(ph, { exact: false }))
+          .or(page.locator(`input[placeholder="${ph}" i]`));
+      }
+
+      // page.getByTestId('id')
+      const getByTestIdMatch = line.match(/getByTestId\(['"]([^'"]+)['"]/);
+      if (getByTestIdMatch) return page.getByTestId(getByTestIdMatch[1]);
 
       // page.locator('selector')
       const locatorMatch = line.match(/(?:page\.)?locator\(['"]([^'"]+)['"]/);
-      if (locatorMatch && locatorMatch[1]) return page.locator(locatorMatch[1]);
+      if (locatorMatch && locatorMatch[1]) {
+        let loc = page.locator(locatorMatch[1]);
+        // Handle .nth(), .first(), .last() chaining
+        const nthMatch = line.match(/\.nth\((\d+)\)/);
+        if (nthMatch) loc = loc.nth(parseInt(nthMatch[1])) as any;
+        else if (line.includes('.last()')) loc = loc.last() as any;
+        return loc;
+      }
     } catch (e: any) {
       logger.warn(`Could not resolve locator from line: ${line.substring(0, 100)} — ${e.message}`);
     }
@@ -506,27 +930,48 @@ export class TestRunnerService {
     const startIndex = line.indexOf(method);
     if (startIndex === -1) return undefined;
     const after = line.substring(startIndex + method.length);
-    // Extract first quoted string parameter
-    const quotedMatch = after.match(/^['"]([^'"]*)['"]/);
-    if (quotedMatch) return quotedMatch[1];
-    // Fallback: extract up to first comma or closing paren (for unquoted params like variables)
+    // Match quoted string with matching quote type (single OR double, not mixed)
+    const singleQuoted = after.match(/^'((?:[^'\\]|\\.)*)'/);
+    if (singleQuoted) return singleQuoted[1];
+    const doubleQuoted = after.match(/^"((?:[^"\\]|\\.)*)"/);
+    if (doubleQuoted) return doubleQuoted[1];
+    // Backtick template literal
+    const backtickQuoted = after.match(/^`([^`]*)`/);
+    if (backtickQuoted) return backtickQuoted[1];
+    // Fallback: unquoted variable up to comma or closing paren
     const fallbackMatch = after.match(/^([^,)]+)/);
-    return fallbackMatch ? fallbackMatch[1].replace(/['"]/g, '').trim() : undefined;
+    return fallbackMatch ? fallbackMatch[1].trim() : undefined;
   }
 
   private extractParameters(line: string, method: string): string[] {
     const startIndex = line.indexOf(method);
     if (startIndex === -1) return [];
-    const after = line.substring(startIndex + method.length);
-    // Extract quoted string parameters separated by commas, stop at object literal { or )
+    let after = line.substring(startIndex + method.length);
     const params: string[] = [];
-    const paramRegex = /['"]([^'"]*)['"]/g;
-    let match;
-    while ((match = paramRegex.exec(after)) !== null) {
-      // Stop if we hit an object literal
+    // Iteratively extract quoted strings with matching quote types
+    while (after.length > 0) {
+      // Stop at object literal
+      const objIdx = after.indexOf('{');
+      const closeIdx = after.indexOf(')');
+      if (objIdx !== -1 && (closeIdx === -1 || objIdx < closeIdx)) {
+        const before = after.substring(0, objIdx);
+        if (!/['"`]/.test(before)) break;
+      }
+      // Try to match next quoted string (matching quote type)
+      const singleMatch = after.match(/'((?:[^'\\]|\\.)*)'/);
+      const doubleMatch = after.match(/"((?:[^"\\]|\\.)*)"/);
+      const backtickMatch = after.match(/`([^`]*)`/);
+      // Pick the earliest match
+      const candidates = [singleMatch, doubleMatch, backtickMatch]
+        .filter(m => m !== null)
+        .sort((a, b) => (a!.index! - b!.index!));
+      if (candidates.length === 0) break;
+      const match = candidates[0]!;
+      // Stop if the match is after an object literal
       const before = after.substring(0, match.index);
       if (before.includes('{')) break;
       params.push(match[1]);
+      after = after.substring(match.index! + match[0].length);
     }
     return params;
   }

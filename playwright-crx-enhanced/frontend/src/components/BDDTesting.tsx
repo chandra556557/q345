@@ -450,6 +450,8 @@ const BDDTesting: React.FC = () => {
   // Generate Playwright code from a saved feature
   const [generatingCode, setGeneratingCode] = useState(false);
   const [generatedFeatureCode, setGeneratedFeatureCode] = useState('');
+  const [editingGeneratedCode, setEditingGeneratedCode] = useState(false);
+  const [editingEditorCode, setEditingEditorCode] = useState(false);
   const [generateLanguage, setGenerateLanguage] = useState<'typescript' | 'java' | 'java-cucumber'>('typescript');
 
   const handleGenerateCode = async (featureId: string) => {
@@ -464,6 +466,85 @@ const BDDTesting: React.FC = () => {
       setError(err.response?.data?.error || 'Failed to generate code');
     } finally {
       setGeneratingCode(false);
+    }
+  };
+
+  // POM Generator state
+  const [generatingPOM, setGeneratingPOM] = useState(false);
+  const [pomResults, setPOMResults] = useState<Array<{ className: string; url: string; locators: any[]; methods: string[]; generatedCode: string }>>([]);
+  const [pomTargetUrl, setPOMTargetUrl] = useState('');
+  const [pomClassName, setPOMClassName] = useState('');
+  const [showPOMDialog, setShowPOMDialog] = useState(false);
+  const [pomFeatureContent, setPOMFeatureContent] = useState('');
+
+  const handleGeneratePOM = async () => {
+    if (!pomFeatureContent || !pomTargetUrl) {
+      setError('Feature content and target URL are required');
+      return;
+    }
+    setGeneratingPOM(true);
+    setPOMResults([]);
+    setError('');
+    try {
+      const res = await axios.post(`${API_URL}/bdd/generate-pom`, {
+        featureContent: pomFeatureContent,
+        targetUrl: pomTargetUrl,
+        className: pomClassName || undefined,
+      }, { headers });
+      setPOMResults(res.data.data || []);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to generate POM');
+    } finally {
+      setGeneratingPOM(false);
+    }
+  };
+
+  const openPOMDialogForFeature = (feature: BDDFeature) => {
+    setPOMFeatureContent(feature.featureContent || '');
+    setPOMTargetUrl('');
+    setPOMClassName('');
+    setPOMResults([]);
+    setAppliedPOMCode('');
+    setShowPOMDialog(true);
+  };
+
+  // Apply POM to feature — regenerate test code using POM methods
+  const [applyingPOM, setApplyingPOM] = useState(false);
+  const [appliedPOMCode, setAppliedPOMCode] = useState('');
+
+  const handleApplyPOM = async (pom: any) => {
+    setApplyingPOM(true);
+    setAppliedPOMCode('');
+    setError('');
+    try {
+      const res = await axios.post(`${API_URL}/bdd/apply-pom`, {
+        featureContent: pomFeatureContent,
+        pom,
+        baseUrl: pomTargetUrl,
+      }, { headers });
+      setAppliedPOMCode(res.data.data.playwrightCode);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to apply POM');
+    } finally {
+      setApplyingPOM(false);
+    }
+  };
+
+  const handleApplyAllPOMs = async () => {
+    setApplyingPOM(true);
+    setAppliedPOMCode('');
+    setError('');
+    try {
+      const res = await axios.post(`${API_URL}/bdd/apply-pom`, {
+        featureContent: pomFeatureContent,
+        poms: pomResults,
+        baseUrl: pomTargetUrl,
+      }, { headers });
+      setAppliedPOMCode(res.data.data.playwrightCode);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to apply POMs');
+    } finally {
+      setApplyingPOM(false);
     }
   };
 
@@ -665,6 +746,9 @@ const BDDTesting: React.FC = () => {
   const handleViewFeature = async (id: string) => {
     try {
       setLoading(true);
+      setGeneratedFeatureCode('');
+      setSavedScriptInfo(null);
+      setError('');
       const res = await axios.get(`${API_URL}/bdd/features/${id}`, { headers });
       setSelectedFeature(res.data.data);
     } catch (err: any) {
@@ -1051,14 +1135,26 @@ const BDDTesting: React.FC = () => {
                 Generated {codeLanguage === 'java-cucumber' ? 'Java Cucumber Project' : 'Playwright Code'}
                 <span style={{ fontSize: '11px', color: '#999' }}>{codeLanguage === 'java-cucumber' ? '.java + pom.xml' : codeLanguage === 'java' ? '.java' : '.spec.ts'}</span>
               </h3>
-              <pre className="bdd-code-preview">
-                {generatedCode || (codeLanguage === 'java-cucumber' ? '// Click "Parse & Preview" to generate Java Cucumber BDD project\n// Generates: Step Definitions, Hooks, Runner, pom.xml' : codeLanguage === 'java' ? '// Click "Parse & Preview" to generate Java Playwright code' : '// Click "Parse & Preview" to generate Playwright code from your Gherkin feature')}
-              </pre>
-              {/* Save as Script + Copy buttons below generated code */}
+              {editingEditorCode && generatedCode ? (
+                <textarea
+                  value={generatedCode}
+                  onChange={e => setGeneratedCode(e.target.value)}
+                  spellCheck={false}
+                  style={{ width: '100%', minHeight: '400px', maxHeight: '600px', background: '#1e1e2e', color: '#cdd6f4', padding: '16px', borderRadius: '8px', fontSize: '12px', fontFamily: 'monospace', border: '2px solid #1565c0', resize: 'vertical', outline: 'none' }}
+                />
+              ) : (
+                <pre className="bdd-code-preview">
+                  {generatedCode || (codeLanguage === 'java-cucumber' ? '// Click "Parse & Preview" to generate Java Cucumber BDD project\n// Generates: Step Definitions, Hooks, Runner, pom.xml' : codeLanguage === 'java' ? '// Click "Parse & Preview" to generate Java Playwright code' : '// Click "Parse & Preview" to generate Playwright code from your Gherkin feature')}
+                </pre>
+              )}
+              {/* Save as Script + Edit + Copy buttons below generated code */}
               {generatedCode && (
                 <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <button className="bdd-btn bdd-btn-success" onClick={handleSaveGeneratedAsScript} disabled={savingEditorScript || !!editorSavedScript}>
                     {savingEditorScript ? 'Saving...' : editorSavedScript ? 'Saved as Script' : 'Save as Script'}
+                  </button>
+                  <button className="bdd-btn bdd-btn-secondary" onClick={() => setEditingEditorCode(v => !v)}>
+                    {editingEditorCode ? 'Done Editing' : 'Edit'}
                   </button>
                   <button className="bdd-btn bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(generatedCode)}>
                     Copy Code
@@ -1334,6 +1430,9 @@ const BDDTesting: React.FC = () => {
               <button className="bdd-btn bdd-btn-success" onClick={() => handleSaveAsScript(selectedFeature.id)} disabled={savingAsScript || !!savedScriptInfo}>
                 {savingAsScript ? 'Saving...' : savedScriptInfo ? 'Saved as Script' : 'Save as Script'}
               </button>
+              <button className="bdd-btn bdd-btn-secondary" onClick={() => openPOMDialogForFeature(selectedFeature)}>
+                Generate Page Object
+              </button>
             </div>
 
             {/* Saved Script Info */}
@@ -1349,13 +1448,27 @@ const BDDTesting: React.FC = () => {
               <div style={{ marginTop: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <h3 style={{ margin: 0, fontSize: '14px' }}>Generated Playwright Code ({generateLanguage})</h3>
-                  <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => { navigator.clipboard.writeText(generatedFeatureCode); }}>
-                    Copy to Clipboard
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => setEditingGeneratedCode(v => !v)}>
+                      {editingGeneratedCode ? 'Done Editing' : 'Edit'}
+                    </button>
+                    <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => { navigator.clipboard.writeText(generatedFeatureCode); }}>
+                      Copy to Clipboard
+                    </button>
+                  </div>
                 </div>
-                <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '16px', borderRadius: '8px', overflow: 'auto', maxHeight: '500px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                  {generatedFeatureCode}
-                </pre>
+                {editingGeneratedCode ? (
+                  <textarea
+                    value={generatedFeatureCode}
+                    onChange={e => setGeneratedFeatureCode(e.target.value)}
+                    spellCheck={false}
+                    style={{ width: '100%', minHeight: '400px', maxHeight: '600px', background: '#1e1e2e', color: '#cdd6f4', padding: '16px', borderRadius: '8px', fontSize: '12px', fontFamily: 'monospace', border: '2px solid #1565c0', resize: 'vertical', outline: 'none' }}
+                  />
+                ) : (
+                  <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '16px', borderRadius: '8px', overflow: 'auto', maxHeight: '500px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                    {generatedFeatureCode}
+                  </pre>
+                )}
               </div>
             )}
           </div>
@@ -2079,6 +2192,128 @@ const BDDTesting: React.FC = () => {
                 >
                   Download
                 </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== POM Generator Dialog ===== */}
+      {showPOMDialog && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '900px', width: '90%', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>Generate Page Object Model</h2>
+              <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => setShowPOMDialog(false)}>Close</button>
+            </div>
+            <p style={{ fontSize: '13px', color: '#666', marginBottom: '16px' }}>
+              Visits the target URL in a headless browser and extracts real locators for elements referenced in your feature file. No AI required — 100% deterministic.
+            </p>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Target URL <span style={{ color: '#c62828' }}>*</span></label>
+              <input
+                type="text"
+                value={pomTargetUrl}
+                onChange={e => setPOMTargetUrl(e.target.value)}
+                placeholder="https://jpetstore.aspectran.com/account/signonForm"
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '13px' }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Class Name (optional)</label>
+              <input
+                type="text"
+                value={pomClassName}
+                onChange={e => setPOMClassName(e.target.value)}
+                placeholder="LoginPage (auto-detected if blank)"
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '13px' }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Feature Content</label>
+              <textarea
+                value={pomFeatureContent}
+                onChange={e => setPOMFeatureContent(e.target.value)}
+                style={{ width: '100%', minHeight: '120px', padding: '10px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '12px', fontFamily: 'monospace' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <button className="bdd-btn bdd-btn-primary" onClick={handleGeneratePOM} disabled={generatingPOM || !pomTargetUrl}>
+                {generatingPOM ? 'Visiting page & extracting locators...' : 'Generate POM'}
+              </button>
+              {pomResults.length > 1 && (
+                <button className="bdd-btn bdd-btn-success" onClick={handleApplyAllPOMs} disabled={applyingPOM}>
+                  {applyingPOM ? 'Applying...' : `Apply All ${pomResults.length} POMs to Feature`}
+                </button>
+              )}
+            </div>
+
+            {pomResults.length > 0 && pomResults.map((pom, idx) => (
+              <div key={idx} style={{ borderTop: '1px solid #eee', paddingTop: '16px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px' }}>{pom.className}</h3>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(pom.generatedCode)}>
+                      Copy POM
+                    </button>
+                    <button className="bdd-btn bdd-btn-sm bdd-btn-primary" onClick={() => handleApplyPOM(pom)} disabled={applyingPOM}>
+                      {applyingPOM ? 'Applying...' : 'Apply POM to Feature'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Locator summary */}
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>Detected Locators ({pom.locators.length})</div>
+                  <div style={{ background: '#f5f7fa', borderRadius: '6px', padding: '10px', fontSize: '12px' }}>
+                    {pom.locators.map((loc: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', gap: '12px', padding: '4px 0', borderBottom: i < pom.locators.length - 1 ? '1px solid #e0e0e0' : 'none' }}>
+                        <span style={{ fontWeight: 500, minWidth: '120px' }}>{loc.fieldName}</span>
+                        <span style={{ color: '#1565c0', fontSize: '11px' }}>{loc.elementType}</span>
+                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#555' }}>{loc.variableName}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Methods */}
+                {pom.methods.length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>Generated Methods</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {pom.methods.map((m, i) => (
+                        <span key={i} style={{ background: '#e3f2fd', color: '#1565c0', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontFamily: 'monospace' }}>{m}()</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Generated code */}
+                <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '400px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                  {pom.generatedCode}
+                </pre>
+              </div>
+            ))}
+
+            {/* Applied POM → Test Code */}
+            {appliedPOMCode && (
+              <div style={{ borderTop: '2px solid #1565c0', paddingTop: '16px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#1565c0' }}>Test Code Using POM</h3>
+                  <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(appliedPOMCode)}>
+                    Copy Test Code
+                  </button>
+                </div>
+                <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
+                  Production-ready test using your POM. Save this as <code>tests/*.spec.ts</code> and the POM as <code>pages/*.ts</code>.
+                </p>
+                <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '400px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                  {appliedPOMCode}
+                </pre>
               </div>
             )}
           </div>

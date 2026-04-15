@@ -8,6 +8,7 @@ import pool from '../db';
 import multer from 'multer';
 import { bddService, bddEventEmitter } from '../services/bdd/bdd.service';
 import { testCaseConverter } from '../services/bdd/testCaseConverter.service';
+import { pomGeneratorService } from '../services/bdd/pomGenerator.service';
 
 // Multer: in-memory storage, 2 MB limit, only text/csv files
 export const testCaseUpload = multer({
@@ -649,6 +650,59 @@ export const generateCode = asyncHandler(async (req: Request, res: Response) => 
  * Generate Playwright code from a BDD feature AND save it as a Script
  * POST /api/bdd/features/:id/save-as-script
  */
+/**
+ * Generate Page Object Model from a feature file + target URL (deterministic — no LLM)
+ * POST /api/bdd/generate-pom
+ * Body: { featureContent: string, targetUrl: string, className?: string, waitForSelector?: string }
+ */
+export const generatePOM = asyncHandler(async (req: Request, res: Response) => {
+  const { featureContent, targetUrl, className, waitForSelector } = req.body;
+  if (!featureContent || !targetUrl) {
+    return res.status(400).json({ error: 'featureContent and targetUrl are required' });
+  }
+  try {
+    const results = await pomGeneratorService.generateFromFeature(
+      featureContent,
+      targetUrl,
+      { className, waitForSelector }
+    );
+    return res.json({ success: true, data: results });
+  } catch (err: any) {
+    logger.error('POM generation failed:', err.message);
+    return res.status(500).json({ error: `POM generation failed: ${err.message}` });
+  }
+});
+
+/**
+ * Apply a generated POM to a feature — regenerate Playwright test code using POM methods
+ * POST /api/bdd/apply-pom
+ * Body: { featureContent: string, pom: POMResult, baseUrl: string }
+ */
+export const applyPOMToFeature = asyncHandler(async (req: Request, res: Response) => {
+  const { featureContent, pom, poms, baseUrl } = req.body;
+  if (!featureContent) {
+    return res.status(400).json({ error: 'featureContent is required' });
+  }
+  // Accept either a single pom (legacy) or array of poms (multi-page)
+  const pomArray = Array.isArray(poms) ? poms : (pom ? [pom] : null);
+  if (!pomArray || pomArray.length === 0) {
+    return res.status(400).json({ error: 'pom or poms array is required' });
+  }
+  try {
+    const playwrightCode = pomGeneratorService.applyMultiplePOMsToFeature(featureContent, pomArray, baseUrl || '');
+    return res.json({
+      success: true,
+      data: {
+        playwrightCode,
+        classNames: pomArray.map((p: any) => p.className),
+      }
+    });
+  } catch (err: any) {
+    logger.error('Apply POM failed:', err.message);
+    return res.status(500).json({ error: `Apply POM failed: ${err.message}` });
+  }
+});
+
 export const saveAsScript = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { id } = req.params;
@@ -757,8 +811,10 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
   const parsed = bddService.parseFeatureContent(feature.featureContent);
   const validationErrors: string[] = [];
   if (!parsed.name) validationErrors.push('Feature has no name');
-  if (parsed.scenarios.length === 0) validationErrors.push('Feature has no scenarios');
-  for (const scenario of parsed.scenarios) {
+  // Filter out Background — it's a setup section, not a test scenario
+  const nonBackgroundScenarios = parsed.scenarios.filter(s => !(s.tags || []).includes('@background'));
+  if (nonBackgroundScenarios.length === 0) validationErrors.push('Feature has no scenarios');
+  for (const scenario of nonBackgroundScenarios) {
     if (scenario.steps.length === 0) {
       validationErrors.push(`Scenario "${scenario.name}" has no steps`);
     }
@@ -777,7 +833,7 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
       validationErrors,
     });
   }
-  const totalSteps = parsed.scenarios.reduce((sum, s) => sum + s.steps.length, 0);
+  const totalSteps = nonBackgroundScenarios.reduce((sum, s) => sum + s.steps.length, 0);
 
   const parsedParallelWorkers = parallelWorkers ? parseInt(parallelWorkers, 10) : 1;
   const parsedRetryCount = retryCount ? parseInt(retryCount, 10) : 0;
