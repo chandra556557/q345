@@ -771,13 +771,31 @@ class POMGeneratorService {
     const methods: Array<{ name: string; code: string }> = [];
     const consumedByCompound = new Set<string>();
 
-    // navigate() method — uses the actual page path (fix #1)
+    // navigate() method — smart URL composition that handles baseUrl with embedded path
+    // e.g., BASE_URL='https://app.com/login' + pagePath='/login' → should NOT become '/login/login'
     methods.push({
       name: 'navigate',
       code: [
-        `  /** Navigate directly to this page */`,
+        `  /** Navigate directly to this page. Handles baseUrl with or without path prefix. */`,
         `  async navigate() {`,
-        `    await this.page.goto(BASE_URL + '${this.escape(snapshot.pagePath)}', { waitUntil: 'domcontentloaded' });`,
+        `    const targetPath = '${this.escape(snapshot.pagePath)}';`,
+        `    let url;`,
+        `    try {`,
+        `      const base = new URL(BASE_URL);`,
+        `      // If BASE_URL already contains the target path, use it directly`,
+        `      if (base.pathname === targetPath || base.pathname.replace(/\\/$/, '') === targetPath.replace(/\\/$/, '')) {`,
+        `        url = BASE_URL;`,
+        `      } else if (targetPath === '/' || targetPath === '') {`,
+        `        // Root path — use origin only (strip any existing pathname from BASE_URL)`,
+        `        url = base.origin;`,
+        `      } else {`,
+        `        // Append target path to origin (avoid duplicating path from BASE_URL)`,
+        `        url = base.origin + targetPath;`,
+        `      }`,
+        `    } catch {`,
+        `      url = BASE_URL + targetPath;`,
+        `    }`,
+        `    await this.page.goto(url, { waitUntil: 'domcontentloaded' });`,
         `  }`,
       ].join('\n'),
     });
