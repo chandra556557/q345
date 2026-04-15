@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { AppError } from '../middleware/errorHandler';
-import { allureService } from '../services/allure.service';
+import { bddReportService } from '../services/bdd-report.service';
 import { queueService } from '../services/queue';
 import { tenantService } from '../services/tenant';
 import pool from '../db';
@@ -103,16 +103,6 @@ export const startTestRun = async (req: Request, res: Response) => {
     );
     const testRun = rows[0];
 
-    try {
-      await allureService.startTest(testRun.id, script.name, {
-        browser: browser || 'chromium',
-        environment: environment || 'development',
-        suiteName: script.name,
-      });
-    } catch (error) {
-      console.error('Failed to start Allure test:', error);
-    }
-
     setTimeout(async () => {
       try {
         const mockSteps = [
@@ -122,19 +112,14 @@ export const startTestRun = async (req: Request, res: Response) => {
           { action: 'Verify success message', status: 'passed' as const, duration: 150 }
         ];
 
-        for (const step of mockSteps) {
-          await allureService.recordStep(testRun.id, step.action, step.status, step.duration);
-        }
-
-        await allureService.endTest(testRun.id, 'passed');
-
-        // Generate Allure report
         let reportUrl = '';
         try {
-          await allureService.generateReport(testRun.id);
-          reportUrl = await allureService.getReportUrl(testRun.id);
+          reportUrl = await bddReportService.generateTestRunReport(
+            testRun.id, script.name, mockSteps, 'passed',
+            { browser: browser || 'chromium', environment: environment || 'development', suiteName: script.name }
+          );
         } catch (error) {
-          console.error('Failed to generate Allure report:', error);
+          console.error('Failed to generate report:', error);
         }
 
         await pool.query(
@@ -190,16 +175,6 @@ export const executeCurrentScript = async (req: Request, res: Response) => {
     );
     const testRun = rows[0];
 
-    try {
-      await allureService.startTest(testRun.id, `Current Script (${language})`, {
-        browser: browser || 'chromium',
-        environment: environment || 'development',
-        suiteName: `Current Script (${language})`,
-      });
-    } catch (error) {
-      console.error('Failed to start Allure test:', error);
-    }
-
     // Simulate test execution (async)
     setTimeout(async () => {
       try {
@@ -210,19 +185,14 @@ export const executeCurrentScript = async (req: Request, res: Response) => {
           { action: 'Verify results', status: 'passed' as const, duration: 200 }
         ];
 
-        for (const step of mockSteps) {
-          await allureService.recordStep(testRun.id, step.action, step.status, step.duration);
-        }
-
-        await allureService.endTest(testRun.id, 'passed');
-
-        // Generate Allure report
         let reportUrl = '';
         try {
-          await allureService.generateReport(testRun.id);
-          reportUrl = await allureService.getReportUrl(testRun.id);
+          reportUrl = await bddReportService.generateTestRunReport(
+            testRun.id, `Current Script (${language})`, mockSteps, 'passed',
+            { browser: browser || 'chromium', environment: environment || 'development', suiteName: `Current Script (${language})` }
+          );
         } catch (error) {
-          console.error('Failed to generate Allure report:', error);
+          console.error('Failed to generate report:', error);
         }
 
         await pool.query(
@@ -341,34 +311,21 @@ export const updateTestRun = async (req: Request, res: Response) => {
     const existing = existsRes.rows[0];
     if (!existing) throw new AppError('Test run not found', 404);
 
-    if (steps && Array.isArray(steps)) {
-      for (const step of steps) {
-        try {
-          await allureService.recordStep(
-            id,
-            step.action || step.name || 'Step',
-            step.status || 'passed',
-            step.duration
-          );
-        } catch (error) {
-          console.error('Failed to record Allure step:', error);
-        }
-      }
-    }
-
     if (status && ['passed', 'failed', 'error'].includes(status)) {
       try {
-        await allureService.endTest(
-          id,
-          status === 'error' ? 'broken' : status,
-          errorMsg
+        const stepData = (steps && Array.isArray(steps))
+          ? steps.map((step: any) => ({
+              action: step.action || step.name || 'Step',
+              status: step.status || 'passed',
+              duration: step.duration,
+            }))
+          : [];
+
+        const reportUrl = await bddReportService.generateTestRunReport(
+          id, existing.script_name || 'Test Run', stepData,
+          status === 'error' ? 'broken' : status
         );
 
-        // Generate Allure report when test completes
-        await allureService.generateReport(id);
-        const reportUrl = await allureService.getReportUrl(id);
-
-        // Update with report URL
         const { rows } = await pool.query(
           `UPDATE "TestRun"
            SET status = COALESCE($2, status),
@@ -384,7 +341,7 @@ export const updateTestRun = async (req: Request, res: Response) => {
         res.status(200).json({ success: true, data: rows[0] });
         return;
       } catch (error) {
-        console.error('Failed to end Allure test or generate report:', error);
+        console.error('Failed to generate report:', error);
       }
     }
 

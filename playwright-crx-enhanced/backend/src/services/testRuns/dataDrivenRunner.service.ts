@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { logger } from '../../utils/logger';
 import pool from '../../db';
 import { testRunnerService } from './testRunner.service';
-import { playwrightCrxService } from '../allure.service';
+import { bddReportService as playwrightCrxService } from '../bdd-report.service';
 
 interface DataDrivenRunRecord {
   id: string;
@@ -390,31 +390,23 @@ export class DataDrivenRunnerService {
 
     if (childRuns.length === 0) return '';
 
-    // Start a parent test case in Allure
-    await playwrightCrxService.startTest(dataDrivenRunId, `Data-Driven: ${scriptName}`);
-
-    // Record each row as a step
-    for (const childRun of childRuns) {
+    // Build steps from child runs
+    const steps = childRuns.map((childRun: any) => {
       const rowLabel = `Row ${(childRun.dataRowIndex ?? 0) + 1}`;
       const dataVals = childRun.dataRowValues
         ? JSON.stringify(childRun.dataRowValues).substring(0, 100)
         : 'N/A';
+      return {
+        action: `${rowLabel}: ${dataVals}`,
+        status: childRun.status === 'passed' ? 'passed' : 'failed',
+        duration: childRun.duration || 0,
+      };
+    });
 
-      await playwrightCrxService.recordStep(
-        dataDrivenRunId,
-        `${rowLabel}: ${dataVals}`,
-        childRun.status === 'passed' ? 'passed' : 'failed',
-        childRun.duration || 0
-      );
-    }
-
-    // End the parent test
     const overallPassed = childRuns.every((r: any) => r.status === 'passed');
-    await playwrightCrxService.endTest(dataDrivenRunId, overallPassed ? 'passed' : 'failed');
-
-    // Generate the report
-    await playwrightCrxService.generateReport(dataDrivenRunId);
-    return await playwrightCrxService.getReportUrl(dataDrivenRunId);
+    return await playwrightCrxService.generateTestRunReport(
+      dataDrivenRunId, `Data-Driven: ${scriptName}`, steps, overallPassed ? 'passed' : 'failed'
+    );
   }
 
   private escapeRegex(str: string): string {

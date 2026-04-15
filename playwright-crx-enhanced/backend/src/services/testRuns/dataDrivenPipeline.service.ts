@@ -13,7 +13,7 @@ import { randomUUID } from 'crypto';
 import { logger } from '../../utils/logger';
 import pool from '../../db';
 import { testRunnerService } from './testRunner.service';
-import { playwrightCrxService } from '../allure.service';
+import { bddReportService as playwrightCrxService } from '../bdd-report.service';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -545,36 +545,33 @@ export class DataDrivenPipelineService {
     strategies: DataStrategy[],
   ): Promise<string> {
     try {
-      await playwrightCrxService.startTest(pipelineRunId, `Data-Driven Pipeline: ${scriptName}`);
+      const steps: Array<{ action: string; status: string; duration: number }> = [];
 
       for (const strategy of strategies) {
         const summary = strategySummary[strategy];
         if (!summary) continue;
 
-        // Record a parent step for each strategy
-        await playwrightCrxService.recordStep(
-          pipelineRunId,
-          `Strategy: ${strategy} — ${summary.passed}/${summary.total} passed`,
-          summary.failed === 0 ? 'passed' : 'failed',
-          summary.rows.reduce((sum, r) => sum + (r.duration ?? 0), 0),
-        );
+        // Strategy-level step
+        steps.push({
+          action: `Strategy: ${strategy} — ${summary.passed}/${summary.total} passed`,
+          status: summary.failed === 0 ? 'passed' : 'failed',
+          duration: summary.rows.reduce((sum, r) => sum + (r.duration ?? 0), 0),
+        });
 
-        // Record individual row results
+        // Individual row results
         for (const row of summary.rows) {
-          const label = `[${strategy}] Row ${row.rowIndex + 1}: ${JSON.stringify(row.dataValues).substring(0, 80)}`;
-          await playwrightCrxService.recordStep(
-            pipelineRunId,
-            label,
-            row.status === 'passed' ? 'passed' : 'failed',
-            row.duration ?? 0,
-          );
+          steps.push({
+            action: `[${strategy}] Row ${row.rowIndex + 1}: ${JSON.stringify(row.dataValues).substring(0, 80)}`,
+            status: row.status === 'passed' ? 'passed' : 'failed',
+            duration: row.duration ?? 0,
+          });
         }
       }
 
       const allPassed = strategies.every(s => (strategySummary[s]?.failed ?? 0) === 0);
-      await playwrightCrxService.endTest(pipelineRunId, allPassed ? 'passed' : 'failed');
-      await playwrightCrxService.generateReport(pipelineRunId);
-      return await playwrightCrxService.getReportUrl(pipelineRunId);
+      return await playwrightCrxService.generateTestRunReport(
+        pipelineRunId, `Data-Driven Pipeline: ${scriptName}`, steps, allPassed ? 'passed' : 'failed'
+      );
     } catch (e: any) {
       logger.error(`Pipeline report generation failed: ${e.message}`);
       return '';

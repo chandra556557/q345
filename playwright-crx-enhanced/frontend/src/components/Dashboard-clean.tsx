@@ -43,7 +43,7 @@ type ActiveView =
   | 'runs' 
   | 'testdata' 
   | 'apitesting' 
-  | 'allure'
+  | 'reports'
   | 'analytics'
   | 'settings';
 
@@ -146,10 +146,10 @@ export const Dashboard: React.FC = () => {
   const generateExecutionReport = async (testRunId: string) => {
     setGeneratingReport(testRunId);
     try {
-      const response = await axios.post(`${API_URL}/allure/generate/${testRunId}`, {}, { headers });
+      const response = await axios.post(`${API_URL}/reports/generate/${testRunId}`, {}, { headers });
       await loadData();
       setSelectedReport(response.data.reportUrl);
-      setActiveView('allure');
+      setActiveView('reports');
     } catch (error) {
       console.error('Error generating report:', error);
     } finally {
@@ -163,7 +163,7 @@ export const Dashboard: React.FC = () => {
     { id: 'runs', icon: '▶️', label: 'Test Runs', category: 'Test Management' },
     { id: 'testdata', icon: '🗄️', label: 'Test Data', category: 'Data Management' },
     { id: 'apitesting', icon: '🔌', label: 'API Testing', category: 'Testing Tools' },
-    { id: 'allure', icon: '📈', label: 'Execution Reports', category: 'Reports' },
+    { id: 'reports', icon: '📈', label: 'Execution Reports', category: 'Reports' },
     { id: 'analytics', icon: '📉', label: 'Analytics', category: 'Reports' },
     { id: 'settings', icon: '⚙️', label: 'Settings', category: 'System' }
   ];
@@ -394,7 +394,7 @@ export const Dashboard: React.FC = () => {
                               className="btn-secondary"
                               onClick={() => {
                                 setSelectedReport(run.executionReportUrl!);
-                                setActiveView('allure');
+                                setActiveView('reports');
                               }}
                             >
                               📊 View Report
@@ -434,7 +434,7 @@ export const Dashboard: React.FC = () => {
           {activeView === 'apitesting' && <ApiTesting />}
 
           {/* Execution Reports */}
-          {activeView === 'allure' && (
+          {activeView === 'reports' && (
             <div className="view-container full-height">
               <h1 className="view-title">Execution Reports</h1>
               {selectedReport ? (
