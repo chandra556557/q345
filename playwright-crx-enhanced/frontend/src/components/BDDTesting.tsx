@@ -477,19 +477,9 @@ const BDDTesting: React.FC = () => {
   const [pomClassName, setPOMClassName] = useState('');
   const [showPOMDialog, setShowPOMDialog] = useState(false);
   const [pomFeatureContent, setPOMFeatureContent] = useState('');
-  const [pomSSOEnabled, setPOMSSOEnabled] = useState(false);
-  const [pomSSOProvider, setPOMSSOProvider] = useState<'keycloak' | 'okta' | 'azure-ad' | 'generic'>('keycloak');
-  const [pomSSOUsername, setPOMSSOUsername] = useState('');
-  const [pomSSOPassword, setPOMSSOPassword] = useState('');
-  const [pomSSOIgnoreCert, setPOMSSOIgnoreCert] = useState(false);
-
   const handleGeneratePOM = async () => {
     if (!pomFeatureContent || !pomTargetUrl) {
       setError('Feature content and target URL are required');
-      return;
-    }
-    if (pomSSOEnabled && (!pomSSOUsername || !pomSSOPassword)) {
-      setError('SSO username and password are required when SSO is enabled');
       return;
     }
     setGeneratingPOM(true);
@@ -501,12 +491,6 @@ const BDDTesting: React.FC = () => {
         targetUrl: pomTargetUrl || undefined,
         projectId: pm.selectedProjectId || undefined,
         className: pomClassName || undefined,
-        ssoAuth: pomSSOEnabled ? {
-          provider: pomSSOProvider,
-          username: pomSSOUsername,
-          password: pomSSOPassword,
-          ignoreCertErrors: pomSSOIgnoreCert,
-        } : undefined,
       }, { headers });
       setPOMResults(res.data.data || []);
     } catch (err: any) {
@@ -2267,47 +2251,9 @@ const BDDTesting: React.FC = () => {
               />
             </div>
 
-            {/* SSO Authentication (Keycloak/Okta/Azure AD) */}
-            <div style={{ marginBottom: '12px', padding: '12px', background: '#f5f7fa', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', marginBottom: pomSSOEnabled ? '12px' : 0 }}>
-                <input type="checkbox" checked={pomSSOEnabled} onChange={e => setPOMSSOEnabled(e.target.checked)} />
-                App behind SSO (Keycloak / Okta / Azure AD)
-              </label>
-              {pomSSOEnabled && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '3px' }}>SSO Provider</label>
-                    <select value={pomSSOProvider} onChange={e => setPOMSSOProvider(e.target.value as any)}
-                      style={{ width: '100%', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '12px' }}>
-                      <option value="keycloak">Keycloak</option>
-                      <option value="okta">Okta</option>
-                      <option value="azure-ad">Azure AD / Microsoft</option>
-                      <option value="generic">Generic SSO</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#555', marginTop: '20px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={pomSSOIgnoreCert} onChange={e => setPOMSSOIgnoreCert(e.target.checked)} />
-                      Ignore SSL certificate errors
-                    </label>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '3px' }}>SSO Username <span style={{ color: '#c62828' }}>*</span></label>
-                    <input type="text" value={pomSSOUsername} onChange={e => setPOMSSOUsername(e.target.value)} placeholder="admin@company.com"
-                      style={{ width: '100%', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '12px' }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '3px' }}>SSO Password <span style={{ color: '#c62828' }}>*</span></label>
-                    <input type="password" value={pomSSOPassword} onChange={e => setPOMSSOPassword(e.target.value)} placeholder="********"
-                      style={{ width: '100%', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '12px' }} />
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <button className="bdd-btn bdd-btn-primary" onClick={handleGeneratePOM} disabled={generatingPOM || !pomTargetUrl}>
-                {generatingPOM ? (pomSSOEnabled ? 'SSO login & extracting locators...' : 'Visiting page & extracting locators...') : 'Generate POM'}
+                {generatingPOM ? 'Visiting page & extracting locators...' : 'Generate POM'}
               </button>
               {pomResults.length > 1 && (
                 <button className="bdd-btn bdd-btn-success" onClick={handleApplyAllPOMs} disabled={applyingPOM}>

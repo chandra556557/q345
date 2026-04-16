@@ -656,7 +656,7 @@ export const generateCode = asyncHandler(async (req: Request, res: Response) => 
  * Body: { featureContent: string, targetUrl: string, className?: string, waitForSelector?: string }
  */
 export const generatePOM = asyncHandler(async (req: Request, res: Response) => {
-  const { featureContent, targetUrl, className, waitForSelector, ssoAuth, projectId } = req.body;
+  const { featureContent, targetUrl, className, waitForSelector, projectId } = req.body;
 
   // Resolve target URL: explicit > project config baseUrl > error
   let resolvedUrl = targetUrl;
@@ -677,7 +677,7 @@ export const generatePOM = asyncHandler(async (req: Request, res: Response) => {
     const results = await pomGeneratorService.generateFromFeature(
       featureContent,
       resolvedUrl,
-      { className, waitForSelector, ssoAuth }
+      { className, waitForSelector }
     );
     return res.json({ success: true, data: results });
   } catch (err: any) {

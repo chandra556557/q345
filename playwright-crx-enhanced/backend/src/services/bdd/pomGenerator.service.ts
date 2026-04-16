@@ -310,16 +310,7 @@ class POMGeneratorService {
   async generateFromFeature(
     featureContent: string,
     targetUrl: string,
-    options: {
-      className?: string;
-      waitForSelector?: string;
-      ssoAuth?: {
-        provider: 'keycloak' | 'okta' | 'azure-ad' | 'generic';
-        username: string;
-        password: string;
-        ignoreCertErrors?: boolean;
-      };
-    } = {}
+    options: { className?: string; waitForSelector?: string } = {}
   ): Promise<POMResult[]> {
     const parsed = bddService.parseFeatureContent(featureContent);
     logger.info(`POM Generator: parsing feature with ${(parsed.scenarios || []).length} scenarios`);
@@ -329,14 +320,10 @@ class POMGeneratorService {
 
     const allSteps: FeatureStep[] = this.parseFeatureIntoSteps(parsed);
 
-    const browser = await chromium.launch({
-      headless: true,
-      args: options.ssoAuth?.ignoreCertErrors ? ['--ignore-certificate-errors'] : [],
-    });
+    const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
       viewport: { width: 1920, height: 1080 },
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      ignoreHTTPSErrors: !!options.ssoAuth?.ignoreCertErrors,
     });
     const page = await context.newPage();
 
@@ -382,60 +369,6 @@ class POMGeneratorService {
     try {
       logger.info(`POM Generator: navigating to ${targetUrl}`);
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-
-      // ─── SSO/Keycloak Authentication ─────────────────────────────────
-      if (options.ssoAuth) {
-        const ssoSuccess = await this.handleSSOLogin(page, targetUrl, options.ssoAuth);
-        if (!ssoSuccess) {
-          logger.error('POM Generator: SSO login failed — page may not have loaded correctly');
-          // Take screenshot for debugging
-          const screenshot = await page.screenshot({ fullPage: true }).catch(() => null);
-          if (screenshot) {
-            logger.error(`POM Generator: SSO failure — current URL: ${page.url()}`);
-          }
-        }
-
-        // After SSO, the app may redirect to a default page (e.g., /dashboard or /perview/).
-        // If targetUrl contained /login, DON'T re-navigate there (already authenticated).
-        // If targetUrl was a specific non-login page, re-navigate to it.
-        const currentUrl = page.url();
-        const targetPath = new URL(targetUrl).pathname;
-        const currentPath = new URL(currentUrl).pathname;
-        const isLoginPath = /\/(login|signin|sign-in|signon|auth|authenticate)\b/i.test(targetPath);
-
-        if (isLoginPath) {
-          // targetUrl was a login page — after SSO we're already logged in.
-          // Stay on whatever page the app redirected us to (e.g., /perview/, /dashboard)
-          logger.info(`POM Generator: SSO — targetUrl was login page (${targetPath}), staying on post-login page: ${currentPath}`);
-        } else if (targetPath !== '/' && targetPath !== currentPath && !currentPath.endsWith(targetPath)) {
-          // targetUrl was a specific app page — navigate there now that we're authenticated
-          logger.info(`POM Generator: SSO landed on ${currentPath}, re-navigating to ${targetUrl}`);
-          await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
-          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-        }
-
-        // Extra wait for SPA frameworks to bootstrap after SSO
-        await page.waitForTimeout(2000);
-        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-
-        // Wait for meaningful content (not just a spinner/loading screen)
-        const hasContent = await page.evaluate(`(() => {
-          const interactive = document.querySelectorAll('input, button, a, select, textarea, [role="button"], [role="link"]');
-          const visible = Array.from(interactive).filter(el => {
-            const rect = el.getBoundingClientRect();
-            return rect.width > 0 && rect.height > 0;
-          });
-          return visible.length;
-        })()`);
-        logger.info(`POM Generator: post-SSO page has ${hasContent} visible interactive elements`);
-
-        if (hasContent === 0) {
-          // Page may still be loading — wait longer
-          logger.warn('POM Generator: no interactive elements found, waiting longer...');
-          await page.waitForTimeout(3000);
-          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-        }
-      }
 
       let currentSnapshot = await takeSnapshot(options.className);
 
@@ -632,212 +565,6 @@ class POMGeneratorService {
     } finally {
       await browser.close();
     }
-  }
-
-  // ─── Component/Fragment Detection (Tier 1, Item 4) ──────────────────────────
-
-  // ─── SSO/Keycloak Login Handler ────────────────────────────────────────────
-
-  private async handleSSOLogin(
-    page: Page,
-    targetUrl: string,
-    ssoAuth: { provider: string; username: string; password: string }
-  ): Promise<boolean> {
-    const currentUrl = page.url();
-    const targetOrigin = new URL(targetUrl).origin;
-
-    // Check if we've been redirected away from the target (SSO redirect)
-    if (currentUrl.startsWith(targetOrigin) && !this.isSSOLoginPage(currentUrl)) {
-      logger.info('POM Generator: SSO — already on target app, no login needed');
-      return true;
-    }
-
-    logger.info(`POM Generator: SSO redirect detected → ${currentUrl}`);
-    logger.info(`POM Generator: SSO provider = ${ssoAuth.provider}, attempting login...`);
-
-    // Wait for login form to render
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-
-    // Strategy: try multiple common SSO login form selectors
-    const usernameSelectors = [
-      '#username',                          // Keycloak default
-      '#kc-form-login input[name="username"]', // Keycloak form
-      'input[name="username"]',
-      'input[name="login"]',
-      'input[name="email"]',
-      'input[name="loginfmt"]',             // Azure AD
-      'input[id="okta-signin-username"]',   // Okta
-      'input[name="identifier"]',           // Google/generic
-      'input[type="email"]',
-      'input[id="i0116"]',                  // Microsoft
-    ];
-
-    const passwordSelectors = [
-      '#password',                          // Keycloak default
-      '#kc-form-login input[name="password"]',
-      'input[name="password"]',
-      'input[name="passwd"]',               // Azure AD
-      'input[id="okta-signin-password"]',   // Okta
-      'input[type="password"]',
-      'input[id="i0118"]',                  // Microsoft
-    ];
-
-    const submitSelectors = [
-      '#kc-login',                          // Keycloak default
-      'input[name="login"]',               // Keycloak submit
-      'input[type="submit"]',
-      'button[type="submit"]',
-      '#okta-signin-submit',               // Okta
-      'input[id="idSIButton9"]',           // Microsoft
-      'button[name="login"]',
-      'button:has-text("Sign In")',
-      'button:has-text("Log In")',
-      'button:has-text("Login")',
-      'button:has-text("Submit")',
-      'button:has-text("Continue")',
-    ];
-
-    // Fill username
-    let usernameFilled = false;
-    for (const sel of usernameSelectors) {
-      try {
-        const locator = page.locator(sel).first();
-        if (await locator.isVisible({ timeout: 2000 })) {
-          await locator.fill(ssoAuth.username);
-          usernameFilled = true;
-          logger.info(`POM Generator: SSO — filled username via "${sel}"`);
-          break;
-        }
-      } catch { /* try next */ }
-    }
-
-    if (!usernameFilled) {
-      // Fallback: try getByLabel
-      try {
-        const labelLocator = page.getByLabel(/user|email|login/i).first();
-        if (await labelLocator.isVisible({ timeout: 2000 })) {
-          await labelLocator.fill(ssoAuth.username);
-          usernameFilled = true;
-          logger.info('POM Generator: SSO — filled username via label fallback');
-        }
-      } catch { /* ignore */ }
-    }
-
-    if (!usernameFilled) {
-      logger.warn('POM Generator: SSO — could not find username field');
-      return false;
-    }
-
-    // Some SSO (Azure AD) has a two-step flow: username first, then password on next page
-    // Check if there's a "Next" button before password
-    const nextButtons = ['button:has-text("Next")', 'input[value="Next"]', 'button[id="idSIButton9"]'];
-    let twoStepFlow = false;
-    for (const sel of nextButtons) {
-      try {
-        const btn = page.locator(sel).first();
-        if (await btn.isVisible({ timeout: 1000 })) {
-          await btn.click();
-          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-          twoStepFlow = true;
-          logger.info('POM Generator: SSO — two-step flow detected, clicked Next');
-          break;
-        }
-      } catch { /* not two-step */ }
-    }
-
-    // Fill password
-    let passwordFilled = false;
-    for (const sel of passwordSelectors) {
-      try {
-        const locator = page.locator(sel).first();
-        if (await locator.isVisible({ timeout: twoStepFlow ? 5000 : 2000 })) {
-          await locator.fill(ssoAuth.password);
-          passwordFilled = true;
-          logger.info(`POM Generator: SSO — filled password via "${sel}"`);
-          break;
-        }
-      } catch { /* try next */ }
-    }
-
-    if (!passwordFilled) {
-      logger.warn('POM Generator: SSO — could not find password field');
-      return false;
-    }
-
-    // Click submit
-    let submitted = false;
-    for (const sel of submitSelectors) {
-      try {
-        const btn = page.locator(sel).first();
-        if (await btn.isVisible({ timeout: 1000 })) {
-          await btn.click();
-          submitted = true;
-          logger.info(`POM Generator: SSO — clicked submit via "${sel}"`);
-          break;
-        }
-      } catch { /* try next */ }
-    }
-
-    if (!submitted) {
-      // Fallback: press Enter on the password field
-      try {
-        await page.locator('input[type="password"]').first().press('Enter');
-        submitted = true;
-        logger.info('POM Generator: SSO — submitted via Enter key');
-      } catch { /* ignore */ }
-    }
-
-    // Wait for redirect back to the target app
-    try {
-      await page.waitForURL(url => url.toString().startsWith(targetOrigin), { timeout: 30000 });
-      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-      logger.info(`POM Generator: SSO — login successful, landed on ${page.url()}`);
-    } catch {
-      // Check for consent/approval screens (Keycloak "Grant Access", Azure "Stay signed in?")
-      const consentButtons = [
-        'button:has-text("Yes")',
-        'button:has-text("Accept")',
-        'button:has-text("Allow")',
-        'button:has-text("Grant Access")',
-        'input[value="Yes"]',
-        'button[id="idSIButton9"]',
-      ];
-      for (const sel of consentButtons) {
-        try {
-          const btn = page.locator(sel).first();
-          if (await btn.isVisible({ timeout: 2000 })) {
-            await btn.click();
-            logger.info(`POM Generator: SSO — clicked consent button "${sel}"`);
-            await page.waitForURL(url => url.toString().startsWith(targetOrigin), { timeout: 15000 });
-            break;
-          }
-        } catch { /* ignore */ }
-      }
-
-      const finalUrl = page.url();
-      if (!finalUrl.startsWith(targetOrigin)) {
-        logger.warn(`POM Generator: SSO — login may have failed, still on ${finalUrl}`);
-      } else {
-        logger.info(`POM Generator: SSO — post-consent, landed on ${finalUrl}`);
-      }
-      return finalUrl.startsWith(targetOrigin);
-    }
-    return true;
-  }
-
-  private isSSOLoginPage(url: string): boolean {
-    const ssoPatterns = [
-      '/auth/realms/',        // Keycloak
-      '/protocol/openid',     // Keycloak OIDC
-      '/oauth2/',             // Generic OAuth
-      '/login.microsoftonline.com', // Azure AD
-      '/okta.com/',           // Okta
-      '/accounts.google.com', // Google
-      '/adfs/',               // ADFS
-      '/saml/',               // SAML
-    ];
-    const lower = url.toLowerCase();
-    return ssoPatterns.some(p => lower.includes(p));
   }
 
   // ─── Component/Fragment Detection (Tier 1, Item 4) ──────────────────────────

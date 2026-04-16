@@ -2512,6 +2512,7 @@ class BDDService {
     lines.push(`    await this.page.goto(ENV_PROFILE.baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(e => {`);
     lines.push(`      console.log('[WARN] Auto-navigation to ' + ENV_PROFILE.baseUrl + ' failed: ' + e.message);`);
     lines.push(`    });`);
+    lines.push('');
     lines.push(`    // Capture initial page screenshot after navigation`);
     lines.push(`    await this.takeScreenshot('sc' + scenarioCount + '-initial-page').catch(() => {});`);
     lines.push(`  }`);
