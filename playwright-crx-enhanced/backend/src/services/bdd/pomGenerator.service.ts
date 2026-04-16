@@ -1654,14 +1654,34 @@ export { expect } from '@playwright/test';
     lines.push('');
     lines.push(`test.describe('${esc(parsed.name || 'Feature')}', () => {`);
 
+    // Fix Gap #14: Background → test.beforeEach
+    const background = (parsed.scenarios || []).find((s: any) => (s.tags || []).includes('@background'));
+    if (background && background.steps.length > 0) {
+      lines.push(`  test.beforeEach(async ({ page }) => {`);
+      lines.push(`    const ${instanceName} = new ${pom.className}(page);`);
+      lines.push('');
+      for (const step of background.steps) {
+        lines.push(`    // ${step.keyword} ${step.text}`);
+        lines.push(`    ${this.mapStepToPOMCall(step.text, pom, instanceName)}`);
+      }
+      lines.push(`  });`);
+      lines.push('');
+    }
+
     for (const scenario of parsed.scenarios || []) {
       if ((scenario.tags || []).includes('@background')) continue;
       const isOutline = scenario.type === 'Scenario Outline' && scenario.examples && scenario.examples.length > 0;
       const runs: any[] = isOutline ? scenario.examples! : [null];
 
+      // Fix Gap #13: Tags → Playwright test annotations
+      const tags = (scenario.tags || []).filter((t: string) => t && t !== '@background');
+
       for (const example of runs) {
         const nameSuffix = example ? ` (${Object.entries(example).map(([k, v]) => `${k}=${v}`).join(', ')})` : '';
-        lines.push(`  test('${esc(scenario.name + nameSuffix)}', async ({ page }) => {`);
+        const testOptions = tags.length > 0
+          ? `, { tag: [${tags.map((t: string) => `'${esc(t)}'`).join(', ')}] }`
+          : '';
+        lines.push(`  test('${esc(scenario.name + nameSuffix)}'${testOptions}, async ({ page }) => {`);
         lines.push(`    const ${instanceName} = new ${pom.className}(page);`);
 
         const stepTexts = scenario.steps.map((s: any) => {
@@ -1730,35 +1750,174 @@ export { expect } from '@playwright/test';
   private mapStepToPOMCall(stepText: string, pom: POMResult, instance: string): string {
     const lower = stepText.toLowerCase();
     const quotes = (stepText.match(/"([^"]*)"/g) || []).map(m => m.replace(/"/g, ''));
+    const parsedStep = this.parseStepText(stepText, 0);
 
-    if (lower.includes('navigate') || lower.match(/^(i )?(go to|open|visit|am on)/)) {
+    // Navigation — extract path if provided
+    if (lower.includes('navigate') || lower.match(/\b(go to|open|visit|am on|i am on)\b/)) {
+      if (quotes[0] && (quotes[0].startsWith('/') || quotes[0].startsWith('http'))) {
+        return `await page.goto(BASE_URL + '${esc(quotes[0])}', { waitUntil: 'domcontentloaded' });`;
+      }
       return `await ${instance}.navigate();`;
     }
+
+    // Hover
+    if (parsedStep?.action === 'hover' || lower.match(/\b(hover|mouseover|mouse over)\b/)) {
+      const target = parsedStep?.target || quotes[0];
+      if (target) {
+        const loc = this.findLocatorForField(target, pom);
+        if (loc) return `await ${instance}.safeHover(${instance}.${loc.variableName});`;
+        return `await page.getByText('${esc(target)}', { exact: false }).first().hover();`;
+      }
+    }
+
+    // Select/dropdown
+    if (parsedStep?.action === 'select' && parsedStep.optionValue !== undefined) {
+      const loc = this.findLocatorForField(parsedStep.target, pom);
+      if (loc) {
+        if (loc.elementType === 'combobox') return `await ${instance}.${loc.variableName}.click();\n    await page.getByRole('option', { name: '${esc(parsedStep.optionValue)}' }).first().click();`;
+        return `await ${instance}.safeSelect(${instance}.${loc.variableName}, '${esc(parsedStep.optionValue)}');`;
+      }
+      return `await page.getByLabel('${esc(parsedStep.target)}').selectOption('${esc(parsedStep.optionValue)}');`;
+    }
+
+    // Fill
     if ((lower.includes('fill') || lower.includes('enter') || lower.includes('type') || lower.includes('set')) && quotes.length >= 2) {
-      const locator = this.findLocatorForField(quotes[0], pom);
-      if (locator) return `await ${instance}.safeFill(${instance}.${locator.variableName}, '${esc(quotes[1])}');`;
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await ${instance}.safeFill(${instance}.${loc.variableName}, '${esc(quotes[1])}');`;
       return `await page.getByLabel('${esc(quotes[0].replace(/[:\s]+$/, '').trim())}').fill('${esc(quotes[1])}');`;
     }
+
+    // Click
     if (lower.includes('click') && quotes[0]) {
-      const locator = this.findLocatorForField(quotes[0], pom);
-      if (locator) return `await ${instance}.retryClick(${instance}.${locator.variableName});`;
-      return `await page.getByRole('button', { name: '${esc(quotes[0])}' }).click();`;
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await ${instance}.retryClick(${instance}.${loc.variableName});`;
+      return `await page.getByRole('button', { name: '${esc(quotes[0])}' }).or(page.getByRole('link', { name: '${esc(quotes[0])}' })).first().click();`;
     }
-    if (lower.match(/\b(hover|mouseover)\b/) && quotes[0]) {
-      const locator = this.findLocatorForField(quotes[0], pom);
-      if (locator) return `await ${instance}.safeHover(${instance}.${locator.variableName});`;
-      return `await page.getByText('${esc(quotes[0])}').first().hover();`;
+
+    // Uncheck (before check)
+    if (lower.includes('uncheck') && quotes[0]) {
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await ${instance}.${loc.variableName}.uncheck();`;
+      return `await page.getByRole('checkbox', { name: '${esc(quotes[0])}' }).uncheck();`;
     }
-    if (lower.includes('should see') || lower.includes('is visible') || lower.includes('displayed')) {
+
+    // Check
+    if (lower.includes('check') && quotes[0]) {
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await ${instance}.${loc.variableName}.check();`;
+      return `await page.getByRole('checkbox', { name: '${esc(quotes[0])}' }).check();`;
+    }
+
+    // Wait
+    if (lower.match(/\bwait\b|\bpause\b|\bdelay\b/)) {
+      const seconds = quotes[0] ? parseInt(quotes[0]) : (lower.match(/(\d+)\s*second/)?.[1] ? parseInt(lower.match(/(\d+)\s*second/)![1]) : 1);
+      return `await page.waitForTimeout(${seconds * 1000});`;
+    }
+
+    // Press key
+    if (lower.match(/\bpress\b/) && quotes[0]) {
+      return `await page.keyboard.press('${esc(quotes[0])}');`;
+    }
+
+    // Upload file
+    if (lower.match(/\b(upload|attach)\b/) && quotes[0]) {
+      const target = quotes.length >= 2 ? quotes[1] : '';
+      const loc = target ? this.findLocatorForField(target, pom) : null;
+      if (loc) return `await ${instance}.${loc.variableName}.setInputFiles('${esc(quotes[0])}');`;
+      return `await page.locator('input[type="file"]').setInputFiles('${esc(quotes[0])}');`;
+    }
+
+    // Scroll
+    if (lower.match(/\bscroll\b/) && quotes[0]) {
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await ${instance}.${loc.variableName}.scrollIntoViewIfNeeded();`;
+      return `await page.getByText('${esc(quotes[0])}', { exact: false }).first().scrollIntoViewIfNeeded();`;
+    }
+
+    // Dialog
+    if (lower.match(/\b(accept|dismiss|confirm|cancel)\b.*\b(dialog|alert|popup)\b/)) {
+      const isAccept = lower.includes('accept') || lower.includes('confirm');
+      return `page.once('dialog', async d => await d.${isAccept ? 'accept' : 'dismiss'}());`;
+    }
+
+    // Screenshot
+    if (lower.match(/\bscreenshot\b|\bcapture\b/)) {
+      return `await page.screenshot({ path: '${esc(quotes[0] || 'screenshot')}.png', fullPage: true });`;
+    }
+
+    // Assertions — should see
+    if (lower.includes('should see') || lower.includes('is visible') || lower.includes('displayed') || lower.includes('is shown')) {
       const target = quotes[0];
-      if (!target) return `// TODO: ${stepText}`;
+      if (!target) {
+        const plainMatch = lower.match(/should see\s+(.+)/);
+        if (plainMatch) return `await expect(page.getByText('${esc(plainMatch[1].trim())}', { exact: false })).toBeVisible({ timeout: 10000 });`;
+        return `// TODO: ${stepText}`;
+      }
+      const cleanName = target.replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(/\s+/)
+        .map((p, i) => i === 0 ? p.charAt(0).toLowerCase() + p.slice(1) : p.charAt(0).toUpperCase() + p.slice(1)).join('');
+      const methodName = `assert${cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}Visible`;
+      if (pom.methods.includes(methodName)) return `await ${instance}.${methodName}();`;
       return `await expect(page.getByText('${esc(target)}', { exact: false })).toBeVisible({ timeout: 10000 });`;
     }
-    if (lower.includes('should not see') || lower.includes('not visible')) {
+
+    // Should not see
+    if (lower.includes('should not see') || lower.includes('not visible') || lower.includes('is hidden')) {
       const target = quotes[0];
       if (!target) return `// TODO: ${stepText}`;
       return `await expect(page.getByText('${esc(target)}')).toBeHidden();`;
     }
+
+    // URL assertion
+    if (lower.match(/should be on|should be at|url should/) && quotes[0]) {
+      return `await expect(page).toHaveURL(new RegExp('${esc(quotes[0])}'));`;
+    }
+
+    // Title assertion
+    if (lower.match(/title should|page title/) && quotes[0]) {
+      return `await expect(page).toHaveTitle(new RegExp('${esc(quotes[0])}'));`;
+    }
+
+    // Disabled/enabled assertion
+    if (lower.includes('should be disabled') && quotes[0]) {
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await expect(${instance}.${loc.variableName}).toBeDisabled();`;
+      return `await expect(page.getByRole('button', { name: '${esc(quotes[0])}' })).toBeDisabled();`;
+    }
+    if (lower.includes('should be enabled') && quotes[0]) {
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await expect(${instance}.${loc.variableName}).toBeEnabled();`;
+      return `await expect(page.getByRole('button', { name: '${esc(quotes[0])}' })).toBeEnabled();`;
+    }
+
+    // Checked/unchecked assertion
+    if (lower.includes('should be checked') && quotes[0]) {
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await expect(${instance}.${loc.variableName}).toBeChecked();`;
+      return `await expect(page.getByRole('checkbox', { name: '${esc(quotes[0])}' })).toBeChecked();`;
+    }
+    if (lower.match(/should (be unchecked|not be checked)/) && quotes[0]) {
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await expect(${instance}.${loc.variableName}).not.toBeChecked();`;
+      return `await expect(page.getByRole('checkbox', { name: '${esc(quotes[0])}' })).not.toBeChecked();`;
+    }
+
+    // Value assertion
+    if (lower.match(/should have value|value should be/) && quotes.length >= 2) {
+      const loc = this.findLocatorForField(quotes[0], pom);
+      if (loc) return `await expect(${instance}.${loc.variableName}).toHaveValue('${esc(quotes[1])}');`;
+      return `await expect(page.getByLabel('${esc(quotes[0])}')).toHaveValue('${esc(quotes[1])}');`;
+    }
+
+    // Steps without quotes — common patterns
+    if (quotes.length === 0) {
+      if (lower.match(/\b(loaded|ready|initialized|opened)\b/)) return `await ${instance}.waitForPageLoad();`;
+      if (lower.match(/\b(log\s*out|sign\s*out|logout|signout)\b/)) return `await page.getByRole('button', { name: /log\\s*out|sign\\s*out/i }).or(page.getByRole('link', { name: /log\\s*out|sign\\s*out/i })).first().click();`;
+      if (lower.match(/\bsubmit\b/)) return `await page.getByRole('button', { name: /submit/i }).click();`;
+      if (lower.match(/\b(go back|navigate back)\b/)) return `await page.goBack();`;
+      if (lower.match(/\breload\b|\brefresh\b/)) return `await page.reload();`;
+      if (lower.match(/\b(am on|on the)\b.*\b(page|form|screen)\b/)) return `await ${instance}.navigate();`;
+    }
+
     return `// TODO: unmapped step — ${stepText}`;
   }
 
