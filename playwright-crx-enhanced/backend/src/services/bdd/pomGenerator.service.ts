@@ -385,7 +385,56 @@ class POMGeneratorService {
 
       // ─── SSO/Keycloak Authentication ─────────────────────────────────
       if (options.ssoAuth) {
-        await this.handleSSOLogin(page, targetUrl, options.ssoAuth);
+        const ssoSuccess = await this.handleSSOLogin(page, targetUrl, options.ssoAuth);
+        if (!ssoSuccess) {
+          logger.error('POM Generator: SSO login failed — page may not have loaded correctly');
+          // Take screenshot for debugging
+          const screenshot = await page.screenshot({ fullPage: true }).catch(() => null);
+          if (screenshot) {
+            logger.error(`POM Generator: SSO failure — current URL: ${page.url()}`);
+          }
+        }
+
+        // After SSO, the app may redirect to a default page (e.g., /dashboard or /perview/).
+        // If targetUrl contained /login, DON'T re-navigate there (already authenticated).
+        // If targetUrl was a specific non-login page, re-navigate to it.
+        const currentUrl = page.url();
+        const targetPath = new URL(targetUrl).pathname;
+        const currentPath = new URL(currentUrl).pathname;
+        const isLoginPath = /\/(login|signin|sign-in|signon|auth|authenticate)\b/i.test(targetPath);
+
+        if (isLoginPath) {
+          // targetUrl was a login page — after SSO we're already logged in.
+          // Stay on whatever page the app redirected us to (e.g., /perview/, /dashboard)
+          logger.info(`POM Generator: SSO — targetUrl was login page (${targetPath}), staying on post-login page: ${currentPath}`);
+        } else if (targetPath !== '/' && targetPath !== currentPath && !currentPath.endsWith(targetPath)) {
+          // targetUrl was a specific app page — navigate there now that we're authenticated
+          logger.info(`POM Generator: SSO landed on ${currentPath}, re-navigating to ${targetUrl}`);
+          await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+        }
+
+        // Extra wait for SPA frameworks to bootstrap after SSO
+        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+
+        // Wait for meaningful content (not just a spinner/loading screen)
+        const hasContent = await page.evaluate(`(() => {
+          const interactive = document.querySelectorAll('input, button, a, select, textarea, [role="button"], [role="link"]');
+          const visible = Array.from(interactive).filter(el => {
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          });
+          return visible.length;
+        })()`);
+        logger.info(`POM Generator: post-SSO page has ${hasContent} visible interactive elements`);
+
+        if (hasContent === 0) {
+          // Page may still be loading — wait longer
+          logger.warn('POM Generator: no interactive elements found, waiting longer...');
+          await page.waitForTimeout(3000);
+          await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+        }
       }
 
       let currentSnapshot = await takeSnapshot(options.className);
@@ -593,14 +642,14 @@ class POMGeneratorService {
     page: Page,
     targetUrl: string,
     ssoAuth: { provider: string; username: string; password: string }
-  ): Promise<void> {
+  ): Promise<boolean> {
     const currentUrl = page.url();
     const targetOrigin = new URL(targetUrl).origin;
 
     // Check if we've been redirected away from the target (SSO redirect)
     if (currentUrl.startsWith(targetOrigin) && !this.isSSOLoginPage(currentUrl)) {
       logger.info('POM Generator: SSO — already on target app, no login needed');
-      return;
+      return true;
     }
 
     logger.info(`POM Generator: SSO redirect detected → ${currentUrl}`);
@@ -676,7 +725,7 @@ class POMGeneratorService {
 
     if (!usernameFilled) {
       logger.warn('POM Generator: SSO — could not find username field');
-      return;
+      return false;
     }
 
     // Some SSO (Azure AD) has a two-step flow: username first, then password on next page
@@ -712,7 +761,7 @@ class POMGeneratorService {
 
     if (!passwordFilled) {
       logger.warn('POM Generator: SSO — could not find password field');
-      return;
+      return false;
     }
 
     // Click submit
@@ -771,7 +820,9 @@ class POMGeneratorService {
       } else {
         logger.info(`POM Generator: SSO — post-consent, landed on ${finalUrl}`);
       }
+      return finalUrl.startsWith(targetOrigin);
     }
+    return true;
   }
 
   private isSSOLoginPage(url: string): boolean {
