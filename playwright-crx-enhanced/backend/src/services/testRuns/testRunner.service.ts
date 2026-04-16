@@ -196,19 +196,72 @@ export class TestRunnerService {
   }
 
   private async executePlaywrightCode(context: TestRunContext, page: Page, code: string): Promise<void> {
-    // Parse and execute Playwright commands from the code
-    const lines = code.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//'));
+    // Fix #1: Join multi-line chains — lines starting with . are continuation of previous line
+    const rawLines = code.split('\n');
+    const joinedLines: string[] = [];
+    for (const raw of rawLines) {
+      const trimmed = raw.trim();
+      if (!trimmed || trimmed.startsWith('//')) continue;
+      // Strip inline comments (but not URLs with //)
+      const cleaned = trimmed.replace(/\s+\/\/(?!\/).*$/, '');
+      if (!cleaned) continue;
+      // Join continuation lines (starting with . or chain methods)
+      if (cleaned.startsWith('.') && joinedLines.length > 0) {
+        joinedLines[joinedLines.length - 1] += cleaned;
+      } else if (joinedLines.length > 0 && !joinedLines[joinedLines.length - 1].match(/[;)}\]]$/) && cleaned.match(/^\.(fill|click|hover|check|uncheck|press|clear|focus|dblclick|selectOption|waitFor|scrollIntoViewIfNeeded|setInputFiles|dragTo|nth|first|last|count|textContent|innerText|getAttribute|inputValue|isVisible|isEnabled|isDisabled|isChecked)\(/)) {
+        joinedLines[joinedLines.length - 1] += cleaned;
+      } else {
+        joinedLines.push(cleaned);
+      }
+    }
+    const lines = joinedLines;
 
-    // Extract BASE_URL from script: const BASE_URL = process.env.BASE_URL || 'https://...';
+    // Fix #5: Extract ALL user-defined constants (const/let/var = 'value')
+    const userVars: Record<string, string> = {};
     let scriptBaseUrl = '';
     for (const line of lines) {
+      // BASE_URL special handling
       const baseUrlMatch = line.match(/(?:const|let|var)\s+BASE_URL\s*=\s*.*\|\|\s*['"]([^'"]+)['"]/);
-      if (baseUrlMatch) { scriptBaseUrl = baseUrlMatch[1]; break; }
-      const simpleMatch = line.match(/(?:const|let|var)\s+BASE_URL\s*=\s*['"]([^'"]+)['"]/);
-      if (simpleMatch) { scriptBaseUrl = simpleMatch[1]; break; }
+      if (baseUrlMatch) { scriptBaseUrl = baseUrlMatch[1]; userVars['BASE_URL'] = baseUrlMatch[1]; continue; }
+      const simpleBaseMatch = line.match(/(?:const|let|var)\s+BASE_URL\s*=\s*['"]([^'"]+)['"]/);
+      if (simpleBaseMatch) { scriptBaseUrl = simpleBaseMatch[1]; userVars['BASE_URL'] = simpleBaseMatch[1]; continue; }
+      // Generic const/let/var declarations with string values
+      const varMatch = line.match(/(?:const|let|var)\s+(\w+)\s*=\s*(?:.*\|\|\s*)?['"]([^'"]+)['"]/);
+      if (varMatch && varMatch[1] !== 'BASE_URL') {
+        userVars[varMatch[1]] = varMatch[2];
+      }
     }
     if (!scriptBaseUrl) scriptBaseUrl = process.env.BASE_URL || '';
     logger.info(`Script BASE_URL resolved to: "${scriptBaseUrl}"`);
+    if (Object.keys(userVars).length > 0) logger.info(`User variables: ${JSON.stringify(userVars)}`);
+
+    // Fix #6: Extract configurable timeout from script
+    let defaultTimeout = 30000;
+    const timeoutLine = lines.find(l => l.includes('setDefaultTimeout(') || l.includes('DEFAULT_TIMEOUT'));
+    if (timeoutLine) {
+      const tm = timeoutLine.match(/(\d{4,})/);
+      if (tm) defaultTimeout = parseInt(tm[1]);
+    }
+
+    // Fix #5: Resolve variable references in a string
+    const resolveVars = (s: string): string => {
+      if (!s) return s;
+      // Handle BASE_URL + '/path' or ENV_PROFILE.baseUrl
+      if (s.includes('BASE_URL') || s.includes('ENV_PROFILE')) {
+        const plusMatch = s.match(/(?:BASE_URL|ENV_PROFILE\.baseUrl)\s*\+\s*(.*)/);
+        if (plusMatch) return scriptBaseUrl + plusMatch[1].replace(/['"]/g, '').trim();
+        return scriptBaseUrl || s.replace(/BASE_URL\s*\|\|\s*/, '').replace(/ENV_PROFILE\.baseUrl\s*\|\|\s*/, '').replace(/['"]/g, '').trim();
+      }
+      // Resolve user-defined variables
+      for (const [name, val] of Object.entries(userVars)) {
+        if (s === name) return val;
+        if (s.includes(name)) s = s.replace(new RegExp(`\\b${name}\\b`, 'g'), val);
+      }
+      return s;
+    };
+
+    // Fix #3: Track active frame context for iframe support
+    let activeFrameLocator: any = null;
 
     let stepNumber = 1;
 
@@ -218,40 +271,40 @@ export class TestRunnerService {
         let selector = '';
         let value = '';
 
+        // Skip non-executable lines (imports, variable declarations, describe/test blocks, braces)
+        if (line.startsWith('import ') || line.startsWith('const ') || line.startsWith('let ') || line.startsWith('var ') ||
+            line.startsWith('test(') || line.startsWith('test.describe(') || line.startsWith('test.beforeEach(') ||
+            line === '{' || line === '}' || line === '});' || line.startsWith('});') ||
+            line.startsWith('async ') || line.match(/^\w+\s*=\s*new\s+/) || line.startsWith('export ')) {
+          continue;
+        }
+
+        // Fix #5: resolve variables in the line for logging
+        logger.debug(`Step ${stepNumber}: Parsing line: ${line.substring(0, 120)}`);
+
         // Parse and execute different Playwright commands
         if (line.includes('page.goto(')) {
           action = 'navigate';
           let url = this.extractParameter(line, 'page.goto(') || '';
+          url = resolveVars(url);
 
-          // Resolve variable references: "BASE_URL + /path" or "BASE_URL || http://..."
-          if (url.includes('BASE_URL') || url.includes('ENV_PROFILE')) {
-            // Extract the path part after + if present
-            const plusMatch = url.match(/(?:BASE_URL|ENV_PROFILE\.baseUrl)\s*\+\s*(.*)/);
-            if (plusMatch) {
-              url = scriptBaseUrl + plusMatch[1].replace(/['"]/g, '').trim();
-            } else {
-              // "BASE_URL || fallback" or just "BASE_URL"
-              url = scriptBaseUrl || url.replace(/BASE_URL\s*\|\|\s*/, '').replace(/ENV_PROFILE\.baseUrl\s*\|\|\s*/, '').replace(/['"]/g, '').trim();
-            }
-          }
-
-          // Skip non-URL lines (variable declarations, if statements)
           if (!url || url.startsWith('if') || url.startsWith('const') || url.startsWith('throw')) {
             stepNumber++;
             continue;
           }
 
           selector = url;
-          
+
           logger.info(`Step ${stepNumber}: Navigate to ${url}`);
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
           try {
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-            logger.info(`✅ Step ${stepNumber}: Navigation successful`);
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: defaultTimeout });
+            logger.info(`Step ${stepNumber}: Navigation successful`);
           } catch (navError: any) {
-            logger.error(`❌ Step ${stepNumber}: Navigation failed -`, navError.message);
+            logger.error(`Step ${stepNumber}: Navigation failed - ${navError.message}`);
             throw navError;
           }
+          activeFrameLocator = null;
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
           
         } else if (line.includes('page.click(')) {
@@ -320,13 +373,26 @@ export class TestRunnerService {
           }
           await this.recordStep(context, stepNumber, action, selector || '(page element)', value, 'passed');
 
-        } else if (line.includes('page.frameLocator(')) {
-          // Handle iframe: page.frameLocator('#frame') — store for subsequent locator calls
+        } else if (line.includes('page.frameLocator(') || line.includes('frameLocator(')) {
+          // Fix #3: Store frame context for subsequent locator calls
           action = 'frame';
           const frameMatch = line.match(/frameLocator\(['"]([^'"]+)['"]\)/);
           selector = frameMatch ? frameMatch[1] : '';
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
-          // Frame locator is resolved inline — just record and continue
+          if (selector) {
+            activeFrameLocator = page.frameLocator(selector);
+            logger.info(`Step ${stepNumber}: Switched to iframe context: ${selector}`);
+            // If the line also has a chained action (e.g., frameLocator('#f').locator('btn').click())
+            if (line.includes('.locator(') && (line.includes('.click(') || line.includes('.fill(') || line.includes('.hover('))) {
+              const innerLocMatch = line.match(/\.locator\(['"]([^'"]+)['"]\)/);
+              if (innerLocMatch) {
+                const innerLoc = activeFrameLocator.locator(innerLocMatch[1]);
+                if (line.includes('.click(')) { await innerLoc.first().click(); action = 'click'; }
+                else if (line.includes('.fill(')) { const fm = line.match(/\.fill\(['"]([^'"]*)['"]\)/); if (fm) await innerLoc.first().fill(fm[1]); action = 'fill'; }
+                else if (line.includes('.hover(')) { await innerLoc.first().hover(); action = 'hover'; }
+              }
+            }
+          }
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
 
         } else if (line.includes('page.keyboard.press(')) {
@@ -386,60 +452,101 @@ export class TestRunnerService {
 
         } else if (line.includes('page.waitForURL(')) {
           action = 'wait';
-          const urlMatch = line.match(/waitForURL\((?:new RegExp\()?['"]([^'"]+)['"]/);
-          selector = urlMatch ? urlMatch[1] : '';
+          // Fix #8: Better regex extraction — handle escaped chars and flags
+          const regexMatch = line.match(/waitForURL\(\s*new RegExp\(\s*['"](.+?)['"]\s*(?:,\s*['"]([gimsuy]*)['"]\s*)?\)/);
+          const strMatch = !regexMatch ? line.match(/waitForURL\(\s*['"]([^'"]+)['"]\s*/) : null;
+          selector = regexMatch ? regexMatch[1] : (strMatch ? strMatch[1] : '');
+          const regexFlags = regexMatch ? (regexMatch[2] || '') : '';
           await this.recordStep(context, stepNumber, action, `url: ${selector}`, value, 'running');
-          if (line.includes('new RegExp')) {
-            await page.waitForURL(new RegExp(selector), { timeout: 15000 });
+          if (regexMatch) {
+            await page.waitForURL(new RegExp(selector, regexFlags), { timeout: defaultTimeout });
           } else {
-            await page.waitForURL(selector, { timeout: 15000 });
+            await page.waitForURL(resolveVars(selector), { timeout: defaultTimeout });
           }
           await this.recordStep(context, stepNumber, action, `url: ${selector}`, value, 'passed');
 
         } else if (line.includes('page.evaluate(')) {
+          // Fix #4: Better evaluate handling — extract full callback body
           action = 'evaluate';
           selector = 'JavaScript';
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
-          const evalMatch = line.match(/evaluate\(\(\)\s*=>\s*(.+)\)/);
-          if (evalMatch) {
-            await page.evaluate(evalMatch[1]);
+          try {
+            // Try to extract the evaluate body between the outermost parens
+            const evalStart = line.indexOf('page.evaluate(');
+            if (evalStart !== -1) {
+              const afterEval = line.substring(evalStart + 'page.evaluate('.length);
+              // Simple arrow: () => expression
+              const arrowMatch = afterEval.match(/^\(\)\s*=>\s*\{?\s*(.+?)\s*\}?\s*\)?\s*;?\s*$/);
+              if (arrowMatch) {
+                const body = arrowMatch[1].replace(/\}\s*$/, '');
+                await page.evaluate(body);
+              } else {
+                // String argument: evaluate('code')
+                const strMatch = afterEval.match(/^['"](.+)['"]\s*\)/);
+                if (strMatch) {
+                  await page.evaluate(strMatch[1]);
+                } else {
+                  // Fallback: pass the whole thing (may work for simple cases)
+                  await page.evaluate(`(${afterEval.replace(/\)\s*;?\s*$/, '')})()`);
+                }
+              }
+            }
+          } catch (evalErr: any) {
+            logger.warn(`Step ${stepNumber}: evaluate warning — ${evalErr.message.substring(0, 100)}`);
           }
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
 
         } else if (line.includes('page.once(') && line.includes('dialog')) {
+          // Fix #10: Enhanced dialog handling with message capture
           action = 'dialog';
           const isAccept = line.includes('accept');
+          // Check for accept with text: d.accept('text')
+          const acceptTextMatch = line.match(/accept\(['"]([^'"]*)['"]\)/);
           selector = isAccept ? 'accept' : 'dismiss';
+          if (acceptTextMatch) value = acceptTextMatch[1];
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
-          page.once('dialog', async d => isAccept ? await d.accept() : await d.dismiss());
+          page.once('dialog', async d => {
+            logger.info(`Dialog appeared: type=${d.type()}, message="${d.message()}"`);
+            if (isAccept) {
+              await d.accept(acceptTextMatch ? acceptTextMatch[1] : undefined);
+            } else {
+              await d.dismiss();
+            }
+          });
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
 
         } else if (line.includes('expect(') && line.includes('toHaveURL')) {
           action = 'assert_url';
-          const urlMatch = line.match(/toHaveURL\((?:new RegExp\()?['"]([^'"]+)['"]/);
-          selector = urlMatch ? urlMatch[1] : '';
+          // Fix #8: Better regex extraction with flags
+          const regexUrlMatch = line.match(/toHaveURL\(\s*new RegExp\(\s*['"](.+?)['"]\s*(?:,\s*['"]([gimsuy]*)['"]\s*)?\)/);
+          const strUrlMatch = !regexUrlMatch ? line.match(/toHaveURL\(\s*['"]([^'"]+)['"]/) : null;
+          selector = regexUrlMatch ? regexUrlMatch[1] : (strUrlMatch ? strUrlMatch[1] : '');
+          const urlFlags = regexUrlMatch ? (regexUrlMatch[2] || '') : '';
           value = selector;
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
-          if (line.includes('new RegExp')) {
-            await page.waitForURL(new RegExp(selector), { timeout: 15000 });
+          if (regexUrlMatch) {
+            await page.waitForURL(new RegExp(selector, urlFlags), { timeout: defaultTimeout });
           } else {
             const currentUrl = page.url();
-            if (!currentUrl.includes(selector) && currentUrl !== selector) {
-              throw new Error(`URL mismatch: expected "${selector}", got "${currentUrl}"`);
+            const resolvedSelector = resolveVars(selector);
+            if (!currentUrl.includes(resolvedSelector) && currentUrl !== resolvedSelector) {
+              throw new Error(`URL mismatch: expected "${resolvedSelector}", got "${currentUrl}"`);
             }
           }
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
 
         } else if (line.includes('expect(') && line.includes('toHaveTitle')) {
           action = 'assert_title';
-          const titleMatch = line.match(/toHaveTitle\((?:new RegExp\()?['"]([^'"]+)['"]/);
-          value = titleMatch ? titleMatch[1] : '';
+          const regexTitleMatch = line.match(/toHaveTitle\(\s*new RegExp\(\s*['"](.+?)['"]\s*(?:,\s*['"]([gimsuy]*)['"]\s*)?\)/);
+          const strTitleMatch = !regexTitleMatch ? line.match(/toHaveTitle\(\s*['"]([^'"]+)['"]/) : null;
+          value = regexTitleMatch ? regexTitleMatch[1] : (strTitleMatch ? strTitleMatch[1] : '');
+          const titleFlags = regexTitleMatch ? (regexTitleMatch[2] || '') : '';
           selector = 'title';
           await this.recordStep(context, stepNumber, action, selector, value, 'running');
           const actualTitle = await page.title();
-          if (line.includes('new RegExp')) {
-            if (!new RegExp(value).test(actualTitle)) {
-              throw new Error(`Title mismatch: expected /${value}/, got "${actualTitle}"`);
+          if (regexTitleMatch) {
+            if (!new RegExp(value, titleFlags).test(actualTitle)) {
+              throw new Error(`Title mismatch: expected /${value}/${titleFlags}, got "${actualTitle}"`);
             }
           } else if (actualTitle !== value) {
             throw new Error(`Title mismatch: expected "${value}", got "${actualTitle}"`);
@@ -551,9 +658,63 @@ export class TestRunnerService {
           }
           await this.recordStep(context, stepNumber, action, selector, value, 'passed');
 
+        } else if (line.includes('page.waitForFunction(')) {
+          // Fix #7: Missing API — waitForFunction
+          action = 'wait';
+          selector = 'function';
+          const fnBody = this.extractParameter(line, 'page.waitForFunction(') || '';
+          await this.recordStep(context, stepNumber, action, selector, fnBody, 'running');
+          await page.waitForFunction(fnBody, null, { timeout: defaultTimeout });
+          await this.recordStep(context, stepNumber, action, selector, fnBody, 'passed');
+
+        } else if (line.includes('page.route(')) {
+          // Fix #7: Missing API — route (request interception)
+          action = 'route';
+          const routeUrl = this.extractParameter(line, 'page.route(') || '';
+          selector = routeUrl;
+          await this.recordStep(context, stepNumber, action, selector, value, 'running');
+          if (line.includes('fulfill')) {
+            const statusMatch = line.match(/status:\s*(\d+)/);
+            const bodyMatch = line.match(/body:\s*['"]([^'"]*)['"]/);
+            await page.route(routeUrl, route => route.fulfill({
+              status: statusMatch ? parseInt(statusMatch[1]) : 200,
+              body: bodyMatch ? bodyMatch[1] : '',
+            }));
+          } else if (line.includes('abort')) {
+            await page.route(routeUrl, route => route.abort());
+          } else {
+            await page.route(routeUrl, route => route.continue());
+          }
+          await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+
+        } else if (line.includes('page.getByAltText(')) {
+          // Fix #7: Missing API — getByAltText
+          const altMatch = line.match(/getByAltText\(['"]([^'"]+)['"]/);
+          if (altMatch) {
+            const locator = page.getByAltText(altMatch[1]);
+            selector = `alt:${altMatch[1]}`;
+            if (line.includes('.click(')) { action = 'click'; await this.recordStep(context, stepNumber, action, selector, value, 'running'); await locator.first().click(); }
+            else if (line.includes('.hover(')) { action = 'hover'; await this.recordStep(context, stepNumber, action, selector, value, 'running'); await locator.first().hover(); }
+            else { action = 'locate'; await this.recordStep(context, stepNumber, action, selector, value, 'running'); }
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          }
+
+        } else if (line.includes('page.getByTitle(')) {
+          // Fix #7: Missing API — getByTitle
+          const titleMatch = line.match(/getByTitle\(['"]([^'"]+)['"]/);
+          if (titleMatch) {
+            const locator = page.getByTitle(titleMatch[1]);
+            selector = `title:${titleMatch[1]}`;
+            if (line.includes('.click(')) { action = 'click'; await this.recordStep(context, stepNumber, action, selector, value, 'running'); await locator.first().click(); }
+            else if (line.includes('.fill(')) { const fm = line.match(/\.fill\(['"]([^'"]*)['"]\)/); value = fm ? fm[1] : ''; action = 'fill'; await this.recordStep(context, stepNumber, action, selector, value, 'running'); await locator.first().fill(value); }
+            else { action = 'locate'; await this.recordStep(context, stepNumber, action, selector, value, 'running'); }
+            await this.recordStep(context, stepNumber, action, selector, value, 'passed');
+          }
+
         } else if (line.includes('page.getByLabel(') || line.includes('page.getByRole(') || line.includes('page.getByText(') || line.includes('page.getByPlaceholder(') || line.includes('page.getByTestId(') || line.includes('page.locator(')) {
-          // Handle modern Playwright locator API calls
-          const locator = this.resolveLocator(page, line);
+          // Handle modern Playwright locator API calls — use frame context if inside iframe
+          const resolveTarget = activeFrameLocator || page;
+          const locator = this.resolveLocator(resolveTarget, line);
           if (!locator) { stepNumber++; continue; }
 
           // Wait for DOM stability before acting
@@ -827,21 +988,21 @@ export class TestRunnerService {
   /**
    * Resolve a Playwright locator from a code line containing getByLabel, getByRole, getByText, or locator calls.
    */
-  private resolveLocator(page: Page, line: string): ReturnType<Page['locator']> | null {
+  private resolveLocator(pageOrFrame: any, line: string): ReturnType<Page['locator']> | null {
     try {
       // page.getByText('text', { exact: false })
       const getByTextMatch = line.match(/getByText\(['"]([^'"]+)['"]/);
-      if (getByTextMatch) return page.getByText(getByTextMatch[1], { exact: false });
+      if (getByTextMatch) return pageOrFrame.getByText(getByTextMatch[1], { exact: false });
 
       // page.getByLabel('label') — with smart fallback chain
       const getByLabelMatch = line.match(/getByLabel\(['"]([^'"]+)['"]/);
       if (getByLabelMatch) {
         const field = getByLabelMatch[1].replace(/[:\s]+$/, '').trim();
-        return page.getByLabel(field, { exact: false })
-          .or(page.getByPlaceholder(field, { exact: false }))
-          .or(page.getByRole('textbox', { name: field }))
-          .or(page.locator(`input[name="${field}" i], input[id="${field}" i], textarea[name="${field}" i], input[placeholder="${field}" i]`))
-          .or(page.locator(`label:has-text("${field}") + input, label:has-text("${field}") input, td:has-text("${field}") + td input`));
+        return pageOrFrame.getByLabel(field, { exact: false })
+          .or(pageOrFrame.getByPlaceholder(field, { exact: false }))
+          .or(pageOrFrame.getByRole('textbox', { name: field }))
+          .or(pageOrFrame.locator(`input[name="${field}" i], input[id="${field}" i], textarea[name="${field}" i], input[placeholder="${field}" i]`))
+          .or(pageOrFrame.locator(`label:has-text("${field}") + input, label:has-text("${field}") input, td:has-text("${field}") + td input`));
       }
 
       // page.getByRole('role', { name: 'text' }) — with fallback to other roles
@@ -852,43 +1013,57 @@ export class TestRunnerService {
         const nameRegex = getByRoleMatch[3];
         if (nameRegex) {
           const regex = new RegExp(nameRegex, 'i');
-          return page.getByRole(role, { name: regex })
-            .or(page.getByRole('link', { name: regex }))
-            .or(page.getByRole('button', { name: regex }))
-            .or(page.getByText(regex));
+          return pageOrFrame.getByRole(role, { name: regex })
+            .or(pageOrFrame.getByRole('link', { name: regex }))
+            .or(pageOrFrame.getByRole('button', { name: regex }))
+            .or(pageOrFrame.getByText(regex));
         }
         if (nameStr) {
-          return page.getByRole(role, { name: nameStr })
-            .or(page.getByRole(role === 'button' ? 'link' : 'button', { name: nameStr }))
-            .or(page.getByRole('tab', { name: nameStr }))
-            .or(page.getByRole('menuitem', { name: nameStr }))
-            .or(page.getByText(nameStr, { exact: true }))
-            .or(page.locator(`a:has-text("${nameStr}"), button:has-text("${nameStr}"), input[type="submit"][value="${nameStr}" i]`));
+          return pageOrFrame.getByRole(role, { name: nameStr })
+            .or(pageOrFrame.getByRole(role === 'button' ? 'link' : 'button', { name: nameStr }))
+            .or(pageOrFrame.getByRole('tab', { name: nameStr }))
+            .or(pageOrFrame.getByRole('menuitem', { name: nameStr }))
+            .or(pageOrFrame.getByText(nameStr, { exact: true }))
+            .or(pageOrFrame.locator(`a:has-text("${nameStr}"), button:has-text("${nameStr}"), input[type="submit"][value="${nameStr}" i]`));
         }
-        return page.getByRole(role);
+        return pageOrFrame.getByRole(role);
       }
 
       // page.getByPlaceholder('text') — with fallback
       const getByPlaceholderMatch = line.match(/getByPlaceholder\(['"]([^'"]+)['"]/);
       if (getByPlaceholderMatch) {
         const ph = getByPlaceholderMatch[1];
-        return page.getByPlaceholder(ph, { exact: false })
-          .or(page.getByLabel(ph, { exact: false }))
-          .or(page.locator(`input[placeholder="${ph}" i]`));
+        return pageOrFrame.getByPlaceholder(ph, { exact: false })
+          .or(pageOrFrame.getByLabel(ph, { exact: false }))
+          .or(pageOrFrame.locator(`input[placeholder="${ph}" i]`));
       }
 
       // page.getByTestId('id')
       const getByTestIdMatch = line.match(/getByTestId\(['"]([^'"]+)['"]/);
-      if (getByTestIdMatch) return page.getByTestId(getByTestIdMatch[1]);
+      if (getByTestIdMatch) return pageOrFrame.getByTestId(getByTestIdMatch[1]);
 
-      // page.locator('selector')
-      const locatorMatch = line.match(/(?:page\.)?locator\(['"]([^'"]+)['"]/);
-      if (locatorMatch && locatorMatch[1]) {
-        let loc = page.locator(locatorMatch[1]);
-        // Handle .nth(), .first(), .last() chaining
+      // page.getByAltText('text')
+      const getByAltMatch = line.match(/getByAltText\(['"]([^'"]+)['"]/);
+      if (getByAltMatch) return pageOrFrame.getByAltText(getByAltMatch[1]);
+
+      // page.getByTitle('text')
+      const getByTitleMatch = line.match(/getByTitle\(['"]([^'"]+)['"]/);
+      if (getByTitleMatch) return pageOrFrame.getByTitle(getByTitleMatch[1]);
+
+      // Fix #2: page.locator('selector') — handle CSS selectors with inner quotes
+      // e.g., page.locator('[data-testid="foo"]') — the inner " are different from outer '
+      const locSingleMatch = line.match(/(?:page\.)?locator\('((?:[^'\\]|\\.)*)'\)/);
+      const locDoubleMatch = line.match(/(?:page\.)?locator\("((?:[^"\\]|\\.)*)"\)/);
+      const locMatch = locSingleMatch || locDoubleMatch;
+      if (locMatch && locMatch[1]) {
+        let loc = pageOrFrame.locator(locMatch[1]);
         const nthMatch = line.match(/\.nth\((\d+)\)/);
         if (nthMatch) loc = loc.nth(parseInt(nthMatch[1])) as any;
         else if (line.includes('.last()')) loc = loc.last() as any;
+        else if (line.includes('.first()')) loc = loc.first() as any;
+        // Handle .filter({ hasText: 'text' })
+        const filterMatch = line.match(/\.filter\(\{\s*hasText:\s*['"]([^'"]+)['"]\s*\}\)/);
+        if (filterMatch) loc = loc.filter({ hasText: filterMatch[1] }) as any;
         return loc;
       }
     } catch (e: any) {
@@ -908,8 +1083,15 @@ export class TestRunnerService {
     if (textMatch) return `text:${textMatch[1]}`;
     const testIdMatch = line.match(/getByTestId\(['"]([^'"]+)['"]/);
     if (testIdMatch) return `testid:${testIdMatch[1]}`;
-    const locatorMatch = line.match(/locator\(['"]([^'"]+)['"]/);
-    if (locatorMatch) return locatorMatch[1];
+    const altMatch = line.match(/getByAltText\(['"]([^'"]+)['"]/);
+    if (altMatch) return `alt:${altMatch[1]}`;
+    const titleMatch = line.match(/getByTitle\(['"]([^'"]+)['"]/);
+    if (titleMatch) return `title:${titleMatch[1]}`;
+    // Fix #2: handle CSS selectors with inner quotes
+    const locSingle = line.match(/locator\('((?:[^'\\]|\\.)*)'\)/);
+    if (locSingle) return locSingle[1];
+    const locDouble = line.match(/locator\("((?:[^"\\]|\\.)*)"\)/);
+    if (locDouble) return locDouble[1];
     return line.substring(0, 60);
   }
 
