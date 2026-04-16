@@ -656,14 +656,27 @@ export const generateCode = asyncHandler(async (req: Request, res: Response) => 
  * Body: { featureContent: string, targetUrl: string, className?: string, waitForSelector?: string }
  */
 export const generatePOM = asyncHandler(async (req: Request, res: Response) => {
-  const { featureContent, targetUrl, className, waitForSelector, ssoAuth } = req.body;
-  if (!featureContent || !targetUrl) {
-    return res.status(400).json({ error: 'featureContent and targetUrl are required' });
+  const { featureContent, targetUrl, className, waitForSelector, ssoAuth, projectId } = req.body;
+
+  // Resolve target URL: explicit > project config baseUrl > error
+  let resolvedUrl = targetUrl;
+  if (!resolvedUrl && projectId) {
+    try {
+      const projResult = await pool.query('SELECT "baseUrl" FROM "Project" WHERE id = $1', [projectId]);
+      if (projResult.rows[0]?.baseUrl) {
+        resolvedUrl = projResult.rows[0].baseUrl;
+        logger.info(`POM: using project baseUrl: ${resolvedUrl}`);
+      }
+    } catch { /* ignore */ }
+  }
+
+  if (!featureContent || !resolvedUrl) {
+    return res.status(400).json({ error: 'featureContent and targetUrl (or project baseUrl) are required' });
   }
   try {
     const results = await pomGeneratorService.generateFromFeature(
       featureContent,
-      targetUrl,
+      resolvedUrl,
       { className, waitForSelector, ssoAuth }
     );
     return res.json({ success: true, data: results });

@@ -498,7 +498,8 @@ const BDDTesting: React.FC = () => {
     try {
       const res = await axios.post(`${API_URL}/bdd/generate-pom`, {
         featureContent: pomFeatureContent,
-        targetUrl: pomTargetUrl,
+        targetUrl: pomTargetUrl || undefined,
+        projectId: pm.selectedProjectId || undefined,
         className: pomClassName || undefined,
         ssoAuth: pomSSOEnabled ? {
           provider: pomSSOProvider,
@@ -517,7 +518,9 @@ const BDDTesting: React.FC = () => {
 
   const openPOMDialogForFeature = (feature: BDDFeature) => {
     setPOMFeatureContent(feature.featureContent || '');
-    setPOMTargetUrl('');
+    // Auto-populate target URL from project config baseUrl
+    const configuredUrl = pm.selectedProject?.baseUrl || '';
+    setPOMTargetUrl(configuredUrl);
     setPOMClassName('');
     setPOMResults([]);
     setAppliedPOMCode('');
@@ -2227,7 +2230,14 @@ const BDDTesting: React.FC = () => {
             </p>
 
             <div style={{ marginBottom: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Target URL <span style={{ color: '#c62828' }}>*</span></label>
+              <label style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>
+                Target URL <span style={{ color: '#c62828' }}>*</span>
+                {pm.selectedProject?.baseUrl && (
+                  <span style={{ fontSize: '11px', color: '#2e7d32', fontWeight: 400, marginLeft: '8px' }}>
+                    (auto-filled from project config)
+                  </span>
+                )}
+              </label>
               <input
                 type="text"
                 value={pomTargetUrl}
