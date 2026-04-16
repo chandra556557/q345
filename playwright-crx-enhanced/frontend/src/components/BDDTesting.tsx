@@ -471,15 +471,25 @@ const BDDTesting: React.FC = () => {
 
   // POM Generator state
   const [generatingPOM, setGeneratingPOM] = useState(false);
-  const [pomResults, setPOMResults] = useState<Array<{ className: string; url: string; locators: any[]; methods: string[]; generatedCode: string }>>([]);
+  const [pomResults, setPOMResults] = useState<Array<{ className: string; url: string; locators: any[]; methods: string[]; generatedCode: string; basePageCode?: string; fixtureCode?: string; barrelExport?: string; dataInterface?: string; validationReport?: any[]; components?: any[]; envConfig?: string }>>([]);
+  const [pomActiveTab, setPOMActiveTab] = useState<'pom' | 'basepage' | 'fixture' | 'data' | 'barrel' | 'env' | 'validation'>('pom');
   const [pomTargetUrl, setPOMTargetUrl] = useState('');
   const [pomClassName, setPOMClassName] = useState('');
   const [showPOMDialog, setShowPOMDialog] = useState(false);
   const [pomFeatureContent, setPOMFeatureContent] = useState('');
+  const [pomSSOEnabled, setPOMSSOEnabled] = useState(false);
+  const [pomSSOProvider, setPOMSSOProvider] = useState<'keycloak' | 'okta' | 'azure-ad' | 'generic'>('keycloak');
+  const [pomSSOUsername, setPOMSSOUsername] = useState('');
+  const [pomSSOPassword, setPOMSSOPassword] = useState('');
+  const [pomSSOIgnoreCert, setPOMSSOIgnoreCert] = useState(false);
 
   const handleGeneratePOM = async () => {
     if (!pomFeatureContent || !pomTargetUrl) {
       setError('Feature content and target URL are required');
+      return;
+    }
+    if (pomSSOEnabled && (!pomSSOUsername || !pomSSOPassword)) {
+      setError('SSO username and password are required when SSO is enabled');
       return;
     }
     setGeneratingPOM(true);
@@ -490,6 +500,12 @@ const BDDTesting: React.FC = () => {
         featureContent: pomFeatureContent,
         targetUrl: pomTargetUrl,
         className: pomClassName || undefined,
+        ssoAuth: pomSSOEnabled ? {
+          provider: pomSSOProvider,
+          username: pomSSOUsername,
+          password: pomSSOPassword,
+          ignoreCertErrors: pomSSOIgnoreCert,
+        } : undefined,
       }, { headers });
       setPOMResults(res.data.data || []);
     } catch (err: any) {
@@ -2241,9 +2257,47 @@ const BDDTesting: React.FC = () => {
               />
             </div>
 
+            {/* SSO Authentication (Keycloak/Okta/Azure AD) */}
+            <div style={{ marginBottom: '12px', padding: '12px', background: '#f5f7fa', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', marginBottom: pomSSOEnabled ? '12px' : 0 }}>
+                <input type="checkbox" checked={pomSSOEnabled} onChange={e => setPOMSSOEnabled(e.target.checked)} />
+                App behind SSO (Keycloak / Okta / Azure AD)
+              </label>
+              {pomSSOEnabled && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '3px' }}>SSO Provider</label>
+                    <select value={pomSSOProvider} onChange={e => setPOMSSOProvider(e.target.value as any)}
+                      style={{ width: '100%', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '12px' }}>
+                      <option value="keycloak">Keycloak</option>
+                      <option value="okta">Okta</option>
+                      <option value="azure-ad">Azure AD / Microsoft</option>
+                      <option value="generic">Generic SSO</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#555', marginTop: '20px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={pomSSOIgnoreCert} onChange={e => setPOMSSOIgnoreCert(e.target.checked)} />
+                      Ignore SSL certificate errors
+                    </label>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '3px' }}>SSO Username <span style={{ color: '#c62828' }}>*</span></label>
+                    <input type="text" value={pomSSOUsername} onChange={e => setPOMSSOUsername(e.target.value)} placeholder="admin@company.com"
+                      style={{ width: '100%', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '12px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '3px' }}>SSO Password <span style={{ color: '#c62828' }}>*</span></label>
+                    <input type="password" value={pomSSOPassword} onChange={e => setPOMSSOPassword(e.target.value)} placeholder="********"
+                      style={{ width: '100%', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '12px' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <button className="bdd-btn bdd-btn-primary" onClick={handleGeneratePOM} disabled={generatingPOM || !pomTargetUrl}>
-                {generatingPOM ? 'Visiting page & extracting locators...' : 'Generate POM'}
+                {generatingPOM ? (pomSSOEnabled ? 'SSO login & extracting locators...' : 'Visiting page & extracting locators...') : 'Generate POM'}
               </button>
               {pomResults.length > 1 && (
                 <button className="bdd-btn bdd-btn-success" onClick={handleApplyAllPOMs} disabled={applyingPOM}>
@@ -2252,64 +2306,218 @@ const BDDTesting: React.FC = () => {
               )}
             </div>
 
-            {pomResults.length > 0 && pomResults.map((pom, idx) => (
-              <div key={idx} style={{ borderTop: '1px solid #eee', paddingTop: '16px', marginTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px' }}>{pom.className}</h3>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(pom.generatedCode)}>
-                      Copy POM
-                    </button>
-                    <button className="bdd-btn bdd-btn-sm bdd-btn-primary" onClick={() => handleApplyPOM(pom)} disabled={applyingPOM}>
-                      {applyingPOM ? 'Applying...' : 'Apply POM to Feature'}
-                    </button>
-                  </div>
+            {/* Enterprise POM Tabs */}
+            {pomResults.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', gap: '4px', borderBottom: '2px solid #e0e0e0', marginBottom: '16px' }}>
+                  {([
+                    { key: 'pom', label: 'Page Objects' },
+                    { key: 'basepage', label: 'BasePage' },
+                    { key: 'fixture', label: 'Fixtures' },
+                    { key: 'data', label: 'Data Helpers' },
+                    { key: 'barrel', label: 'Barrel Index' },
+                    { key: 'env', label: 'Env Config' },
+                    { key: 'validation', label: 'Validation' },
+                  ] as Array<{ key: typeof pomActiveTab; label: string }>).map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setPOMActiveTab(tab.key)}
+                      style={{
+                        padding: '8px 16px', fontSize: '12px', fontWeight: pomActiveTab === tab.key ? 600 : 400,
+                        background: pomActiveTab === tab.key ? '#1565c0' : 'transparent',
+                        color: pomActiveTab === tab.key ? '#fff' : '#555',
+                        border: 'none', borderRadius: '6px 6px 0 0', cursor: 'pointer',
+                      }}
+                    >{tab.label}</button>
+                  ))}
                 </div>
 
-                {/* Locator summary */}
-                <div style={{ marginBottom: '12px' }}>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>Detected Locators ({pom.locators.length})</div>
-                  <div style={{ background: '#f5f7fa', borderRadius: '6px', padding: '10px', fontSize: '12px' }}>
-                    {pom.locators.map((loc: any, i: number) => (
-                      <div key={i} style={{ display: 'flex', gap: '12px', padding: '4px 0', borderBottom: i < pom.locators.length - 1 ? '1px solid #e0e0e0' : 'none' }}>
-                        <span style={{ fontWeight: 500, minWidth: '120px' }}>{loc.fieldName}</span>
-                        <span style={{ color: '#1565c0', fontSize: '11px' }}>{loc.elementType}</span>
-                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#555' }}>{loc.variableName}</span>
+                {/* Tab: Page Objects */}
+                {pomActiveTab === 'pom' && pomResults.map((pom, idx) => (
+                  <div key={idx} style={{ borderTop: idx > 0 ? '1px solid #eee' : 'none', paddingTop: idx > 0 ? '16px' : 0, marginTop: idx > 0 ? '16px' : 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h3 style={{ margin: 0, fontSize: '15px' }}>{pom.className} <span style={{ fontSize: '11px', color: '#888', fontWeight: 400 }}>extends BasePage</span></h3>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(pom.generatedCode)}>Copy POM</button>
+                        <button className="bdd-btn bdd-btn-sm bdd-btn-primary" onClick={() => handleApplyPOM(pom)} disabled={applyingPOM}>
+                          {applyingPOM ? 'Applying...' : 'Apply POM to Feature'}
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Methods */}
-                {pom.methods.length > 0 && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>Generated Methods</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {pom.methods.map((m, i) => (
-                        <span key={i} style={{ background: '#e3f2fd', color: '#1565c0', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontFamily: 'monospace' }}>{m}()</span>
-                      ))}
                     </div>
+
+                    {/* Locator summary with strategy + confidence */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>Detected Locators ({pom.locators.length})</div>
+                      <div style={{ background: '#f5f7fa', borderRadius: '6px', padding: '10px', fontSize: '12px' }}>
+                        {pom.locators.map((loc: any, i: number) => (
+                          <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '4px 0', borderBottom: i < pom.locators.length - 1 ? '1px solid #e0e0e0' : 'none' }}>
+                            <span style={{ fontWeight: 500, minWidth: '120px' }}>{loc.fieldName}</span>
+                            <span style={{ color: '#1565c0', fontSize: '11px', minWidth: '70px' }}>{loc.elementType}</span>
+                            <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#555', flex: 1 }}>{loc.variableName}</span>
+                            {loc.locatorStrategy && (
+                              <span style={{ background: '#e8f5e9', color: '#2e7d32', padding: '2px 6px', borderRadius: '3px', fontSize: '10px' }}>{loc.locatorStrategy}</span>
+                            )}
+                            {loc.confidence != null && (
+                              <span style={{ background: loc.confidence >= 80 ? '#e8f5e9' : loc.confidence >= 50 ? '#fff3e0' : '#ffebee', color: loc.confidence >= 80 ? '#2e7d32' : loc.confidence >= 50 ? '#e65100' : '#c62828', padding: '2px 6px', borderRadius: '3px', fontSize: '10px' }}>{loc.confidence}%</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Components detected */}
+                    {pom.components && pom.components.length > 0 && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>Component Fragments</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {pom.components.map((comp: any, i: number) => (
+                            <span key={i} style={{ background: '#f3e5f5', color: '#7b1fa2', padding: '3px 8px', borderRadius: '4px', fontSize: '11px' }}>{comp.name} ({comp.type})</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Methods */}
+                    {pom.methods.length > 0 && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>Generated Methods (Fluent API — all return <code>this</code>)</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {pom.methods.map((m: string, i: number) => (
+                            <span key={i} style={{ background: '#e3f2fd', color: '#1565c0', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontFamily: 'monospace' }}>{m}()</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '400px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      {pom.generatedCode}
+                    </pre>
+                  </div>
+                ))}
+
+                {/* Tab: BasePage */}
+                {pomActiveTab === 'basepage' && pomResults[0]?.basePageCode && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px' }}>BasePage.ts</h3>
+                        <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0' }}>Enterprise base class — all POMs extend this. Includes: retryClick, safeFill, safeHover, waitForPageLoad, screenshot, assertURL.</p>
+                      </div>
+                      <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(pomResults[0].basePageCode || '')}>Copy BasePage</button>
+                    </div>
+                    <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '500px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      {pomResults[0].basePageCode}
+                    </pre>
                   </div>
                 )}
 
-                {/* Generated code */}
-                <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '400px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                  {pom.generatedCode}
-                </pre>
+                {/* Tab: Fixtures */}
+                {pomActiveTab === 'fixture' && (
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>Playwright Fixtures with dependency-injected page objects. Use <code>test.extend</code> for clean test setup.</p>
+                    {pomResults.map((pom, idx) => pom.fixtureCode && (
+                      <div key={idx} style={{ marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <h4 style={{ margin: 0, fontSize: '13px' }}>{pom.className}.fixture.ts</h4>
+                          <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(pom.fixtureCode || '')}>Copy</button>
+                        </div>
+                        <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '300px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                          {pom.fixtureCode}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Tab: Data Helpers */}
+                {pomActiveTab === 'data' && (
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>Typed data interfaces and factory functions for test data. Provides smart defaults for email, password, name, phone fields.</p>
+                    {pomResults.map((pom, idx) => pom.dataInterface && (
+                      <div key={idx} style={{ marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <h4 style={{ margin: 0, fontSize: '13px' }}>{pom.className}Data</h4>
+                          <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(pom.dataInterface || '')}>Copy</button>
+                        </div>
+                        <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '300px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                          {pom.dataInterface}
+                        </pre>
+                      </div>
+                    ))}
+                    {pomResults.every(p => !p.dataInterface) && (
+                      <p style={{ color: '#888', fontSize: '13px' }}>No input fields detected — data interfaces are generated for pages with form inputs.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab: Barrel Index */}
+                {pomActiveTab === 'barrel' && pomResults[0]?.barrelExport && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px' }}>pages/index.ts</h3>
+                        <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0' }}>Barrel exports + Page Factory with URL-based routing. Import all POMs from a single entry point.</p>
+                      </div>
+                      <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(pomResults[0].barrelExport || '')}>Copy</button>
+                    </div>
+                    <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '400px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      {pomResults[0].barrelExport}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Tab: Env Config */}
+                {pomActiveTab === 'env' && pomResults[0]?.envConfig && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '15px' }}>config/env.config.ts</h3>
+                        <p style={{ fontSize: '11px', color: '#666', margin: '4px 0 0' }}>Multi-environment config (dev/staging/prod/local). Reads from env vars with smart defaults.</p>
+                      </div>
+                      <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(pomResults[0].envConfig || '')}>Copy</button>
+                    </div>
+                    <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '400px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      {pomResults[0].envConfig}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Tab: Validation Report */}
+                {pomActiveTab === 'validation' && (
+                  <div>
+                    <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>Each locator was validated against the live page. Green = exactly 1 match, Yellow = ambiguous (multiple), Red = broken (0 matches).</p>
+                    {pomResults.map((pom, idx) => pom.validationReport && pom.validationReport.length > 0 && (
+                      <div key={idx} style={{ marginBottom: '16px' }}>
+                        <h4 style={{ fontSize: '13px', marginBottom: '8px' }}>{pom.className}</h4>
+                        <div style={{ background: '#f5f7fa', borderRadius: '6px', padding: '10px', fontSize: '12px' }}>
+                          {pom.validationReport.map((v: any, i: number) => (
+                            <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '4px 0', borderBottom: i < pom.validationReport!.length - 1 ? '1px solid #e0e0e0' : 'none' }}>
+                              <span style={{
+                                width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
+                                background: v.status === 'ok' ? '#4caf50' : v.status === 'ambiguous' ? '#ff9800' : '#f44336',
+                              }} />
+                              <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 500, minWidth: '150px' }}>{v.variableName}</span>
+                              <span style={{ fontSize: '11px', color: '#666' }}>matches: {v.matchCount}</span>
+                              {v.suggestion && <span style={{ fontSize: '10px', color: '#c62828', flex: 1 }}>{v.suggestion}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
+            )}
 
             {/* Applied POM → Test Code */}
             {appliedPOMCode && (
               <div style={{ borderTop: '2px solid #1565c0', paddingTop: '16px', marginTop: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <h3 style={{ margin: 0, fontSize: '15px', color: '#1565c0' }}>Test Code Using POM</h3>
-                  <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(appliedPOMCode)}>
-                    Copy Test Code
-                  </button>
+                  <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(appliedPOMCode)}>Copy Test Code</button>
                 </div>
                 <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
-                  Production-ready test using your POM. Save this as <code>tests/*.spec.ts</code> and the POM as <code>pages/*.ts</code>.
+                  Production-ready test using your POM with fluent API (method chaining). Save as <code>tests/*.spec.ts</code>, POM as <code>pages/*.ts</code>, and <code>BasePage.ts</code> in pages/.
                 </p>
                 <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '400px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
                   {appliedPOMCode}

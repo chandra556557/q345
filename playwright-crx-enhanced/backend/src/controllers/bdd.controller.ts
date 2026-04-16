@@ -656,7 +656,7 @@ export const generateCode = asyncHandler(async (req: Request, res: Response) => 
  * Body: { featureContent: string, targetUrl: string, className?: string, waitForSelector?: string }
  */
 export const generatePOM = asyncHandler(async (req: Request, res: Response) => {
-  const { featureContent, targetUrl, className, waitForSelector } = req.body;
+  const { featureContent, targetUrl, className, waitForSelector, ssoAuth } = req.body;
   if (!featureContent || !targetUrl) {
     return res.status(400).json({ error: 'featureContent and targetUrl are required' });
   }
@@ -664,7 +664,7 @@ export const generatePOM = asyncHandler(async (req: Request, res: Response) => {
     const results = await pomGeneratorService.generateFromFeature(
       featureContent,
       targetUrl,
-      { className, waitForSelector }
+      { className, waitForSelector, ssoAuth }
     );
     return res.json({ success: true, data: results });
   } catch (err: any) {
