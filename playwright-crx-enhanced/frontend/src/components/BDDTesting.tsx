@@ -200,6 +200,9 @@ const BDDTesting: React.FC = () => {
   // Run options
   const [runTags, setRunTags] = useState('');
   const [parallelWorkers, setParallelWorkers] = useState(1);
+  const [runBrowser, setRunBrowser] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
+  const [runRetryCount, setRunRetryCount] = useState(0);
+  const [runHeadless, setRunHeadless] = useState(true);
 
   // Project config (extracted hook)
   const pm = useProjectManager();
@@ -671,6 +674,9 @@ const BDDTesting: React.FC = () => {
         stepDefinitions,
         tags: mergedTags || undefined,
         parallelWorkers: parallelWorkers > 1 ? parallelWorkers : undefined,
+        browser: runBrowser !== 'chromium' ? runBrowser : undefined,
+        executionMode: runHeadless ? 'headless' : 'headed',
+        retryCount: runRetryCount > 0 ? runRetryCount : undefined,
         projectId: pm.selectedProjectId || undefined,
       }, { headers });
 
@@ -1122,6 +1128,31 @@ const BDDTesting: React.FC = () => {
                 <option value={3}>3 Workers</option>
                 <option value={4}>4 Workers</option>
               </select>
+            </div>
+          </div>
+          <div className="bdd-form-row" style={{ background: '#f5f7fa', padding: '10px 14px', borderRadius: '8px', marginTop: '8px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>Browser</label>
+              <select value={runBrowser} onChange={e => setRunBrowser(e.target.value as any)} style={{ width: '100%', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '4px', fontSize: '13px' }}>
+                <option value="chromium">Chromium</option>
+                <option value="firefox">Firefox</option>
+                <option value="webkit">WebKit (Safari)</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '4px' }}>Retry on Failure</label>
+              <select value={runRetryCount} onChange={e => setRunRetryCount(parseInt(e.target.value))} style={{ width: '100%', padding: '6px 10px', border: '1px solid #d0d0d0', borderRadius: '4px', fontSize: '13px' }}>
+                <option value={0}>No Retry</option>
+                <option value={1}>1 Retry</option>
+                <option value={2}>2 Retries</option>
+                <option value={3}>3 Retries</option>
+              </select>
+            </div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#555', cursor: 'pointer', paddingBottom: '8px' }}>
+                <input type="checkbox" checked={runHeadless} onChange={e => setRunHeadless(e.target.checked)} />
+                Headless Mode
+              </label>
             </div>
           </div>
 

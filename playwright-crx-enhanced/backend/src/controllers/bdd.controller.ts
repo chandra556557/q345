@@ -848,7 +848,8 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
   }
   const totalSteps = nonBackgroundScenarios.reduce((sum, s) => sum + s.steps.length, 0);
 
-  const parsedParallelWorkers = parallelWorkers ? parseInt(parallelWorkers, 10) : 1;
+  const MAX_PARALLEL_WORKERS = parseInt(process.env.BDD_MAX_PARALLEL_WORKERS || '10', 10);
+  const parsedParallelWorkers = Math.min(Math.max(parallelWorkers ? parseInt(parallelWorkers, 10) : 1, 1), MAX_PARALLEL_WORKERS);
   const parsedRetryCount = retryCount ? parseInt(retryCount, 10) : 0;
 
   // Fetch project config — use request projectId, fallback to feature's projectId
