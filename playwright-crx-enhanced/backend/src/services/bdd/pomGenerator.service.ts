@@ -1,6 +1,8 @@
-import { chromium, Page } from 'playwright-core';
+import { chromium, Page, Browser } from 'playwright-core';
 import { logger } from '../../utils/logger';
 import { bddService } from './bdd.service';
+import { validatePublicUrl } from '../../utils/urlValidator';
+import { safeResolveLocator } from '../../utils/locatorStrategy';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -203,10 +205,127 @@ export abstract class BasePage {
     return this;
   }
 
+  /**
+   * Chain multiple hovers (for two-level hover menus).
+   * Each entry is hovered in order, settled with a short wait so the next
+   * level has time to render, then the final entry is hovered last.
+   */
+  async hoverChain(locators: Locator[], settleMs = 200) {
+    for (const loc of locators) {
+      await loc.waitFor({ state: 'visible', timeout: 5000 });
+      await loc.hover();
+      await this.page.waitForTimeout(settleMs);
+    }
+    return this;
+  }
+
   /** Select option from native dropdown with wait */
   async safeSelect(locator: Locator, option: string, timeout = 5000) {
     await locator.waitFor({ state: 'visible', timeout });
     await locator.selectOption(option);
+    return this;
+  }
+
+  /**
+   * Dropdown-taxonomy-aware select. Detects the widget at runtime:
+   *  - native <select>  -> selectOption(...)
+   *  - ARIA combobox / listbox / custom -> click to open, wait, pick by role/text
+   *
+   * Waits for the option to actually appear (async-rendered dropdowns take
+   * 200–1000ms). Tries four locator fallbacks for the option itself.
+   */
+  async smartSelect(locator: Locator, option: string, opts: { timeout?: number } = {}) {
+    const timeout = opts.timeout ?? 10000;
+    await locator.waitFor({ state: 'visible', timeout });
+    await locator.scrollIntoViewIfNeeded({ timeout }).catch(() => {});
+
+    // Wrap the tag probe so a stale/detached locator doesn't abort the whole
+    // select — we fall through to the custom-dropdown branch when unknown.
+    let tag = '';
+    let inputType = '';
+    try {
+      const probe = await locator.evaluate((el: HTMLElement) => ({
+        tag: el.tagName.toLowerCase(),
+        type: (el as HTMLInputElement).type || '',
+      }), { timeout: 2000 } as any);
+      tag = probe.tag;
+      inputType = probe.type;
+    } catch { tag = ''; }
+    if (tag === 'select') {
+      await locator.selectOption(option);
+      return this;
+    }
+
+    // Typeahead / searchable comboboxes: the trigger is a text input with
+    // role="combobox" (or autocomplete/list attributes). Open by focusing,
+    // type the option, wait for a filtered option, then pick it.
+    const looksLikeTypeahead =
+      tag === 'input' && (inputType === 'text' || inputType === 'search' || inputType === '');
+    if (looksLikeTypeahead) {
+      await locator.click({ timeout });
+      await locator.fill('');
+      await locator.type(option, { delay: 20 });
+      const optionLoc = this.page.getByRole('option', { name: option, exact: false }).first()
+        .or(this.page.locator('[role="listbox"] [role="option"]', { hasText: option }).first())
+        .or(this.page.locator('li[role="option"]', { hasText: option }).first())
+        .first();
+      await optionLoc.waitFor({ state: 'visible', timeout });
+      await optionLoc.click();
+      return this;
+    }
+
+    await locator.click({ timeout });
+
+    // Each branch ends in .first() — without that, two options sharing the
+    // query text ("Open" and "Open account") trip strict-mode throws.
+    const optionLoc = this.page.getByRole('option', { name: option, exact: false }).first()
+      .or(this.page.locator('[role="listbox"] [role="option"]', { hasText: option }).first())
+      .or(this.page.locator('[role="menuitem"]', { hasText: option }).first())
+      .or(this.page.locator('li', { hasText: option }).first())
+      .first();
+    await optionLoc.waitFor({ state: 'visible', timeout });
+    await optionLoc.click();
+    return this;
+  }
+
+  /**
+   * Multi-select dropdown — applies multiple options in one open. Works for:
+   *  - native <select multiple> (uses selectOption with an array)
+   *  - custom checkbox-in-dropdown (click trigger, then click each option)
+   * The dropdown is only opened once; if it auto-closes between picks, pass
+   * reopenBetween: true to click the trigger before each option.
+   */
+  async smartMultiSelect(
+    locator: Locator,
+    options: string[],
+    opts: { timeout?: number; reopenBetween?: boolean } = {},
+  ) {
+    const timeout = opts.timeout ?? 10000;
+    if (!Array.isArray(options) || options.length === 0) return this;
+    await locator.waitFor({ state: 'visible', timeout });
+
+    let tag = '';
+    try { tag = await locator.evaluate((el: HTMLElement) => el.tagName.toLowerCase(), { timeout: 2000 } as any); } catch { /* fall through */ }
+    if (tag === 'select') {
+      await locator.selectOption(options);
+      return this;
+    }
+
+    await locator.click({ timeout });
+    for (const option of options) {
+      if (opts.reopenBetween) {
+        await locator.click({ timeout });
+      }
+      const optionLoc = this.page.getByRole('option', { name: option, exact: false }).first()
+        .or(this.page.locator('[role="listbox"] [role="option"]', { hasText: option }).first())
+        .or(this.page.locator('[role="menuitemcheckbox"]', { hasText: option }).first())
+        .or(this.page.locator('li', { hasText: option }).first())
+        .first();
+      await optionLoc.waitFor({ state: 'visible', timeout });
+      await optionLoc.click();
+    }
+    // Click outside to close for patterns that stay open.
+    await this.page.keyboard.press('Escape').catch(() => {});
     return this;
   }
 }
@@ -310,7 +429,16 @@ class POMGeneratorService {
   async generateFromFeature(
     featureContent: string,
     targetUrl: string,
-    options: { className?: string; waitForSelector?: string } = {}
+    options: {
+      className?: string;
+      waitForSelector?: string;
+      /** Playwright storageState JSON (cookies + localStorage). Lets the
+       *  generator scan post-login pages without replaying the login flow. */
+      storageState?: any;
+      /** When true, also run static-scan on the landing page and merge its
+       *  classified components (tabs/lists/menus/forms) into the POM. */
+      enrichWithScan?: boolean;
+    } = {}
   ): Promise<POMResult[]> {
     const parsed = bddService.parseFeatureContent(featureContent);
     logger.info(`POM Generator: parsing feature with ${(parsed.scenarios || []).length} scenarios`);
@@ -320,12 +448,29 @@ class POMGeneratorService {
 
     const allSteps: FeatureStep[] = this.parseFeatureIntoSteps(parsed);
 
-    const browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({
-      viewport: { width: 1920, height: 1080 },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    });
-    const page = await context.newPage();
+    // Defence-in-depth: reject non-public URLs before launching a browser.
+    // The controller also validates, but future internal callers might not.
+    const allowPrivate = process.env.ALLOW_PRIVATE_SCAN_URLS === 'true';
+    validatePublicUrl(targetUrl, { allowPrivate });
+
+    let browser: Browser | null = null;
+    let context: any = null;
+    let page: any = null;
+    try {
+      browser = await chromium.launch({ headless: true });
+      const contextOpts: any = {
+        viewport: { width: 1920, height: 1080 },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      };
+      // storageState accepts either a path (legacy Playwright) or an object
+      // ({ cookies, origins }). We persist it as-is so callers can pass either.
+      if (options.storageState) contextOpts.storageState = options.storageState;
+      context = await browser.newContext(contextOpts);
+      page = await context.newPage();
+    } catch (e) {
+      if (browser) await browser.close().catch(() => {});
+      throw e;
+    }
 
     interface Snapshot {
       url: string;
@@ -334,8 +479,24 @@ class POMGeneratorService {
       elements: ElementInfo[];
       candidateTargets: Set<string>;
       domHash: string;
+      /** Static-scan classification (tabs/lists/menus/forms) captured against
+       *  the same open page. Populated only when enrichWithScan is true. */
+      scanComponents?: any[];
     }
     const snapshots: Snapshot[] = [];
+
+    // Lazy-loaded so the import only runs when enrichment is requested.
+    let staticScanSvc: any = null;
+    const getStaticScan = async () => {
+      if (staticScanSvc) return staticScanSvc;
+      try {
+        staticScanSvc = (await import('./staticScan.service')).staticScanService;
+      } catch (e: any) {
+        logger.warn(`POM Generator: could not load staticScanService: ${e?.message}`);
+        staticScanSvc = { scanOpenPage: async () => null };
+      }
+      return staticScanSvc;
+    };
 
     const takeSnapshot = async (preferredClassName?: string): Promise<Snapshot> => {
       if (options.waitForSelector) {
@@ -360,9 +521,23 @@ class POMGeneratorService {
         finalClassName = `${className}${collisionCounter++}`;
       }
 
-      const snapshot: Snapshot = { url, pagePath, className: finalClassName, elements, candidateTargets: new Set(), domHash };
+      // Enrichment runs at snapshot time (reuses the open Playwright Page, no
+      // second browser launch) and is stored on the snapshot so the later
+      // code-gen step can fold the components into the emitted TS class.
+      let scanComponents: any[] | undefined;
+      if (options.enrichWithScan) {
+        try {
+          const svc = await getStaticScan();
+          const scan = await svc.scanOpenPage(page);
+          if (scan?.components) scanComponents = scan.components;
+        } catch (scanErr: any) {
+          logger.warn(`POM Generator: scanOpenPage failed for ${url}: ${scanErr?.message}`);
+        }
+      }
+
+      const snapshot: Snapshot = { url, pagePath, className: finalClassName, elements, candidateTargets: new Set(), domHash, scanComponents };
       snapshots.push(snapshot);
-      logger.info(`POM Generator: snapshot for ${finalClassName} at ${url} — ${elements.length} elements`);
+      logger.info(`POM Generator: snapshot for ${finalClassName} at ${url} — ${elements.length} elements${scanComponents ? ` + ${scanComponents.length} scan components` : ''}`);
       return snapshot;
     };
 
@@ -463,10 +638,14 @@ class POMGeneratorService {
           try {
             const rawLocator = loc.locator.replace(/^this\.page\./, 'page.');
             let matchCount = 0;
-            try {
-              const pwLocator = eval(`(function(page) { return ${rawLocator}; })`)(page);
+            // Replaced eval() with an allowlist-based parser. If the locator
+            // string doesn't match one of the supported Playwright getters,
+            // safeResolveLocator returns null and we treat it as broken
+            // rather than execute arbitrary code in the backend process.
+            const pwLocator = safeResolveLocator(page, rawLocator);
+            if (pwLocator) {
               matchCount = await pwLocator.count().catch(() => 0);
-            } catch {
+            } else {
               matchCount = -1;
             }
             let status: 'ok' | 'ambiguous' | 'broken' = 'ok';
@@ -512,6 +691,15 @@ class POMGeneratorService {
           });
         }
 
+        // Enrichment: fold static-scan components into `locators` BEFORE the
+        // page-class TypeScript is emitted, so the merged locators become
+        // first-class `readonly xxxTabs/Menu/List: Locator` declarations with
+        // real constructor initializers. Otherwise the merged locators would
+        // be referenced by apply-POM but missing from the emitted class.
+        if (snapshot.scanComponents && snapshot.scanComponents.length > 0) {
+          this.appendScanComponentsToLocators(snapshot.scanComponents, locators, usedVarNames);
+        }
+
         if (locators.length === 0) continue;
 
         // Detect component fragments (Tier 1, Item 4)
@@ -555,6 +743,12 @@ class POMGeneratorService {
         });
       }
 
+      // Enrichment now runs per-snapshot inside `takeSnapshot()` and is
+      // folded into `locators` before `buildPOMCode` — the emitted TS class
+      // includes the merged tab/menu/list/form locators as real readonly
+      // declarations with constructor initializers (not just in-memory
+      // metadata). No post-hoc merge needed here.
+
       // Generate combined barrel index (Tier 2, Item 8)
       if (results.length > 0) {
         const combinedBarrel = this.generateBarrelIndex(results);
@@ -563,7 +757,11 @@ class POMGeneratorService {
 
       return results;
     } finally {
-      await browser.close();
+      if (browser) {
+        await browser.close().catch(err => {
+          logger.warn(`POM Generator: browser.close() failed: ${err?.message}`);
+        });
+      }
     }
   }
 
@@ -809,6 +1007,11 @@ export { expect } from '@playwright/test';
     lines.push(`export class ${className} extends BasePage {`);
 
     for (const loc of locators) {
+      // Surface low-confidence locators as @unstable JSDoc so reviewers notice
+      // them at code-review time and the UI can highlight them before run.
+      if ((loc.confidence ?? 100) < 60) {
+        lines.push(`  /** @unstable confidence=${loc.confidence ?? 0} strategy=${loc.locatorStrategy} — review before merging */`);
+      }
       lines.push(`  readonly ${loc.variableName}: Locator;`);
     }
 
@@ -1259,8 +1462,10 @@ export { expect } from '@playwright/test';
   // ─── DOM Extraction ─────────────────────────────────────────────────────────
 
   private async extractDOMElements(page: Page): Promise<ElementInfo[]> {
-    const result = await page.evaluate(`(() => {
-      const selector = [
+    // Top-document + open shadow-root traversal in one evaluate, plus same-
+    // origin iframes enumerated via Playwright's frame API below.
+    const extractForRoot = `function extractFromRoot(root) {
+      const selectorList = [
         'input', 'button', 'a', 'select', 'textarea',
         '[role="button"]', '[role="link"]', '[role="tab"]', '[role="menuitem"]',
         '[role="textbox"]', '[role="combobox"]', '[role="listbox"]', '[role="option"]', '[role="menu"]',
@@ -1269,13 +1474,26 @@ export { expect } from '@playwright/test';
         '[class*="card"]', '[class*="tile"]', '[class*="hover"]', '[class*="menu-item"]',
         '[onclick]', '[onmouseover]', '[onmouseenter]'
       ].join(', ');
+      const out = [];
       const seen = new Set();
-      const elements = Array.from(document.querySelectorAll(selector)).filter(el => {
-        if (seen.has(el)) return false;
-        seen.add(el);
-        return true;
-      });
-      return elements.map(function(el) {
+
+      // Walk the DOM including open shadow roots. Closed shadow roots are
+      // invisible to JS — we can't cross them without the app's cooperation.
+      function walk(node) {
+        if (!node || seen.has(node)) return;
+        seen.add(node);
+        // Only call matches/querySelectorAll on Elements & shadow-root hosts.
+        if (node.querySelectorAll) {
+          node.querySelectorAll(selectorList).forEach(el => { if (!out.includes(el)) out.push(el); });
+        }
+        // Recurse into open shadow roots.
+        const allChildren = node.querySelectorAll ? node.querySelectorAll('*') : [];
+        for (const c of allChildren) {
+          if (c.shadowRoot && c.shadowRoot.mode === 'open') walk(c.shadowRoot);
+        }
+      }
+      walk(root);
+      return out.map(function(el) {
         const rect = el.getBoundingClientRect();
         const cs = window.getComputedStyle(el);
         const inLayout = rect.width > 0 && rect.height > 0;
@@ -1289,23 +1507,22 @@ export { expect } from '@playwright/test';
           .filter(t => t && t.length < 100)
           .join(' ');
 
-        // Detect component regions
         function isInside(tagNames) {
-          let p = el.parentElement;
+          let p = el.parentElement || (el.getRootNode && el.getRootNode().host) || null;
           while (p) {
-            const pTag = p.tagName.toLowerCase();
-            const pRole = p.getAttribute('role') || '';
-            const pClass = (p.className || '').toLowerCase();
+            const pTag = p.tagName ? p.tagName.toLowerCase() : '';
+            const pRole = p.getAttribute ? (p.getAttribute('role') || '') : '';
+            const pClass = (p.className || '').toString().toLowerCase();
             for (const t of tagNames) {
               if (pTag === t || pRole === t || pClass.includes(t)) return true;
             }
-            p = p.parentElement;
+            p = p.parentElement || (p.getRootNode && p.getRootNode().host) || null;
           }
           return false;
         }
 
         return {
-          tag: el.tagName.toLowerCase(),
+          tag: el.tagName ? el.tagName.toLowerCase() : '',
           type: el.type || '',
           name: el.name || '',
           id: el.id || '',
@@ -1330,20 +1547,52 @@ export { expect } from '@playwright/test';
       }).filter(function(e) {
         return e.visible || e.tag === 'img' || e.tag === 'div';
       });
+    }`;
+
+    // Extract from main document (includes open shadow roots).
+    const mainResult = await page.evaluate(`(() => {
+      ${extractForRoot}
+      return extractFromRoot(document);
     })()`);
-    return result as ElementInfo[];
+
+    // Extract from same-origin iframes via Playwright's frame API so we don't
+    // trip the same-origin policy in `page.evaluate`. Cross-origin frames are
+    // skipped (browser blocks access). Failures per-frame are swallowed.
+    const frameResults: ElementInfo[] = [];
+    for (const frame of page.frames()) {
+      if (frame === page.mainFrame()) continue;
+      try {
+        const elements = await frame.evaluate(`(() => {
+          ${extractForRoot}
+          return extractFromRoot(document);
+        })()`);
+        if (Array.isArray(elements)) frameResults.push(...(elements as ElementInfo[]));
+      } catch { /* cross-origin frame — skip */ }
+    }
+
+    return [...(mainResult as ElementInfo[]), ...frameResults];
   }
 
   private async computeDomHash(page: Page): Promise<string> {
     const result = await page.evaluate(`(() => {
-      const els = Array.from(document.querySelectorAll('a:not([hidden]), button:not([hidden]), input:not([type="hidden"])'));
+      // Include role=option/listitem/menuitem/row so that opening a dropdown,
+      // expanding a tree, or revealing a menu triggers a new snapshot — those
+      // interactions don't alter the set of buttons/inputs but do change the
+      // interactive surface the user can target.
+      const els = Array.from(document.querySelectorAll(
+        'a:not([hidden]), button:not([hidden]), input:not([type="hidden"]),' +
+        ' [role="option"]:not([hidden]), [role="menuitem"]:not([hidden]),' +
+        ' [role="listitem"]:not([hidden]), [role="row"]:not([hidden]),' +
+        ' [role="tab"]:not([hidden])'
+      ));
       const visible = els.filter(function(el) {
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       });
       const sig = visible.map(function(el) {
         const text = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim().substring(0, 30);
-        return el.tagName + '|' + text;
+        const role = el.getAttribute('role') || '';
+        return el.tagName + (role ? ':' + role : '') + '|' + text;
       }).join('::');
       let hash = 0;
       for (let i = 0; i < sig.length; i++) {
@@ -1553,6 +1802,18 @@ export { expect } from '@playwright/test';
             return;
           }
           lines.push(`    // ${step.keyword} ${step.text}`);
+          // Surface confidence across ALL POMs — take the highest match.
+          let bestWarning: string | null = null;
+          let bestConfidence = -1;
+          const stepQuotes = (step.text.match(/"([^"]*)"/g) || []).map((m: string) => m.replace(/"/g, ''));
+          for (const pi of pomInstances) {
+            const w = this.confidenceWarningForStep(step.text, pi.pom);
+            if (w && bestConfidence === -1) bestWarning = w;
+            // If any POM has a confident match, suppress the warning.
+            const loc = this.findLocatorForField(stepQuotes[0] || '', pi.pom);
+            if (loc && (loc.confidence ?? 100) >= bestConfidence) bestConfidence = loc.confidence ?? 100;
+          }
+          if (bestWarning && bestConfidence < 60) lines.push(`    ${bestWarning}`);
           const call = this.mapStepToMultiPOMCallWithContext(step.text, pomInstances, context);
           lines.push(`    ${call}`);
         });
@@ -1587,27 +1848,36 @@ export { expect } from '@playwright/test';
 
       const searchOrder = [context.activePOM, ...pomInstances.filter(pi => pi !== context.activePOM)];
 
+      // Derive the caller's intent once so each POM gets scored with the
+      // correct role preference (click -> button/link, fill -> input, etc.).
+      const intent: 'click' | 'fill' | 'select' | 'hover' | 'check' | 'assert' | undefined =
+        parsedStep?.action === 'hover' || lower.match(/\b(hover|mouseover|mouse over)\b/) ? 'hover' :
+        parsedStep?.action === 'select' ? 'select' :
+        lower.includes('fill') || lower.includes('enter') || lower.includes('type') || lower.includes('set') ? 'fill' :
+        lower.includes('uncheck') || lower.includes('check') ? 'check' :
+        lower.includes('click') ? 'click' :
+        lower.includes('should see') || lower.includes('is visible') || lower.includes('displayed') ? 'assert' :
+        undefined;
+
       for (const pi of searchOrder) {
-        const loc = this.findLocatorForField(target, pi.pom);
+        const loc = this.findLocatorForField(target, pi.pom, intent);
         if (!loc) continue;
 
-        if (parsedStep?.action === 'hover' || lower.match(/\b(hover|mouseover|mouse over)\b/)) {
+        if (intent === 'hover') {
           return `await ${pi.instanceName}.safeHover(${pi.instanceName}.${loc.variableName});`;
         }
-        if (parsedStep?.action === 'select' && optionValue !== undefined) {
-          if (loc.elementType === 'select') return `await ${pi.instanceName}.safeSelect(${pi.instanceName}.${loc.variableName}, '${esc(optionValue)}');`;
-          if (loc.elementType === 'combobox') return `await ${pi.instanceName}.${loc.variableName}.click();\n    await page.getByRole('option', { name: '${esc(optionValue)}' }).first().click();`;
-          return `await ${pi.instanceName}.${loc.variableName}.selectOption('${esc(optionValue)}');`;
+        if (intent === 'select' && optionValue !== undefined) {
+          return `await ${pi.instanceName}.smartSelect(${pi.instanceName}.${loc.variableName}, '${esc(optionValue)}');`;
         }
-        if ((lower.includes('fill') || lower.includes('enter') || lower.includes('type') || lower.includes('set')) && value !== undefined && value !== '') {
+        if (intent === 'fill' && value !== undefined && value !== '') {
           return `await ${pi.instanceName}.safeFill(${pi.instanceName}.${loc.variableName}, '${esc(value)}');`;
         }
-        if (lower.includes('click')) {
+        if (intent === 'click') {
           if (pi !== context.activePOM) context.activePOM = pi;
           return `await ${pi.instanceName}.retryClick(${pi.instanceName}.${loc.variableName});`;
         }
-        if (lower.includes('uncheck')) return `await ${pi.instanceName}.${loc.variableName}.uncheck();`;
-        if (lower.includes('check')) return `await ${pi.instanceName}.${loc.variableName}.check();`;
+        if (intent === 'check' && lower.includes('uncheck')) return `await ${pi.instanceName}.${loc.variableName}.uncheck();`;
+        if (intent === 'check') return `await ${pi.instanceName}.${loc.variableName}.check();`;
       }
 
       if (parsedStep?.action === 'hover' || lower.match(/\b(hover|mouseover|mouse over)\b/)) {
@@ -1735,6 +2005,11 @@ export { expect } from '@playwright/test';
             return;
           }
           lines.push(`    // ${step.keyword} ${step.text}`);
+          // Annotate the resolved locator's confidence so low-quality matches
+          // surface as comments in the emitted test file (and `@unstable` JSDoc
+          // on class properties). Users see warnings in the dry-run preview.
+          const warning = this.confidenceWarningForStep(step.text, pom);
+          if (warning) lines.push(`    ${warning}`);
           lines.push(`    ${this.mapStepToPOMCall(step.text, pom, instanceName)}`);
         });
 
@@ -1752,58 +2027,80 @@ export { expect } from '@playwright/test';
     const quotes = (stepText.match(/"([^"]*)"/g) || []).map(m => m.replace(/"/g, ''));
     const parsedStep = this.parseStepText(stepText, 0);
 
-    // Navigation — extract path if provided
+    // Navigation — emit absolute URLs verbatim, prepend BASE_URL for relative paths.
     if (lower.includes('navigate') || lower.match(/\b(go to|open|visit|am on|i am on)\b/)) {
-      if (quotes[0] && (quotes[0].startsWith('/') || quotes[0].startsWith('http'))) {
-        return `await page.goto(BASE_URL + '${esc(quotes[0])}', { waitUntil: 'domcontentloaded' });`;
+      const url = quotes[0];
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        return `await page.goto('${esc(url)}', { waitUntil: 'domcontentloaded' });`;
+      }
+      if (url && url.startsWith('/')) {
+        return `await page.goto(BASE_URL + '${esc(url)}', { waitUntil: 'domcontentloaded' });`;
       }
       return `await ${instance}.navigate();`;
     }
 
-    // Hover
+    // Hover — chained ("hover Settings then Profile" / "A > B > C") or single.
     if (parsedStep?.action === 'hover' || lower.match(/\b(hover|mouseover|mouse over)\b/)) {
+      const chain = this.detectHoverChain(stepText, quotes);
+      if (chain && chain.length >= 2) {
+        // Resolve each step of the chain via scored matching; fall back to a
+        // best-effort multi-strategy locator for any step the POM doesn't know.
+        const resolved = chain.map((name: string) => {
+          const loc = this.findLocatorForField(name, pom, 'hover');
+          if (loc) return `${instance}.${loc.variableName}`;
+          return `page.getByRole('menuitem', { name: '${esc(name)}' }).or(page.getByRole('button', { name: '${esc(name)}' })).or(page.getByRole('link', { name: '${esc(name)}' })).or(page.getByText('${esc(name)}', { exact: false })).first()`;
+        });
+        return `await ${instance}.hoverChain([${resolved.join(', ')}]);`;
+      }
       const target = parsedStep?.target || quotes[0];
       if (target) {
-        const loc = this.findLocatorForField(target, pom);
+        const loc = this.findLocatorForField(target, pom, 'hover');
         if (loc) return `await ${instance}.safeHover(${instance}.${loc.variableName});`;
-        return `await page.getByText('${esc(target)}', { exact: false }).first().hover();`;
+        // Multi-strategy fallback: icon-only menus don't respond to getByText.
+        return `await page.getByRole('button', { name: '${esc(target)}' }).or(page.getByRole('link', { name: '${esc(target)}' })).or(page.getByLabel('${esc(target)}')).or(page.getByText('${esc(target)}', { exact: false })).first().hover();`;
       }
     }
 
-    // Select/dropdown
+    // Select/dropdown — unified taxonomy: native + ARIA combobox/listbox +
+    // typeahead + multi-select + custom.
     if (parsedStep?.action === 'select' && parsedStep.optionValue !== undefined) {
-      const loc = this.findLocatorForField(parsedStep.target, pom);
-      if (loc) {
-        if (loc.elementType === 'combobox') return `await ${instance}.${loc.variableName}.click();\n    await page.getByRole('option', { name: '${esc(parsedStep.optionValue)}' }).first().click();`;
-        return `await ${instance}.safeSelect(${instance}.${loc.variableName}, '${esc(parsedStep.optionValue)}');`;
+      const loc = this.findLocatorForField(parsedStep.target, pom, 'select');
+      // Multi-value syntax: "A, B, C" or "A | B | C" in the option value.
+      const multiValues: string[] = this.splitMultiSelectValues(parsedStep.optionValue);
+      if (multiValues.length > 1) {
+        const literal = multiValues.map((v: string) => `'${esc(v)}'`).join(', ');
+        if (loc) return `await ${instance}.smartMultiSelect(${instance}.${loc.variableName}, [${literal}]);`;
+        return `await page.getByLabel('${esc(parsedStep.target)}').or(page.getByRole('combobox', { name: '${esc(parsedStep.target)}' })).first().click();\n    for (const opt of [${literal}]) {\n      await page.getByRole('option', { name: opt, exact: false }).first().click();\n    }`;
       }
-      return `await page.getByLabel('${esc(parsedStep.target)}').selectOption('${esc(parsedStep.optionValue)}');`;
+      if (loc) return `await ${instance}.smartSelect(${instance}.${loc.variableName}, '${esc(parsedStep.optionValue)}');`;
+      return `await page.getByLabel('${esc(parsedStep.target)}').or(page.getByRole('combobox', { name: '${esc(parsedStep.target)}' })).first().click();\n    await page.getByRole('option', { name: '${esc(parsedStep.optionValue)}', exact: false }).first().click();`;
     }
 
     // Fill
     if ((lower.includes('fill') || lower.includes('enter') || lower.includes('type') || lower.includes('set')) && quotes.length >= 2) {
-      const loc = this.findLocatorForField(quotes[0], pom);
+      const loc = this.findLocatorForField(quotes[0], pom, 'fill');
       if (loc) return `await ${instance}.safeFill(${instance}.${loc.variableName}, '${esc(quotes[1])}');`;
-      return `await page.getByLabel('${esc(quotes[0].replace(/[:\s]+$/, '').trim())}').fill('${esc(quotes[1])}');`;
+      return `await page.getByLabel('${esc(quotes[0].replace(/[:\s]+$/, '').trim())}').or(page.getByPlaceholder('${esc(quotes[0])}')).first().fill('${esc(quotes[1])}');`;
     }
 
     // Click
     if (lower.includes('click') && quotes[0]) {
-      const loc = this.findLocatorForField(quotes[0], pom);
+      const loc = this.findLocatorForField(quotes[0], pom, 'click');
       if (loc) return `await ${instance}.retryClick(${instance}.${loc.variableName});`;
-      return `await page.getByRole('button', { name: '${esc(quotes[0])}' }).or(page.getByRole('link', { name: '${esc(quotes[0])}' })).first().click();`;
+      // Multi-strategy fallback: button > link > menuitem > label > text.
+      return `await page.getByRole('button', { name: '${esc(quotes[0])}' }).or(page.getByRole('link', { name: '${esc(quotes[0])}' })).or(page.getByRole('menuitem', { name: '${esc(quotes[0])}' })).or(page.getByLabel('${esc(quotes[0])}')).or(page.getByText('${esc(quotes[0])}', { exact: false })).first().click();`;
     }
 
     // Uncheck (before check)
     if (lower.includes('uncheck') && quotes[0]) {
-      const loc = this.findLocatorForField(quotes[0], pom);
+      const loc = this.findLocatorForField(quotes[0], pom, 'check');
       if (loc) return `await ${instance}.${loc.variableName}.uncheck();`;
       return `await page.getByRole('checkbox', { name: '${esc(quotes[0])}' }).uncheck();`;
     }
 
     // Check
     if (lower.includes('check') && quotes[0]) {
-      const loc = this.findLocatorForField(quotes[0], pom);
+      const loc = this.findLocatorForField(quotes[0], pom, 'check');
       if (loc) return `await ${instance}.${loc.variableName}.check();`;
       return `await page.getByRole('checkbox', { name: '${esc(quotes[0])}' }).check();`;
     }
@@ -1819,12 +2116,27 @@ export { expect } from '@playwright/test';
       return `await page.keyboard.press('${esc(quotes[0])}');`;
     }
 
-    // Upload file
-    if (lower.match(/\b(upload|attach)\b/) && quotes[0]) {
-      const target = quotes.length >= 2 ? quotes[1] : '';
-      const loc = target ? this.findLocatorForField(target, pom) : null;
-      if (loc) return `await ${instance}.${loc.variableName}.setInputFiles('${esc(quotes[0])}');`;
-      return `await page.locator('input[type="file"]').setInputFiles('${esc(quotes[0])}');`;
+    // Upload file — guard against "upload"/"attach" appearing inside quoted text
+    // (e.g. `"Upload" should be visible` would otherwise hijack this branch).
+    // Only fire when the verb appears in the un-quoted part of the step.
+    {
+      const unquoted = stepText.replace(/"[^"]*"/g, '').toLowerCase();
+      const isUploadAction = /\b(upload|attach)\b/.test(unquoted);
+      if (isUploadAction && quotes[0]) {
+        const target = quotes.length >= 2 ? quotes[1] : '';
+        // Prefer a POM locator that is actually a file input. The matcher
+        // happily returns the page heading "File Uploader" for the field
+        // name "File"; calling setInputFiles on a heading throws at runtime.
+        const loc = target ? this.findLocatorForField(target, pom) : null;
+        const isFileInput = (l: any) => l && (
+          /type\s*=\s*["']file["']/i.test(l.locatorCode || '') ||
+          /\bfileinput|fileupload|chooseFile|attachment/i.test(l.variableName || '')
+        );
+        if (loc && isFileInput(loc)) {
+          return `await ${instance}.${loc.variableName}.setInputFiles('${esc(quotes[0])}');`;
+        }
+        return `await page.locator('input[type="file"]').first().setInputFiles('${esc(quotes[0])}');`;
+      }
     }
 
     // Scroll
@@ -1845,25 +2157,61 @@ export { expect } from '@playwright/test';
       return `await page.screenshot({ path: '${esc(quotes[0] || 'screenshot')}.png', fullPage: true });`;
     }
 
-    // Assertions — should see
-    if (lower.includes('should see') || lower.includes('is visible') || lower.includes('displayed') || lower.includes('is shown')) {
+    // Assertions — visibility. Match: "should see", "is visible", "displayed",
+    // "is shown", "should be visible", and the natural "I see the … button/link".
+    // Prefers role-based locators when the step mentions "button"/"link".
+    if (
+      lower.includes('should see') ||
+      lower.includes('is visible') ||
+      lower.includes('displayed') ||
+      lower.includes('is shown') ||
+      lower.includes('should be visible') ||
+      /\bsee the\b/.test(lower)
+    ) {
       const target = quotes[0];
       if (!target) {
         const plainMatch = lower.match(/should see\s+(.+)/);
         if (plainMatch) return `await expect(page.getByText('${esc(plainMatch[1].trim())}', { exact: false })).toBeVisible({ timeout: 10000 });`;
         return `// TODO: ${stepText}`;
       }
+      // 1) POM locator
+      const loc = this.findLocatorForField(target, pom, 'assert');
+      if (loc) return `await expect(${instance}.${loc.variableName}).toBeVisible({ timeout: 10000 });`;
+      // 2) Role-specific when step text hints at button / link
+      if (/\bbutton\b/.test(lower)) {
+        return `await expect(page.getByRole('button', { name: '${esc(target)}' })).toBeVisible({ timeout: 10000 });`;
+      }
+      if (/\blink\b/.test(lower)) {
+        return `await expect(page.getByRole('link', { name: '${esc(target)}' })).toBeVisible({ timeout: 10000 });`;
+      }
+      // 3) Reusable POM assertion method (e.g. assertLoginSuccessVisible)
       const cleanName = target.replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(/\s+/)
         .map((p, i) => i === 0 ? p.charAt(0).toLowerCase() + p.slice(1) : p.charAt(0).toUpperCase() + p.slice(1)).join('');
       const methodName = `assert${cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}Visible`;
       if (pom.methods.includes(methodName)) return `await ${instance}.${methodName}();`;
+      // 4) Text fallback
       return `await expect(page.getByText('${esc(target)}', { exact: false })).toBeVisible({ timeout: 10000 });`;
     }
 
-    // Should not see
-    if (lower.includes('should not see') || lower.includes('not visible') || lower.includes('is hidden')) {
+    // Negative visibility. Match: "should not see", "not visible", "is hidden",
+    // "should not be visible", and "I should not see the … button/link".
+    if (
+      lower.includes('should not see') ||
+      lower.includes('not visible') ||
+      lower.includes('is hidden') ||
+      lower.includes('should not be visible') ||
+      lower.includes('should be hidden')
+    ) {
       const target = quotes[0];
       if (!target) return `// TODO: ${stepText}`;
+      const loc = this.findLocatorForField(target, pom, 'assert');
+      if (loc) return `await expect(${instance}.${loc.variableName}).toBeHidden();`;
+      if (/\bbutton\b/.test(lower)) {
+        return `await expect(page.getByRole('button', { name: '${esc(target)}' })).toBeHidden();`;
+      }
+      if (/\blink\b/.test(lower)) {
+        return `await expect(page.getByRole('link', { name: '${esc(target)}' })).toBeHidden();`;
+      }
       return `await expect(page.getByText('${esc(target)}')).toBeHidden();`;
     }
 
@@ -1921,12 +2269,264 @@ export { expect } from '@playwright/test';
     return `// TODO: unmapped step — ${stepText}`;
   }
 
-  private findLocatorForField(fieldName: string, pom: POMResult): POMLocator | undefined {
+  /**
+   * Score-based locator lookup. Replaces the old exact-or-substring match,
+   * which was too weak for post-login pages where step text ("Click Home")
+   * rarely matches the POM field name ("Go to Homepage") literally.
+   *
+   * Scoring dimensions:
+   *  - fieldName exact / word-overlap / contains
+   *  - variableName overlap (camelCase split)
+   *  - element-type preference hint from the step text
+   *    (click -> button/link, fill -> input, select -> select/combobox)
+   *  - confidence bonus from the original POM (higher = more resilient)
+   */
+  private findLocatorForField(
+    fieldName: string,
+    pom: POMResult,
+    intent?: 'click' | 'fill' | 'select' | 'hover' | 'check' | 'assert',
+  ): POMLocator | undefined {
     const clean = fieldName.replace(/[:\s]+$/, '').trim().toLowerCase();
-    let match = pom.locators.find(l => l.fieldName.toLowerCase() === clean);
-    if (match) return match;
-    match = pom.locators.find(l => l.fieldName.toLowerCase().includes(clean) || clean.includes(l.fieldName.toLowerCase()));
-    return match;
+    if (!clean) return undefined;
+    // Expand the probe with synonyms: users write "Sign In" but the POM has
+    // a field called "Login", and vice versa. One variant matching is enough
+    // to surface the locator — the highest-scoring hit across all variants wins.
+    const variants = this.expandWithSynonyms(clean);
+    const allCleanWords = Array.from(new Set(variants.flatMap(v => v.split(/\s+/).filter(w => w.length > 1))));
+
+    const scoreLocAgainst = (loc: POMLocator, probe: string, probeWords: string[]): number => {
+      const fn = (loc.fieldName || '').toLowerCase();
+      const vn = this.splitCamelCase((loc.variableName || '')).toLowerCase();
+      let s = 0;
+
+      if (fn === probe) s += 200;
+      else if (fn === probe.replace(/\s+/g, '')) s += 180;
+      else if (fn.includes(probe)) s += 110;
+      else if (probe.includes(fn) && fn.length >= 3) s += 90;
+      else {
+        const fnWords = fn.split(/\s+/).filter(w => w.length > 1);
+        const overlap = probeWords.filter(w => fnWords.includes(w)).length;
+        if (overlap > 0) s += 60 * (overlap / Math.max(probeWords.length, fnWords.length || 1));
+      }
+
+      const vnWords = vn.split(/\s+/).filter(w => w.length > 1);
+      const vnOverlap = probeWords.filter(w => vnWords.includes(w)).length;
+      if (vnOverlap > 0) s += 30 * (vnOverlap / Math.max(probeWords.length, vnWords.length || 1));
+
+      const et = loc.elementType;
+      if (intent === 'click' && (et === 'button' || et === 'link' || et === 'menu')) s += 25;
+      else if (intent === 'fill' && et === 'input') s += 30;
+      else if (intent === 'select' && (et === 'select' || et === 'combobox')) s += 40;
+      else if (intent === 'check' && (et === 'checkbox' || et === 'radio')) s += 30;
+      if (intent === 'click' && (et === 'input' || et === 'checkbox' || et === 'radio' || et === 'select')) s -= 15;
+      if (intent === 'fill' && (et === 'button' || et === 'link')) s -= 20;
+
+      s += Math.max(0, Math.min(15, Math.round((loc.confidence ?? 0) * 0.15)));
+      return s;
+    };
+
+    const scored = pom.locators.map(l => {
+      let best = 0;
+      for (const variant of variants) {
+        const vw = variant.split(/\s+/).filter(w => w.length > 1);
+        const s = scoreLocAgainst(l, variant, vw.length > 0 ? vw : allCleanWords);
+        if (s > best) best = s;
+      }
+      return { l, s: best };
+    }).filter(x => x.s > 0);
+    scored.sort((a, b) => b.s - a.s);
+    if (scored.length === 0) return undefined;
+    return scored[0].s >= 25 ? scored[0].l : undefined;
+  }
+
+  /**
+   * Generate a small set of synonym/lexical variants for a step target so the
+   * scored matcher can resolve common UI copy mismatches: users write what
+   * they see on the screen, but the POM field name was built from a label,
+   * testid, or placeholder that used different wording.
+   *
+   * Each variant is space-separated, lowercased. The original probe is always
+   * included — synonyms only add alternatives, never replace.
+   */
+  private expandWithSynonyms(clean: string): string[] {
+    // Bidirectional groups — any member matches any other.
+    const groups: string[][] = [
+      ['login', 'log in', 'sign in', 'signin'],
+      ['logout', 'log out', 'sign out', 'signout'],
+      ['submit', 'send'],
+      ['cancel', 'close', 'dismiss'],
+      ['delete', 'remove', 'trash'],
+      ['edit', 'modify', 'update'],
+      ['save', 'apply', 'confirm'],
+      ['search', 'find', 'lookup'],
+      ['ok', 'okay', 'accept'],
+      ['email', 'e-mail', 'mail'],
+      ['username', 'user name', 'user id', 'userid', 'user'],
+      ['password', 'pwd', 'pass'],
+      ['home', 'homepage', 'dashboard'],
+      ['settings', 'preferences', 'options', 'config'],
+      ['profile', 'account', 'my account'],
+      ['next', 'continue', 'proceed'],
+      ['prev', 'previous', 'back'],
+      ['new', 'create', 'add'],
+    ];
+    const out = new Set<string>([clean]);
+    for (const group of groups) {
+      for (const term of group) {
+        if (clean === term || clean.includes(term)) {
+          for (const alt of group) {
+            if (alt === term) continue;
+            out.add(clean.split(term).join(alt));
+          }
+        }
+      }
+    }
+    return Array.from(out);
+  }
+
+  private splitCamelCase(s: string): string {
+    return s.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ');
+  }
+
+  /**
+   * Produce a `// @unstable` comment for a step whose resolved locator has
+   * low confidence. The dry-run preview UI parses these to highlight fragile
+   * steps before the test is saved.
+   */
+  private confidenceWarningForStep(stepText: string, pom: POMResult): string | null {
+    const lower = stepText.toLowerCase();
+    const quotes = (stepText.match(/"([^"]*)"/g) || []).map(m => m.replace(/"/g, ''));
+    const target = quotes[0];
+    if (!target) return null;
+    const intent: 'click' | 'fill' | 'select' | 'hover' | 'check' | 'assert' | undefined =
+      lower.match(/\b(hover|mouseover|mouse over)\b/) ? 'hover' :
+      lower.includes('fill') || lower.includes('enter') || lower.includes('type') || lower.includes('set') ? 'fill' :
+      lower.includes('select') ? 'select' :
+      lower.includes('uncheck') || lower.includes('check') ? 'check' :
+      lower.includes('click') ? 'click' :
+      lower.includes('should see') || lower.includes('is visible') || lower.includes('displayed') ? 'assert' :
+      undefined;
+    const loc = this.findLocatorForField(target, pom, intent);
+    if (!loc) return `// @unstable no POM match for "${target}" — falling back to generic locator chain`;
+    const c = loc.confidence ?? 100;
+    if (c < 60) return `// @unstable confidence=${c} strategy=${loc.locatorStrategy} — consider adding a data-testid`;
+    return null;
+  }
+
+  /**
+   * Detect a chained-hover intent in step text. Recognizes:
+   *   - "I hover over Settings then Profile"
+   *   - "Hover Settings, then Profile"
+   *   - "Hover \"Settings\" > \"Profile\" > \"Edit\""
+   *   - Multi-quote hovers: quotes[] has 2+ entries and step has "hover"
+   * Returns the ordered list of hover targets, or null if no chain detected.
+   */
+  /**
+   * Split a "select X, Y, Z" or "X | Y | Z" option value into discrete choices
+   * so the step mapper can emit a multi-select call. Single-value strings
+   * return a one-element array; whitespace-only segments are dropped.
+   * Avoids splitting on commas that are inside quoted pairs (e.g. "1,000").
+   */
+  private splitMultiSelectValues(value: string): string[] {
+    if (!value) return [];
+    // Pipe takes precedence — it's unambiguous.
+    if (value.includes('|')) {
+      return value.split('|').map(s => s.trim()).filter(Boolean);
+    }
+    // Comma split only when there are 2+ commas OR the segments look like
+    // discrete options (short, title-case-ish). Otherwise a value like
+    // "Main St, Apt 4" would be wrongly split.
+    if (value.includes(',')) {
+      const parts = value.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length >= 2 && parts.every(p => p.length <= 40 && !/\d{2,}/.test(p))) {
+        return parts;
+      }
+    }
+    return [value];
+  }
+
+  private detectHoverChain(stepText: string, quotes: string[]): string[] | null {
+    const lower = stepText.toLowerCase();
+    if (!/\b(hover|mouseover|mouse over)\b/.test(lower)) return null;
+
+    // Two or more distinct quoted targets strongly imply a chain.
+    if (quotes.length >= 2) {
+      const uniq = Array.from(new Set(quotes.map(q => q.trim()).filter(q => q.length > 0)));
+      if (uniq.length >= 2) return uniq;
+    }
+
+    // Split by " > " (arrow chain) or " then " / ", then ".
+    const arrowSplit = stepText.split(/\s*>\s*|\s+then\s+|,\s*then\s+/i);
+    if (arrowSplit.length >= 2) {
+      // Strip a leading "hover"/"I hover"/"hover over" from the first segment.
+      const cleaned = arrowSplit
+        .map((s, i) => i === 0 ? s.replace(/^\s*(?:i\s+)?hover(?:\s+over)?\s*/i, '') : s)
+        .map(s => s.replace(/^["'\s]+|["'\s]+$/g, ''))
+        .filter(s => s.length > 0);
+      if (cleaned.length >= 2) return cleaned;
+    }
+    return null;
+  }
+
+  /**
+   * Append static-scan components as POMLocator entries into an existing
+   * locators[] list BEFORE the page-class TS is built. `usedVarNames` is the
+   * same set the caller tracks for collision detection, so the emitted class
+   * has no duplicate variables.
+   */
+  private appendScanComponentsToLocators(
+    scanComponents: any[],
+    locators: POMLocator[],
+    usedVarNames: Set<string>,
+  ): void {
+    const toPascal = (s: string) =>
+      s.replace(/(?:^|[^a-zA-Z0-9])([a-zA-Z])/g, (_, c) => c.toUpperCase()).replace(/[^a-zA-Z0-9]/g, '');
+    const uniqueName = (base: string): string => {
+      const safe = base || 'component';
+      let n = safe;
+      let i = 2;
+      while (usedVarNames.has(n)) n = `${safe}${i++}`;
+      usedVarNames.add(n);
+      return n;
+    };
+
+    let added = 0;
+    for (const c of scanComponents) {
+      const code: string | undefined = c.bestLocator?.code;
+      if (!code) continue;
+      const locatorCode = code.replace(/^page\./, 'this.page.');
+      const rawName = c.id || c.type || 'component';
+      const suffix =
+        c.type === 'tablist' ? 'Tabs' :
+        c.type === 'list' ? 'List' :
+        c.type === 'menu' ? 'Menu' :
+        c.type === 'form' ? 'Form' : '';
+      const basePascal = toPascal(rawName) + suffix;
+      const variableName = uniqueName(basePascal.charAt(0).toLowerCase() + basePascal.slice(1));
+
+      const elementType: POMLocator['elementType'] =
+        c.type === 'menu' ? 'menu' : 'other';
+
+      const fieldName =
+        c.type === 'tablist' ? `${c.tabs?.[0]?.name || 'Tab'} tabs` :
+        c.type === 'menu'    ? `${c.items?.[0]?.name || 'Menu'} menu` :
+        c.type === 'list'    ? `${c.sampleItems?.[0]?.split(/\s+/).slice(0, 3).join(' ') || 'List'} list` :
+        c.type === 'form'    ? `${c.submitLabel || 'Submit'} form` :
+        rawName;
+
+      locators.push({
+        fieldName,
+        variableName,
+        locator: locatorCode,
+        elementType,
+        locatorStrategy: c.bestLocator?.strategy || 'css',
+        confidence: Math.round((c.confidence ?? 0.5) * 100),
+      });
+      added++;
+    }
+    if (added > 0) {
+      logger.info(`POM Generator: merged ${added} static-scan component(s) into locators`);
+    }
   }
 }
 

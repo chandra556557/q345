@@ -32,6 +32,12 @@ import {
   saveAsScript,
   generatePOM,
   applyPOMToFeature,
+  scanPOM,
+  mintStreamToken,
+  healLocator,
+  getProjectAuthStatus,
+  saveProjectAuth,
+  deleteProjectAuth,
 } from '../controllers/bdd.controller';
 import {
   runCucumberTests,
@@ -57,14 +63,25 @@ router.post('/parse', authMiddleware, parseFeature);
 router.post('/features/:id/generate', authMiddleware, generateCode);
 router.post('/features/:id/save-as-script', authMiddleware, optionalTenantMiddleware, saveAsScript);
 router.post('/generate-pom', authMiddleware, generatePOM);
+router.post('/scan-pom', authMiddleware, scanPOM);
 router.post('/apply-pom', authMiddleware, applyPOMToFeature);
+router.post('/heal-locator', authMiddleware, healLocator);
+
+// Project auth (per-project storageState with TTL + encryption at rest)
+router.get('/projects/:id/auth/status', authMiddleware, getProjectAuthStatus);
+router.put('/projects/:id/auth', authMiddleware, saveProjectAuth);
+router.delete('/projects/:id/auth', authMiddleware, deleteProjectAuth);
 
 // Run execution
 router.post('/features/:id/run', authMiddleware, optionalTenantMiddleware, runFeature);
 router.get('/runs', authMiddleware, getRuns);
 router.get('/runs/:id', authMiddleware, getRun);
-router.get('/runs/:id/report', getRunReport); // No auth — serves HTML report directly (linked from UI)
-router.get('/runs/:id/stream', streamRun); // No authMiddleware — SSE uses token query param (EventSource can't send headers)
+// Report access: auth via token query param (so the report can be opened in a
+// new window via window.open('/api/...?token=...') — browsers don't send our
+// Authorization header through that flow).
+router.get('/runs/:id/report', getRunReport);
+router.post('/runs/:id/stream-token', authMiddleware, mintStreamToken); // mint short-lived HMAC stream token
+router.get('/runs/:id/stream', streamRun); // No authMiddleware — SSE uses streamToken (HMAC) or legacy token query param
 router.post('/runs/:id/cancel', authMiddleware, cancelRun);
 router.delete('/runs/:id', authMiddleware, deleteRun);
 

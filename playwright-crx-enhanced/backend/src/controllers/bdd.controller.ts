@@ -9,6 +9,10 @@ import multer from 'multer';
 import { bddService, bddEventEmitter } from '../services/bdd/bdd.service';
 import { testCaseConverter } from '../services/bdd/testCaseConverter.service';
 import { pomGeneratorService } from '../services/bdd/pomGenerator.service';
+import { staticScanService } from '../services/bdd/staticScan.service';
+import { locatorHealService } from '../services/bdd/locatorHeal.service';
+import { projectAuthService } from '../services/bdd/projectAuth.service';
+import { validatePublicUrl } from '../utils/urlValidator';
 
 // Multer: in-memory storage, 2 MB limit, only text/csv files
 export const testCaseUpload = multer({
@@ -88,81 +92,21 @@ const VALID_STATUSES = ['draft', 'active', 'archived'] as const;
 const VALID_RUN_STATUSES = ['pending', 'running', 'passed', 'failed', 'cancelled'] as const;
 
 /**
- * Inject or replace navigation steps in every scenario.
- * - If no navigation step exists → inject 'Given I navigate to "/"' as first step
- * - If a custom navigation step exists (e.g., "Given I am on the pulse login page") → replace with 'Given I navigate to "/"'
- * - If 'Given I navigate to "/"' already exists → leave as-is
+ * Pass-through — returns feature content unchanged.
+ *
+ * Previously this function injected or replaced the first step of each
+ * scenario with `Given I navigate to "/"`. That behaviour was removed because
+ * the runtime step-definitions (generated in bdd.service.ts) already contain
+ * a `Before` hook that auto-navigates to the project's baseUrl whenever the
+ * first step is NOT a navigation step. Rewriting the user-authored Gherkin
+ * clobbered domain-focused phrasings like `Given I open the "Hovers" page`
+ * and surfaced a synthetic "/" step the user never wrote.
+ *
+ * Kept as a no-op so call sites (createFeature, importFeatureFiles) stay
+ * stable — if a future feature legitimately needs injection, gate it here.
  */
 function injectNavigationStep(featureContent: string): string {
-  // Pattern to detect any navigation-like step
-  const navPattern = /^(\s*)(Given|When|And|But)\s+(I navigate to|I am on|I go to|I visit|I open the url|I am on the base URL|User should launch|the user launches|I launch the application|the application is open|User is on|user is on|the user is on)\b/i;
-
-  // The exact standard line we want
-  const standardNav = 'Given I navigate to "/"';
-
-  const lines = featureContent.split('\n');
-  const result: string[] = [];
-  let insideScenario = false;
-  let firstStepFound = false;
-  let navHandled = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    // Detect scenario start
-    if (/^\s*(Scenario|Scenario Outline):/.test(line)) {
-      insideScenario = true;
-      firstStepFound = false;
-      navHandled = false;
-      result.push(line);
-      continue;
-    }
-
-    // Reset on next scenario/feature/tag
-    if (insideScenario && /^\s*(Scenario|Scenario Outline|Feature:|@)/.test(trimmed) && firstStepFound) {
-      insideScenario = false;
-      firstStepFound = false;
-    }
-
-    // Inside scenario — check each step line
-    if (insideScenario && /^\s*(Given|When|Then|And|But)\s+/.test(line)) {
-      const navMatch = line.match(navPattern);
-
-      if (navMatch && !navHandled) {
-        // This is a navigation step — replace it with standard nav
-        const indent = navMatch[1] || '    ';
-
-        // Check if it's already the exact standard line
-        if (trimmed === standardNav) {
-          // Already correct — keep as-is
-          navHandled = true;
-          result.push(line);
-        } else {
-          // Replace custom nav with standard nav
-          navHandled = true;
-          result.push(`${indent}${standardNav}`);
-        }
-        firstStepFound = true;
-        continue;
-      }
-
-      if (!firstStepFound) {
-        firstStepFound = true;
-        // No nav step found yet and this is the first step — inject before it
-        if (!navHandled) {
-          const stepIndentMatch = line.match(/^(\s*)/);
-          const indent = stepIndentMatch ? stepIndentMatch[1] : '    ';
-          result.push(`${indent}${standardNav}`);
-          navHandled = true;
-        }
-      }
-    }
-
-    result.push(line);
-  }
-
-  return result.join('\n');
+  return featureContent;
 }
 
 export const createFeature = asyncHandler(async (req: Request, res: Response) => {
@@ -636,10 +580,11 @@ export const generateCode = asyncHandler(async (req: Request, res: Response) => 
   let playwrightCode = bddService.generatePlaywrightCode(parsed, lang);
 
   // Inject project baseUrl into BASE_URL fallback
-  if (projectConfig?.baseUrl && playwrightCode.includes("process.env.BASE_URL || ''")) {
+  const projectBaseUrl = projectConfig?.baseUrl;
+  if (projectBaseUrl && playwrightCode.includes("process.env.BASE_URL || ''")) {
     playwrightCode = playwrightCode.replace(
       "process.env.BASE_URL || ''",
-      `process.env.BASE_URL || '${projectConfig.baseUrl.replace(/'/g, "\\'")}'`
+      `process.env.BASE_URL || '${projectBaseUrl.replace(/'/g, "\\'")}'`
     );
   }
 
@@ -656,7 +601,7 @@ export const generateCode = asyncHandler(async (req: Request, res: Response) => 
  * Body: { featureContent: string, targetUrl: string, className?: string, waitForSelector?: string }
  */
 export const generatePOM = asyncHandler(async (req: Request, res: Response) => {
-  const { featureContent, targetUrl, className, waitForSelector, projectId } = req.body;
+  const { featureContent, targetUrl, className, waitForSelector, projectId, storageState, enrichWithScan } = req.body;
 
   // Resolve target URL: explicit > project config baseUrl > error
   let resolvedUrl = targetUrl;
@@ -673,17 +618,204 @@ export const generatePOM = asyncHandler(async (req: Request, res: Response) => {
   if (!featureContent || !resolvedUrl) {
     return res.status(400).json({ error: 'featureContent and targetUrl (or project baseUrl) are required' });
   }
+  // Gherkin validation — reject empty / malformed feature content up front.
+  const parsed = bddService.parseFeatureContent(featureContent);
+  if (!parsed.name || !parsed.scenarios || parsed.scenarios.length === 0) {
+    return res.status(400).json({
+      error: 'featureContent is not valid Gherkin — missing Feature name or scenarios',
+    });
+  }
+  // SSRF guard: block non-http(s), loopback, RFC1918, link-local.
+  const allowPrivate = process.env.ALLOW_PRIVATE_SCAN_URLS === 'true';
+  try {
+    validatePublicUrl(resolvedUrl, { allowPrivate });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+  // Validate storageState shape when provided — either a JSON object matching
+  // Playwright's shape, or a string path. Anything else is rejected up front.
+  let parsedStorageState: any;
+  if (storageState !== undefined && storageState !== null && storageState !== '') {
+    if (typeof storageState === 'string') {
+      try {
+        parsedStorageState = JSON.parse(storageState);
+      } catch {
+        // treat as a filesystem path if it doesn't parse as JSON
+        parsedStorageState = storageState;
+      }
+    } else if (typeof storageState === 'object') {
+      parsedStorageState = storageState;
+    } else {
+      return res.status(400).json({ error: 'storageState must be a JSON object or string' });
+    }
+  } else if (projectId) {
+    try {
+      const saved = await projectAuthService.get(projectId);
+      if (saved) {
+        parsedStorageState = saved.storageState;
+        logger.info(`POM: loaded project auth for ${projectId}`);
+      }
+    } catch { /* non-fatal */ }
+  }
+
   try {
     const results = await pomGeneratorService.generateFromFeature(
       featureContent,
       resolvedUrl,
-      { className, waitForSelector }
+      {
+        className,
+        waitForSelector,
+        storageState: parsedStorageState,
+        enrichWithScan: enrichWithScan === true || enrichWithScan === 'true',
+      }
     );
     return res.json({ success: true, data: results });
   } catch (err: any) {
     logger.error('POM generation failed:', err.message);
     return res.status(500).json({ error: `POM generation failed: ${err.message}` });
   }
+});
+
+/**
+ * Static POM scan — no feature file, no step replay. Visits a URL, classifies
+ * visible components (tabs/lists/menus/forms) and emits page-object code that
+ * extends BasePage / NavMenu / TabPanel / DataList.
+ * POST /api/bdd/scan-pom
+ * Body: { targetUrl?: string, pageName?: string, waitForSelector?: string, projectId?: string }
+ */
+export const scanPOM = asyncHandler(async (req: Request, res: Response) => {
+  const { targetUrl, pageName, waitForSelector, projectId, storageState } = req.body;
+
+  let resolvedUrl = targetUrl;
+  if (!resolvedUrl && projectId) {
+    try {
+      const projResult = await pool.query('SELECT "baseUrl" FROM "Project" WHERE id = $1', [projectId]);
+      if (projResult.rows[0]?.baseUrl) {
+        resolvedUrl = projResult.rows[0].baseUrl;
+        logger.info(`Static scan: using project baseUrl: ${resolvedUrl}`);
+      }
+    } catch { /* ignore */ }
+  }
+
+  if (!resolvedUrl) {
+    return res.status(400).json({ error: 'targetUrl (or project baseUrl) is required' });
+  }
+  // SSRF guard — shared with generatePOM. Toggle ALLOW_PRIVATE_SCAN_URLS=true
+  // in the environment for local dev against localhost / RFC1918 hosts.
+  const allowPrivate = process.env.ALLOW_PRIVATE_SCAN_URLS === 'true';
+  try {
+    validatePublicUrl(resolvedUrl, { allowPrivate });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+  let parsedStorageState: any;
+  if (storageState !== undefined && storageState !== null && storageState !== '') {
+    if (typeof storageState === 'string') {
+      try { parsedStorageState = JSON.parse(storageState); }
+      catch { parsedStorageState = storageState; }
+    } else if (typeof storageState === 'object') {
+      parsedStorageState = storageState;
+    } else {
+      return res.status(400).json({ error: 'storageState must be a JSON object or string' });
+    }
+  } else if (projectId) {
+    try {
+      const saved = await projectAuthService.get(projectId);
+      if (saved) {
+        parsedStorageState = saved.storageState;
+        logger.info(`Static scan: loaded project auth for ${projectId}`);
+      }
+    } catch { /* non-fatal */ }
+  }
+
+  try {
+    const result = await staticScanService.scanAndEmit({
+      url: resolvedUrl,
+      pageName,
+      waitFor: waitForSelector,
+      storageState: parsedStorageState,
+    });
+    return res.json({ success: true, data: result });
+  } catch (err: any) {
+    logger.error('Static scan failed:', err.message);
+    return res.status(500).json({ error: `Static scan failed: ${err.message}` });
+  }
+});
+
+/**
+ * Project auth (per-project storageState)
+ * GET    /api/bdd/projects/:id/auth/status
+ * PUT    /api/bdd/projects/:id/auth         Body: { storageState, ttlMinutes?, refreshNote? }
+ * DELETE /api/bdd/projects/:id/auth
+ *
+ * The stored storageState is AES-256-GCM encrypted with a key derived from
+ * JWT_SECRET. runFeature / generatePOM / scanPOM auto-load it when the
+ * caller omits `storageState` in the request body.
+ */
+async function userOwnsProject(userId: string, projectId: string): Promise<boolean> {
+  const { rows } = await pool.query(`SELECT 1 FROM "Project" WHERE id = $1 AND "userId" = $2`, [projectId, userId]);
+  return rows.length > 0;
+}
+
+export const getProjectAuthStatus = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { id } = req.params;
+  if (!await userOwnsProject(userId, id)) return res.status(404).json({ error: 'Project not found' });
+  const status = await projectAuthService.status(id);
+  return res.json({ success: true, data: status });
+});
+
+export const saveProjectAuth = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { id } = req.params;
+  if (!await userOwnsProject(userId, id)) return res.status(404).json({ error: 'Project not found' });
+
+  const { storageState, ttlMinutes, refreshNote } = req.body || {};
+  // Accept JSON object or JSON string. Validate Playwright's expected shape.
+  let parsed: any;
+  if (typeof storageState === 'string') {
+    try { parsed = JSON.parse(storageState); }
+    catch { return res.status(400).json({ error: 'storageState is not valid JSON' }); }
+  } else if (typeof storageState === 'object' && storageState !== null) {
+    parsed = storageState;
+  } else {
+    return res.status(400).json({ error: 'storageState is required (JSON object or string)' });
+  }
+  if (!parsed.cookies && !parsed.origins) {
+    return res.status(400).json({ error: 'storageState must have `cookies` or `origins` (Playwright shape)' });
+  }
+  if (ttlMinutes !== undefined && (typeof ttlMinutes !== 'number' || ttlMinutes < 1 || ttlMinutes > 10080)) {
+    return res.status(400).json({ error: 'ttlMinutes must be a number between 1 and 10080' });
+  }
+
+  await projectAuthService.save(id, parsed, { ttlMinutes, refreshNote });
+  const status = await projectAuthService.status(id);
+  return res.json({ success: true, data: status });
+});
+
+export const deleteProjectAuth = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { id } = req.params;
+  if (!await userOwnsProject(userId, id)) return res.status(404).json({ error: 'Project not found' });
+  await projectAuthService.clear(id);
+  return res.json({ success: true });
+});
+
+/**
+ * Heal a failing locator at runtime — the generated step-defs call this
+ * when a locator-timeout error is caught on a @auto-heal tagged scenario.
+ * Body: { failingLocator: string, elements: HealElement[], stepText?: string }
+ */
+export const healLocator = asyncHandler(async (req: Request, res: Response) => {
+  const { failingLocator, elements, stepText } = req.body || {};
+  if (typeof failingLocator !== 'string' || !failingLocator.trim()) {
+    return res.status(400).json({ error: 'failingLocator is required' });
+  }
+  if (!Array.isArray(elements)) {
+    return res.status(400).json({ error: 'elements must be an array of {tag, role, name, text, testId, ...}' });
+  }
+  const result = locatorHealService.heal({ failingLocator, stepText, elements });
+  return res.json({ success: true, data: result });
 });
 
 /**
@@ -752,10 +884,11 @@ export const saveAsScript = asyncHandler(async (req: Request, res: Response) => 
   let playwrightCode = bddService.generatePlaywrightCode(parsed, lang);
 
   // Replace empty BASE_URL fallback with project's baseUrl
-  if (projectConfig?.baseUrl && playwrightCode.includes("process.env.BASE_URL || ''")) {
+  const scriptBaseUrl = projectConfig?.baseUrl;
+  if (scriptBaseUrl && playwrightCode.includes("process.env.BASE_URL || ''")) {
     playwrightCode = playwrightCode.replace(
       "process.env.BASE_URL || ''",
-      `process.env.BASE_URL || '${projectConfig.baseUrl.replace(/'/g, "\\'")}'`
+      `process.env.BASE_URL || '${scriptBaseUrl.replace(/'/g, "\\'")}'`
     );
   }
 
@@ -801,6 +934,8 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
     environment,
     // Dynamic project selection
     projectId,
+    // Playwright storageState — object with {cookies, origins} or path string
+    storageState,
   } = req.body;
 
   if (!VALID_BROWSERS.includes(browser)) {
@@ -810,6 +945,23 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
   // Validate retry count (0-5)
   if (retryCount !== undefined && (retryCount < 0 || retryCount > 5)) {
     return res.status(400).json({ error: 'retryCount must be between 0 and 5' });
+  }
+
+  // Validate environment profile shape (the runner relies on this being
+  // well-formed; a malformed payload previously crashed the step-def generator).
+  if (environment !== undefined && environment !== null) {
+    if (typeof environment !== 'object' || Array.isArray(environment)) {
+      return res.status(400).json({ error: 'environment must be an object' });
+    }
+    const e: any = environment;
+    const stringOrNullish = (v: any) => v === undefined || v === null || typeof v === 'string';
+    const objOrNullish = (v: any) => v === undefined || v === null || (typeof v === 'object' && !Array.isArray(v));
+    if (!stringOrNullish(e.name) || !stringOrNullish(e.baseUrl)) {
+      return res.status(400).json({ error: 'environment.name and environment.baseUrl must be strings if provided' });
+    }
+    if (!objOrNullish(e.credentials) || !objOrNullish(e.variables) || !objOrNullish(e.headers)) {
+      return res.status(400).json({ error: 'environment.credentials / variables / headers must be objects if provided' });
+    }
   }
 
   const { rows } = await pool.query(
@@ -896,21 +1048,62 @@ export const runFeature = asyncHandler(async (req: Request, res: Response) => {
     name: environment?.name || projectConfig?.name || undefined,
   };
 
-  // Execute asynchronously with all options
+  // Normalize storageState: accept JSON object, JSON string, or file path.
+  // Runtime tests will consume it via Playwright's `newContext({ storageState })`.
+  let runStorageState: any;
+  if (storageState !== undefined && storageState !== null && storageState !== '') {
+    if (typeof storageState === 'string') {
+      try { runStorageState = JSON.parse(storageState); }
+      catch { runStorageState = storageState; }
+    } else if (typeof storageState === 'object') {
+      runStorageState = storageState;
+    } else {
+      return res.status(400).json({ error: 'storageState must be a JSON object or string' });
+    }
+  } else if (effectiveProjectId) {
+    // Fall back to the project's saved auth when the caller didn't supply one.
+    // If the saved state is past TTL we still use it but log a warning — the
+    // runtime auth-liveness check will detect actual expiry on first navigation.
+    try {
+      const saved = await projectAuthService.get(effectiveProjectId);
+      if (saved) {
+        runStorageState = saved.storageState;
+        const age = Date.now() - new Date(saved.record.updatedAt).getTime();
+        if (age > (saved.record.ttlMinutes || 60) * 60 * 1000) {
+          logger.warn(`BDD Run: using stale project auth for ${effectiveProjectId} (age ${Math.round(age / 60000)}min, ttl ${saved.record.ttlMinutes}min)`);
+        } else {
+          logger.info(`BDD Run: loaded project auth for ${effectiveProjectId}`);
+        }
+      }
+    } catch (e: any) {
+      logger.warn(`BDD Run: project auth load failed for ${effectiveProjectId}: ${e?.message}`);
+    }
+  }
+
+  // Execute asynchronously with all options. The outer catch also guards
+  // against the error handler itself throwing (e.g., DB write failing during
+  // error handling) which would otherwise become an unhandled rejection.
   setImmediate(() => {
     bddService.executeFeature(run.id, feature.featureContent, stepDefinitions, {
       browser, executionMode, tags,
       parallelWorkers: parsedParallelWorkers || undefined,
       retryCount: parsedRetryCount || undefined,
+      storageState: runStorageState,
       retryDelayMs: retryDelayMs ? parseInt(retryDelayMs, 10) : undefined,
       quarantineFailures: quarantineFailures === true || quarantineFailures === 'true',
       environment: envProfile.baseUrl ? envProfile : undefined,
     }, userId, organizationId).catch(async (err: any) => {
-      logger.error(`BDD Run ${run.id}: Unhandled error: ${err.message}`);
-      await pool.query(
-        `UPDATE "BDDRun" SET status = 'failed', "errorMsg" = $1, "completedAt" = now(), "updatedAt" = now() WHERE id = $2`,
-        [err.message || 'Unexpected execution error', run.id]
-      );
+      try {
+        logger.error(`BDD Run ${run.id}: Unhandled error: ${err.message}`);
+        await pool.query(
+          `UPDATE "BDDRun" SET status = 'failed', "errorMsg" = $1, "completedAt" = now(), "updatedAt" = now() WHERE id = $2`,
+          [err.message || 'Unexpected execution error', run.id]
+        );
+      } catch (writeErr: any) {
+        logger.error(`BDD Run ${run.id}: failed to persist failure status: ${writeErr?.message}`);
+      }
+    }).catch((fatal: any) => {
+      logger.error(`BDD Run ${run.id}: fatal error in error handler: ${fatal?.message}`);
     });
   });
 
@@ -980,18 +1173,36 @@ export const getRun = asyncHandler(async (req: Request, res: Response) => {
 
 /**
  * Get BDD run report HTML from database
- * GET /api/bdd/runs/:id/report
+ * GET /api/bdd/runs/:id/report?token=<jwt>
+ *
+ * Auth: token passed as query param (EventSource/anchor-target-blank flows
+ * cannot carry Authorization headers). Ownership is verified before redirect.
+ * Note: the actual report HTML is served by express.static from
+ * /playwright-crx-reports — UUID unguessability is the residual defence there.
  */
 export const getRunReport = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const token = (req.query.token as string) || req.headers.authorization?.replace('Bearer ', '');
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Token is required' });
+  }
+  let decoded: { userId: string };
+  try {
+    const { authService } = require('../services/auth/auth.service');
+    decoded = authService.verifyAccessToken(token);
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Invalid or expired token' });
+  }
 
   const { rows } = await pool.query(
-    `SELECT "reportUrl", status FROM "BDDRun" WHERE id = $1`,
+    `SELECT "reportUrl", status, "userId" FROM "BDDRun" WHERE id = $1`,
     [id]
   );
   if (rows.length === 0) return res.status(404).json({ error: 'Run not found' });
-
   const run = rows[0];
+  if (run.userId !== decoded.userId) {
+    return res.status(403).json({ error: 'Forbidden', message: 'Run does not belong to caller' });
+  }
 
   // Redirect to BDD report if available
   if (run.reportUrl && run.reportUrl.startsWith('/playwright-crx-reports/')) {
@@ -1180,50 +1391,137 @@ export const deleteSchedule = asyncHandler(async (req: Request, res: Response) =
 // ===========================
 
 /**
+ * Mint a short-lived, run-scoped stream token. The SSE endpoint accepts only
+ * this token (not the raw JWT), so the long-lived access token never appears
+ * in URLs/logs/history. The token is HMAC-signed with JWT_SECRET and bound to
+ * (runId, userId, exp) — it can only stream the specific run it was minted for.
+ * POST /api/bdd/runs/:id/stream-token
+ */
+export const mintStreamToken = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { id } = req.params;
+
+  const { rows } = await pool.query(
+    `SELECT id FROM "BDDRun" WHERE id = $1 AND "userId" = $2`,
+    [id, userId]
+  );
+  if (rows.length === 0) return res.status(404).json({ error: 'Run not found' });
+
+  const { createHmac } = require('node:crypto');
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+  const exp = Math.floor(Date.now() / 1000) + 120; // 2-minute TTL
+  const payload = `${id}.${userId}.${exp}`;
+  const sig = createHmac('sha256', secret).update(payload).digest('hex');
+  return res.json({ success: true, data: { streamToken: `${payload}.${sig}`, expiresAt: exp } });
+});
+
+function verifyStreamToken(id: string, token: string): { userId: string } | null {
+  if (!token) return null;
+  const parts = token.split('.');
+  if (parts.length !== 4) return null;
+  const [runId, userId, expStr, sig] = parts;
+  if (runId !== id) return null;
+  const exp = parseInt(expStr, 10);
+  if (!Number.isFinite(exp) || Math.floor(Date.now() / 1000) > exp) return null;
+  const { createHmac, timingSafeEqual } = require('node:crypto');
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+  const expected = createHmac('sha256', secret).update(`${runId}.${userId}.${exp}`).digest('hex');
+  try {
+    const a = Buffer.from(expected, 'hex');
+    const b = Buffer.from(sig, 'hex');
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  } catch {
+    return null;
+  }
+  return { userId };
+}
+
+/**
  * SSE endpoint for live BDD run streaming
- * GET /api/bdd/runs/:id/stream
+ * GET /api/bdd/runs/:id/stream?streamToken=<hmac-token>
+ *
+ * Accepts: short-lived HMAC streamToken (preferred) or legacy JWT via ?token=
+ * for backwards compatibility. Adds a heartbeat + inactivity timeout to prevent
+ * listener leaks on ungraceful disconnects.
  */
 export const streamRun = (req: Request, res: Response) => {
   const { id } = req.params;
 
-  // SSE auth: EventSource API cannot send custom headers,
-  // so we accept the JWT token as a query parameter (?token=...)
-  const token = (req.query.token as string) || req.headers.authorization?.replace('Bearer ', '');
-  if (!token) {
-    return res.status(401).json({ error: 'Unauthorized', message: 'Token is required' });
-  }
-  try {
-    const { authService } = require('../services/auth/auth.service');
-    authService.verifyAccessToken(token);
-  } catch {
-    return res.status(401).json({ error: 'Unauthorized', message: 'Invalid or expired token' });
-  }
+  const streamTokenRaw = (req.query.streamToken as string) || '';
+  const legacyToken = (req.query.token as string) || req.headers.authorization?.replace('Bearer ', '');
 
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
-
-  res.write(`data: ${JSON.stringify({ event: 'connected', runId: id })}\n\n`);
-
-  const listener = (data: any) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-
-    // Close connection when run completes
-    if (data.event === 'completed' || data.event === 'error') {
-      setTimeout(() => res.end(), 500);
+  let ownerId: string | null = null;
+  if (streamTokenRaw) {
+    const verified = verifyStreamToken(id, streamTokenRaw);
+    if (!verified) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Invalid or expired streamToken' });
     }
-  };
+    ownerId = verified.userId;
+  } else if (legacyToken) {
+    try {
+      const { authService } = require('../services/auth/auth.service');
+      const decoded = authService.verifyAccessToken(legacyToken);
+      ownerId = decoded.userId;
+    } catch {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Invalid or expired token' });
+    }
+  } else {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Token or streamToken is required' });
+  }
 
-  bddEventEmitter.on(`run:${id}`, listener);
+  // Confirm ownership of the run — don't trust a stale token blindly.
+  pool.query(`SELECT "userId" FROM "BDDRun" WHERE id = $1`, [id])
+    .then(result => {
+      if (result.rows.length === 0 || result.rows[0].userId !== ownerId) {
+        res.status(403).json({ error: 'Forbidden' });
+        return;
+      }
 
-  req.on('close', () => {
-    bddEventEmitter.off(`run:${id}`, listener);
-  });
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
 
-  // explicit void return to satisfy TS (function has early returns above)
+      res.write(`data: ${JSON.stringify({ event: 'connected', runId: id })}\n\n`);
+
+      let closed = false;
+      const cleanup = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(heartbeat);
+        bddEventEmitter.off(`run:${id}`, listener);
+        try { res.end(); } catch { /* socket may already be torn down */ }
+      };
+
+      const listener = (data: any) => {
+        if (closed) return;
+        try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch { cleanup(); return; }
+        if (data.event === 'completed' || data.event === 'error') {
+          setTimeout(cleanup, 500);
+        }
+      };
+
+      // Heartbeat keeps intermediate proxies from closing the connection and
+      // surfaces dead sockets — a failed write triggers cleanup immediately.
+      const heartbeat = setInterval(() => {
+        if (closed) return;
+        try { res.write(`: ping\n\n`); } catch { cleanup(); }
+      }, 15_000);
+
+      // Hard cap: 30 minutes of streaming per connection, then force-close.
+      const maxStreamMs = 30 * 60 * 1000;
+      const hardTimer = setTimeout(cleanup, maxStreamMs);
+
+      bddEventEmitter.on(`run:${id}`, listener);
+      req.on('close', () => { clearTimeout(hardTimer); cleanup(); });
+      req.on('error', () => { clearTimeout(hardTimer); cleanup(); });
+    })
+    .catch(() => {
+      if (!res.headersSent) res.status(500).json({ error: 'Stream setup failed' });
+    });
+
   return;
 };
 

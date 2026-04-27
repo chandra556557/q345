@@ -69,6 +69,7 @@ const DB_MIN_CLIENTS = parseInt(process.env.DB_MIN_CLIENTS || '2', 10);
 const DB_IDLE_TIMEOUT = parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10);
 const DB_QUERY_TIMEOUT = parseInt(process.env.DB_QUERY_TIMEOUT || '30000', 10);
 const DB_CONNECTION_TIMEOUT = parseInt(process.env.DB_CONNECTION_TIMEOUT || '5000', 10);
+const DB_STATEMENT_TIMEOUT = parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000', 10);
 
 const pool = new Pool({
   connectionString,
@@ -76,7 +77,10 @@ const pool = new Pool({
   max: DB_MAX_CLIENTS,
   min: DB_MIN_CLIENTS,
   idleTimeoutMillis: DB_IDLE_TIMEOUT,
+  // query_timeout is client-side (node-postgres); statement_timeout is
+  // server-side (Postgres). Both guard against a hung DB saturating the pool.
   query_timeout: DB_QUERY_TIMEOUT,
+  statement_timeout: DB_STATEMENT_TIMEOUT,
   connectionTimeoutMillis: DB_CONNECTION_TIMEOUT,
 });
 

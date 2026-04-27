@@ -55,6 +55,25 @@ const MAX_QUEUED_RUNS = parseInt(process.env.BDD_MAX_QUEUED_RUNS || '20', 10);
 let activeRunCount = 0;
 const pendingQueue: Array<{ runId: string; resolve: () => void; reject: (err: Error) => void }> = [];
 
+// Simple async mutex for atomic slot bookkeeping. The critical section is
+// synchronous (no awaits inside acquire/release of the mutex), so this is a
+// trivial FIFO queue — no fairness concerns or deadlocks.
+const slotMutex = (() => {
+  let locked = false;
+  const waiters: Array<() => void> = [];
+  return {
+    async acquire(): Promise<void> {
+      if (!locked) { locked = true; return; }
+      await new Promise<void>(resolve => waiters.push(resolve));
+    },
+    release(): void {
+      const next = waiters.shift();
+      if (next) next();
+      else locked = false;
+    },
+  };
+})();
+
 // Live execution streaming via SSE
 export const bddEventEmitter = new EventEmitter();
 bddEventEmitter.setMaxListeners(100);
@@ -96,6 +115,13 @@ export interface ExecuteOptions {
   quarantineFailures?: boolean; // If true, quarantined (@quarantine) tests don't fail the run
   // Environment profiles
   environment?: EnvironmentProfile;
+  /**
+   * Playwright storageState (cookies + localStorage), either a JSON object
+   * with `{ cookies, origins }` or a path to a JSON file. Injected into the
+   * generated step-defs so every scenario launches a browser context already
+   * authenticated — lets tests skip login and run against protected routes.
+   */
+  storageState?: any;
 }
 
 export interface EnvironmentProfile {
@@ -1688,17 +1714,28 @@ class BDDService {
   }
 
   private async acquireSlot(runId: string): Promise<void> {
-    if (activeRunCount < MAX_CONCURRENT_RUNS) {
-      activeRunCount++;
-      logger.info(`BDD: Slot acquired for ${runId} (${activeRunCount}/${MAX_CONCURRENT_RUNS} active)`);
-      return;
+    // Node is single-threaded, but `await` points between the check and the
+    // increment used to let another acquireSlot call slip past the limit. We
+    // guard the synchronous check-and-increment with a micro-lock: only one
+    // acquireSlot may be inside the critical section at a time.
+    await slotMutex.acquire();
+    let waiting = false;
+    try {
+      if (activeRunCount < MAX_CONCURRENT_RUNS) {
+        activeRunCount++;
+        logger.info(`BDD: Slot acquired for ${runId} (${activeRunCount}/${MAX_CONCURRENT_RUNS} active)`);
+        return;
+      }
+      if (pendingQueue.length >= MAX_QUEUED_RUNS) {
+        throw new Error(`BDD queue is full (${MAX_QUEUED_RUNS} runs waiting). Try again later.`);
+      }
+      waiting = true;
+      logger.info(`BDD: Run ${runId} queued (${pendingQueue.length + 1} waiting, ${activeRunCount} active)`);
+    } finally {
+      slotMutex.release();
     }
 
-    if (pendingQueue.length >= MAX_QUEUED_RUNS) {
-      throw new Error(`BDD queue is full (${MAX_QUEUED_RUNS} runs waiting). Try again later.`);
-    }
-
-    logger.info(`BDD: Run ${runId} queued (${pendingQueue.length + 1} waiting, ${activeRunCount} active)`);
+    if (!waiting) return;
 
     await pool.query(
       `UPDATE "BDDRun" SET status = 'queued', "updatedAt" = now() WHERE id = $1`,
@@ -1714,14 +1751,21 @@ class BDDService {
   }
 
   private releaseSlot(): void {
-    const next = pendingQueue.shift();
-    if (next) {
-      // Transfer the slot directly to the next queued run (don't decrement+increment)
-      logger.info(`BDD: Dequeuing run ${next.runId} (${pendingQueue.length} still waiting)`);
-      next.resolve();
-    } else {
-      activeRunCount = Math.max(0, activeRunCount - 1);
-    }
+    // Serialize with acquireSlot's critical section so decrement-vs-transfer
+    // cannot race a concurrent acquire check.
+    slotMutex.acquire().then(() => {
+      try {
+        const next = pendingQueue.shift();
+        if (next) {
+          logger.info(`BDD: Dequeuing run ${next.runId} (${pendingQueue.length} still waiting)`);
+          next.resolve();
+        } else {
+          activeRunCount = Math.max(0, activeRunCount - 1);
+        }
+      } finally {
+        slotMutex.release();
+      }
+    });
   }
 
   getExecutionStatus(): { activeRuns: number; queuedRuns: number; maxConcurrent: number } {
@@ -1803,6 +1847,28 @@ class BDDService {
       const stepDefCode = this.buildStepDefinitions(mergedDefs, processedContent, screenshotDir, runId, options);
       const stepsPath = path.join(stepDefsDir, 'steps.js');
       fs.writeFileSync(stepsPath, stepDefCode);
+
+      // Surface unimplemented steps: the generator inserts TODO markers when
+      // it can't map a Gherkin step to a Playwright action. Scenarios that
+      // only hit TODO-stub steps otherwise pass silently because the step
+      // bodies are no-ops.
+      const todoMatches = stepDefCode.match(/\/\/ TODO: Implement step[^\n]*/g);
+      if (todoMatches && todoMatches.length > 0) {
+        const unique = Array.from(new Set(todoMatches)).slice(0, 10);
+        logger.warn(
+          `BDD Run ${runId}: ${todoMatches.length} unimplemented step(s) — tests may pass without actually running those steps. Examples:\n  ${unique.join('\n  ')}`,
+        );
+        // Emit a warning event so the live-stream UI can show it.
+        try {
+          bddEventEmitter.emit(`run:${runId}`, {
+            event: 'warning',
+            runId,
+            code: 'UNIMPLEMENTED_STEPS',
+            count: todoMatches.length,
+            samples: unique,
+          });
+        } catch { /* non-fatal */ }
+      }
 
       logger.info(`BDD Run ${runId}: Generated step defs:\n${stepDefCode.substring(0, 2000)}`);
 
@@ -2041,7 +2107,14 @@ class BDDService {
           }
         } else {
           overallStatus = 'failed';
-          errorMsg = 'results.json was empty';
+          // Surface cucumber stderr/stdout so the user gets a diagnostic,
+          // not just "results.json was empty". Exit code is included because
+          // Cucumber sometimes writes an empty [] and exits 1 when no
+          // scenarios matched the tag filter.
+          const tail = (cucumberStderr || cucumberStdout || '').toString().trim().slice(-2000);
+          errorMsg = `results.json was empty (cucumber exit ${cucumberExitCode ?? 'unknown'})` +
+            (tail ? `. Last output: ${tail}` : '');
+          logger.warn(`BDD Run ${runId}: results.json empty — exit=${cucumberExitCode}`);
         }
       } else {
         overallStatus = 'failed';
@@ -2477,8 +2550,27 @@ class BDDService {
     if (env?.baseUrl) {
       lines.push(`    baseURL: ${JSON.stringify(env.baseUrl)},`);
     }
+    // Inject storageState if the caller passed one on the run options. This
+    // lets tests start every scenario in an authenticated session (the user
+    // pastes auth.json once; every scenario reuses it). We serialize as JSON
+    // so the file-path and {cookies, origins} forms both work.
+    if (options.storageState) {
+      lines.push(`    storageState: ${JSON.stringify(options.storageState)},`);
+    }
     lines.push(`  };`);
     lines.push(`  this.context = await browser.newContext(contextOptions);`);
+    if (options.storageState) {
+      lines.push('');
+      lines.push(`  // Auth-liveness check: if the first navigation is bounced to a login`);
+      lines.push(`  // page the supplied storageState is stale — surface a clear failure`);
+      lines.push(`  // instead of letting the scenario silently run logged-out.`);
+      lines.push(`  this.__authCheck = async function(currentUrl) {`);
+      lines.push(`    const u = (currentUrl || '').toLowerCase();`);
+      lines.push(`    if (/\\/(login|signin|sign-in|auth\\/login)\\b/.test(u)) {`);
+      lines.push(`      throw new Error('storageState appears expired — navigation redirected to a login page: ' + currentUrl);`);
+      lines.push(`    }`);
+      lines.push(`  };`);
+    }
     lines.push(`  this.page = await this.context.newPage();`);
     lines.push(`  this.activePage = this.page; // activePage tracks iframe context (switches on "I switch to iframe")`);
     lines.push(`  this.page.setDefaultTimeout(${stepTimeout}); // ${stepTimeout / 1000}s default for Playwright actions (fill, click, etc.)`);
@@ -2506,6 +2598,25 @@ class BDDService {
     lines.push(`  // Enable console log capture`);
     lines.push(`  this.page.on('console', msg => {`);
     lines.push(`    if (msg.type() === 'error') console.log('[BROWSER ERROR]', msg.text());`);
+    lines.push(`  });`);
+    lines.push('');
+    lines.push(`  // Page JS errors — consumed by "Then the page should have no JS errors"`);
+    lines.push(`  this.__pageErrors = [];`);
+    lines.push(`  this.page.on('pageerror', err => {`);
+    lines.push(`    const msg = err && err.message ? err.message : String(err);`);
+    lines.push(`    this.__pageErrors.push(msg);`);
+    lines.push(`    console.log('[PAGE ERROR]', msg);`);
+    lines.push(`  });`);
+    lines.push('');
+    lines.push(`  // Main-frame navigation response status — consumed by "Then the response status should be N"`);
+    lines.push(`  this.__lastResponseStatus = null;`);
+    lines.push(`  this.page.on('response', resp => {`);
+    lines.push(`    try {`);
+    lines.push(`      const req = resp.request();`);
+    lines.push(`      if (req.isNavigationRequest() && resp.frame() === this.page.mainFrame()) {`);
+    lines.push(`        this.__lastResponseStatus = resp.status();`);
+    lines.push(`      }`);
+    lines.push(`    } catch { /* ignore */ }`);
     lines.push(`  });`);
     lines.push('');
     lines.push(`  // Auto-navigate to project baseUrl if configured AND first step is not a navigation step`);
@@ -2560,6 +2671,72 @@ class BDDService {
     lines.push(`BeforeStep(async function () {`);
     lines.push(`  this.stepIndex++;`);
     lines.push(`});`);
+    lines.push('');
+
+    // ─── Runtime self-healing helper ───────────────────────────────────
+    // Step defs that opt into healing wrap their action through this helper.
+    // On locator timeout, it captures the current DOM as a flat element list,
+    // POSTs it to /api/bdd/heal-locator, and retries once with the suggested
+    // replacement. Scoped to scenarios tagged @auto-heal so existing tests
+    // aren't slowed down by an extra POST per failure.
+    lines.push(`// Self-healing runtime helper (used when @auto-heal tag is present)`);
+    lines.push(`const BACKEND_URL = process.env.BDD_BACKEND_URL || 'http://localhost:3001';`);
+    lines.push(`async function captureHealSnapshot(page) {`);
+    lines.push(`  try {`);
+    lines.push(`    return await page.evaluate(() => {`);
+    lines.push(`      const sel = 'input, button, a, select, textarea, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="combobox"], [role="option"], label';`);
+    lines.push(`      return Array.from(document.querySelectorAll(sel)).slice(0, 200).map(el => {`);
+    lines.push(`        const rect = el.getBoundingClientRect();`);
+    lines.push(`        const cs = window.getComputedStyle(el);`);
+    lines.push(`        return {`);
+    lines.push(`          tag: el.tagName.toLowerCase(),`);
+    lines.push(`          role: el.getAttribute('role') || '',`);
+    lines.push(`          name: el.getAttribute('aria-label') || '',`);
+    lines.push(`          text: (el.innerText || el.textContent || '').trim().slice(0, 100),`);
+    lines.push(`          testId: el.getAttribute('data-testid') || el.getAttribute('data-test-id') || '',`);
+    lines.push(`          placeholder: el.placeholder || '',`);
+    lines.push(`          label: (document.querySelector('label[for="' + (el.id || '') + '"]') || {}).textContent || '',`);
+    lines.push(`          id: el.id || '',`);
+    lines.push(`          visible: rect.width > 0 && rect.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden',`);
+    lines.push(`          disabled: !!el.disabled,`);
+    lines.push(`        };`);
+    lines.push(`      });`);
+    lines.push(`    });`);
+    lines.push(`  } catch (e) { return []; }`);
+    lines.push(`}`);
+    lines.push(`async function requestHealedLocator(failingLocator, page, stepText) {`);
+    lines.push(`  const elements = await captureHealSnapshot(page);`);
+    lines.push(`  try {`);
+    lines.push(`    const fetchFn = (global.fetch || (await import('node-fetch')).default);`);
+    lines.push(`    const res = await fetchFn(BACKEND_URL + '/api/bdd/heal-locator', {`);
+    lines.push(`      method: 'POST',`);
+    lines.push(`      headers: { 'Content-Type': 'application/json' },`);
+    lines.push(`      body: JSON.stringify({ failingLocator, elements, stepText }),`);
+    lines.push(`    });`);
+    lines.push(`    const body = await res.json();`);
+    lines.push(`    return body?.data?.healed ? body.data : null;`);
+    lines.push(`  } catch (e) { console.log('[AUTO-HEAL] backend unreachable: ' + e.message); return null; }`);
+    lines.push(`}`);
+    lines.push(`// Wrap a Playwright action; on timeout error, attempt one heal + retry.`);
+    lines.push(`// Usage in step-defs: await autoHeal(this, 'page.getByRole(...)', (loc) => loc.click());`);
+    lines.push(`global.autoHeal = async function(world, failingLocatorCode, action, stepText) {`);
+    lines.push(`  const page = world.page;`);
+    lines.push(`  const isAutoHeal = (world.scenarioTags || []).includes('@auto-heal');`);
+    lines.push(`  try {`);
+    lines.push(`    const loc = eval('(' + failingLocatorCode.replace(/^page\\./, '(page).') + ')');`);
+    lines.push(`    return await action(loc);`);
+    lines.push(`  } catch (err) {`);
+    lines.push(`    if (!isAutoHeal) throw err;`);
+    lines.push(`    const msg = (err && err.message) || '';`);
+    lines.push(`    if (!/timeout|not found|no element|strict mode/i.test(msg)) throw err;`);
+    lines.push(`    console.log('[AUTO-HEAL] original failed: ' + msg.slice(0, 120) + ' — rescanning');`);
+    lines.push(`    const healed = await requestHealedLocator(failingLocatorCode, page, stepText);`);
+    lines.push(`    if (!healed) { console.log('[AUTO-HEAL] no replacement found'); throw err; }`);
+    lines.push(`    console.log('[AUTO-HEAL] retrying with: ' + healed.suggestedLocator + ' (confidence=' + healed.confidence + ')');`);
+    lines.push(`    const newLoc = eval('(' + healed.suggestedLocator.replace(/^page\\./, '(page).') + ')');`);
+    lines.push(`    return await action(newLoc);`);
+    lines.push(`  }`);
+    lines.push(`};`);
     lines.push('');
     lines.push(`AfterStep(async function (step) {`);
     lines.push(`  if (!this.page) return;`);
@@ -2791,6 +2968,71 @@ class BDDService {
       lines.push(`  }).join(', '));`);
       lines.push(`  throw new Error('Element "' + target + '" not found on page ' + page.url() + '. Visible clickables: ' + visible);`);
       lines.push('}');
+      lines.push('');
+
+      // Smart dropdown locator — resolves field name to a select/combobox/custom dropdown.
+      // Tries label, role=combobox, id, name, aria-label, placeholder, visible text container.
+      // Uses short-timeout probes so missing matches don't burn the 60s cucumber step budget.
+      lines.push(`async function findDropdown(page, field) {`);
+      lines.push(`  if (!field) throw new Error('Empty field name passed to findDropdown()');`);
+      lines.push(`  await page.waitForLoadState('domcontentloaded').catch(() => {});`);
+      lines.push(`  const clean = String(field).replace(/[:\\s]+$/, '').trim();`);
+      lines.push(`  const safe = clean.replace(/["\\\\]/g, '');`);
+      lines.push(`  const idSafe = clean.replace(/[^\\w-]/g, '');`);
+      lines.push(`  const candidates = [`);
+      lines.push(`    page.getByLabel(clean, { exact: false }),`);
+      lines.push(`    page.getByRole('combobox', { name: clean }),`);
+      lines.push(`    page.getByRole('listbox', { name: clean }),`);
+      lines.push(`  ];`);
+      lines.push(`  if (idSafe) {`);
+      lines.push(`    candidates.push(page.locator('#' + idSafe));`);
+      lines.push(`    candidates.push(page.locator('select[name="' + idSafe + '" i], select[id="' + idSafe + '" i]'));`);
+      lines.push(`    candidates.push(page.locator('[name="' + idSafe + '" i][role="combobox"], [id="' + idSafe + '" i][role="combobox"]'));`);
+      lines.push(`  }`);
+      lines.push(`  candidates.push(page.locator('select[aria-label="' + safe + '" i]'));`);
+      lines.push(`  candidates.push(page.locator('select[placeholder="' + safe + '" i]'));`);
+      lines.push(`  candidates.push(page.locator('[class*="select" i], [class*="dropdown" i]').filter({ hasText: safe }));`);
+      lines.push(`  for (const c of candidates) {`);
+      lines.push(`    try {`);
+      lines.push(`      const n = await c.count();`);
+      lines.push(`      if (n > 0) return c.first();`);
+      lines.push(`    } catch { /* try next */ }`);
+      lines.push(`  }`);
+      lines.push(`  // Last resort: if page has exactly one native <select>, use it`);
+      lines.push(`  const allSelects = page.locator('select');`);
+      lines.push(`  if ((await allSelects.count()) === 1) return allSelects.first();`);
+      lines.push(`  throw new Error('Could not find dropdown "' + field + '" on ' + page.url());`);
+      lines.push(`}`);
+      lines.push('');
+
+      // selectFromDropdown — does the actual selection given a resolved locator.
+      // Handles native <select> (via selectOption), custom dropdowns (click + click option),
+      // and falls back across label/value/regex for each.
+      lines.push(`async function selectFromDropdown(page, target, value) {`);
+      lines.push(`  const tag = await target.evaluate(el => el.tagName.toLowerCase()).catch(() => '');`);
+      lines.push(`  if (tag === 'select') {`);
+      lines.push(`    const tries = [`);
+      lines.push(`      () => target.selectOption({ label: value }),`);
+      lines.push(`      () => target.selectOption(value),`);
+      lines.push(`      () => target.selectOption({ value }),`);
+      lines.push(`      () => target.selectOption({ label: new RegExp('^\\\\s*' + value.replace(/[.*+?^$(){}|[\\]\\\\]/g, '\\\\$&') + '\\\\s*$', 'i') }),`);
+      lines.push(`    ];`);
+      lines.push(`    let lastErr;`);
+      lines.push(`    for (const fn of tries) {`);
+      lines.push(`      try { await fn(); return; } catch (e) { lastErr = e; }`);
+      lines.push(`    }`);
+      lines.push(`    throw lastErr || new Error('selectOption failed for "' + value + '"');`);
+      lines.push(`  }`);
+      lines.push(`  // Custom dropdown: click to open, wait for option, click`);
+      lines.push(`  await target.click();`);
+      lines.push(`  await page.waitForTimeout(300);`);
+      lines.push(`  const option = page.getByRole('option', { name: value })`);
+      lines.push(`    .or(page.getByRole('listitem', { name: value }))`);
+      lines.push(`    .or(page.getByRole('menuitem', { name: value }))`);
+      lines.push(`    .or(page.locator('[class*="option" i], [class*="menu-item" i], li, div[role="option"]', { hasText: value }))`);
+      lines.push(`    .first();`);
+      lines.push(`  await option.click();`);
+      lines.push(`}`);
       lines.push('');
 
       // ========================================
@@ -3375,37 +3617,16 @@ class BDDService {
       // ========================================
       lines.push(`// --- Dropdown / Checkbox / Radio ---`);
       lines.push(`When('I select {string} from {string}', async function (value, selector) {`);
-      lines.push(`  // Smart dropdown: try native <select> first, then click-based custom dropdown`);
-      lines.push(`  const label = this.page.getByLabel(selector);`);
-      lines.push(`  const tag = await label.first().evaluate(el => el.tagName.toLowerCase()).catch(() => '');`);
-      lines.push(`  if (tag === 'select') {`);
-      lines.push(`    await label.selectOption(value);`);
-      lines.push(`  } else {`);
-      lines.push(`    // Custom dropdown: click to open, then click option`);
-      lines.push(`    const trigger = label.or(this.page.getByRole('combobox', { name: selector })).or(this.page.locator('[class*="select"], [class*="dropdown"]', { hasText: selector })).first();`);
-      lines.push(`    await trigger.click();`);
-      lines.push(`    await this.page.waitForTimeout(300);`);
-      lines.push(`    const option = this.page.getByRole('option', { name: value }).or(this.page.getByRole('listitem', { name: value })).or(this.page.locator('[class*="option"], [class*="menu-item"], li', { hasText: value })).first();`);
-      lines.push(`    await option.click();`);
-      lines.push(`  }`);
+      lines.push(`  const target = await findDropdown(this.activePage || this.page, selector);`);
+      lines.push(`  await selectFromDropdown(this.activePage || this.page, target, value);`);
       lines.push('});');
       lines.push(`When('I select {string} from the {string} dropdown', async function (value, selector) {`);
-      lines.push(`  const label = this.page.getByLabel(selector);`);
-      lines.push(`  const tag = await label.first().evaluate(el => el.tagName.toLowerCase()).catch(() => '');`);
-      lines.push(`  if (tag === 'select') {`);
-      lines.push(`    await label.selectOption(value);`);
-      lines.push(`  } else {`);
-      lines.push(`    const trigger = label.or(this.page.getByRole('combobox', { name: selector })).or(this.page.locator('[class*="select"], [class*="dropdown"]', { hasText: selector })).first();`);
-      lines.push(`    await trigger.click();`);
-      lines.push(`    await this.page.waitForTimeout(300);`);
-      lines.push(`    await this.page.getByRole('option', { name: value }).or(this.page.locator('[class*="option"], [class*="menu-item"], li', { hasText: value })).first().click();`);
-      lines.push(`  }`);
+      lines.push(`  const target = await findDropdown(this.activePage || this.page, selector);`);
+      lines.push(`  await selectFromDropdown(this.activePage || this.page, target, value);`);
       lines.push('});');
       lines.push(`When('I select the option {string} in {string}', async function (value, selector) {`);
-      lines.push(`  const label = this.page.getByLabel(selector);`);
-      lines.push(`  const tag = await label.first().evaluate(el => el.tagName.toLowerCase()).catch(() => '');`);
-      lines.push(`  if (tag === 'select') { await label.selectOption(value); }`);
-      lines.push(`  else { await label.first().click(); await this.page.waitForTimeout(300); await this.page.getByRole('option', { name: value }).or(this.page.locator('[class*="option"], li', { hasText: value })).first().click(); }`);
+      lines.push(`  const target = await findDropdown(this.activePage || this.page, selector);`);
+      lines.push(`  await selectFromDropdown(this.activePage || this.page, target, value);`);
       lines.push('});');
       lines.push(`When('I check {string}', async function (label) { await this.page.getByLabel(label).check(); });`);
       lines.push(`When('I uncheck {string}', async function (label) { await this.page.getByLabel(label).uncheck(); });`);
@@ -3424,11 +3645,34 @@ class BDDService {
       // 7. FILE UPLOAD
       // ========================================
       lines.push(`// --- File Upload ---`);
-      lines.push(`When('I upload {string} to {string}', async function (filePath, label) {`);
-      lines.push(`  await this.page.getByLabel(label).setInputFiles(filePath);`);
+      // Smart file-input resolver: handles pages without <label> elements
+      // (e.g. herokuapp) by probing id/name/aria-label/role with short timeouts
+      // before falling back to "any input[type=file] near the named text".
+      lines.push(`async function findFileInput(page, fieldName) {`);
+      lines.push(`  if (!fieldName) return page.locator('input[type="file"]').first();`);
+      lines.push(`  const clean = String(fieldName).replace(/[:\\s]+$/, '').trim();`);
+      lines.push(`  const safe = clean.replace(/[^\\w-]/g, '');`);
+      lines.push(`  const candidates = [`);
+      lines.push(`    page.getByLabel(clean, { exact: false }),`);
+      lines.push(`  ];`);
+      lines.push(`  if (safe) {`);
+      lines.push(`    candidates.push(page.locator('input[type="file"][name="' + safe + '" i]'));`);
+      lines.push(`    candidates.push(page.locator('input[type="file"][id="' + safe + '" i]'));`);
+      lines.push(`    candidates.push(page.locator('input[type="file"][aria-label="' + safe + '" i]'));`);
+      lines.push(`  }`);
+      lines.push(`  for (const c of candidates) {`);
+      lines.push(`    try { if ((await c.count()) > 0) return c.first(); } catch { /* try next */ }`);
+      lines.push(`  }`);
+      lines.push(`  // Final fallback: first visible file input on the page`);
+      lines.push(`  return page.locator('input[type="file"]').first();`);
+      lines.push(`}`);
+      lines.push('');
+      lines.push(`When('I upload {string} to {string}', async function (filePath, fieldName) {`);
+      lines.push(`  const input = await findFileInput(this.activePage || this.page, fieldName);`);
+      lines.push(`  await input.setInputFiles(filePath);`);
       lines.push('});');
       lines.push(`When('I attach the file {string}', async function (filePath) {`);
-      lines.push(`  await this.page.locator('input[type="file"]').first().setInputFiles(filePath);`);
+      lines.push(`  await (this.activePage || this.page).locator('input[type="file"]').first().setInputFiles(filePath);`);
       lines.push('});');
       lines.push('');
 
@@ -3472,9 +3716,11 @@ class BDDService {
       lines.push(`// When inside an iframe, steps use this.activePage instead of this.page`);
       lines.push(`// activePage is set by "I switch to iframe" and cleared by "I switch to the main frame"`);
       lines.push(`When('I switch to iframe {string}', async function (selector) {`);
-      lines.push(`  const frame = this.page.frameLocator(selector);`);
+      lines.push(`  // Supports nested frames via " > " or "," between selectors (e.g. "#outer > iframe[name=inner]")`);
+      lines.push(`  const parts = String(selector).split(/\\s*(?:>|,)\\s*/).filter(Boolean);`);
+      lines.push(`  let frame = this.page;`);
+      lines.push(`  for (const part of parts) { frame = frame.frameLocator(part); }`);
       lines.push(`  this.set('iframe', frame);`);
-      lines.push(`  // Override activePage so findInput/findElement work inside iframe`);
       lines.push(`  this.activePage = frame;`);
       lines.push('});');
       lines.push(`When('I switch to the main frame', async function () {`);
@@ -3516,6 +3762,154 @@ class BDDService {
       lines.push(`    expect(dialog.message()).toContain(expectedText);`);
       lines.push(`    await dialog.accept();`);
       lines.push(`  }`);
+      lines.push('});');
+      lines.push('');
+
+      // ========================================
+      // 11b. AUTH / GEOLOCATION / DOWNLOAD / PAGE ERRORS / SLIDER / STATUS
+      // ========================================
+      lines.push(`// --- HTTP Auth (Basic / Digest) ---`);
+      lines.push(`Given('I authenticate with user {string} password {string}', async function (username, password) {`);
+      lines.push(`  if (typeof this.context.setHTTPCredentials === 'function') {`);
+      lines.push(`    await this.context.setHTTPCredentials({ username, password });`);
+      lines.push(`  } else {`);
+      lines.push(`    const basic = 'Basic ' + Buffer.from(username + ':' + password).toString('base64');`);
+      lines.push(`    await this.context.setExtraHTTPHeaders({ Authorization: basic });`);
+      lines.push(`  }`);
+      lines.push('});');
+      lines.push(`Given('I authenticate as {string} with password {string}', async function (username, password) {`);
+      lines.push(`  if (typeof this.context.setHTTPCredentials === 'function') {`);
+      lines.push(`    await this.context.setHTTPCredentials({ username, password });`);
+      lines.push(`  } else {`);
+      lines.push(`    const basic = 'Basic ' + Buffer.from(username + ':' + password).toString('base64');`);
+      lines.push(`    await this.context.setExtraHTTPHeaders({ Authorization: basic });`);
+      lines.push(`  }`);
+      lines.push('});');
+      lines.push('');
+
+      lines.push(`// --- Geolocation ---`);
+      lines.push(`Given('my location is lat {string} lng {string}', async function (lat, lng) {`);
+      lines.push(`  await this.context.grantPermissions(['geolocation']);`);
+      lines.push(`  await this.context.setGeolocation({ latitude: Number(lat), longitude: Number(lng) });`);
+      lines.push('});');
+      lines.push(`Given('my location is latitude {float} longitude {float}', async function (lat, lng) {`);
+      lines.push(`  await this.context.grantPermissions(['geolocation']);`);
+      lines.push(`  await this.context.setGeolocation({ latitude: lat, longitude: lng });`);
+      lines.push('});');
+      lines.push('');
+
+      lines.push(`// --- File Download ---`);
+      lines.push(`// Registers a waitForEvent before the click, so the download is captured atomically.`);
+      lines.push(`When('I click {string} and save the download as {string}', async function (target, filename) {`);
+      lines.push(`  const page = this.activePage || this.page;`);
+      lines.push(`  const el = await findElement(page, target);`);
+      lines.push(`  const [download] = await Promise.all([ this.page.waitForEvent('download', { timeout: 30000 }), el.click() ]);`);
+      lines.push(`  const _path = require('path');`);
+      lines.push(`  const _fs = require('fs');`);
+      lines.push(`  const dir = process.env.DOWNLOAD_DIR || _path.join(process.cwd(), 'downloads');`);
+      lines.push(`  _fs.mkdirSync(dir, { recursive: true });`);
+      lines.push(`  const saveAs = _path.join(dir, filename);`);
+      lines.push(`  await download.saveAs(saveAs);`);
+      lines.push(`  this.set('__lastDownload', saveAs);`);
+      lines.push(`  console.log('[DOWNLOAD]', saveAs);`);
+      lines.push('});');
+      lines.push(`Then('the downloaded file should exist', async function () {`);
+      lines.push(`  const p = this.get('__lastDownload');`);
+      lines.push(`  if (!p) throw new Error('No prior download — use "I click X and save the download as Y" first');`);
+      lines.push(`  const _fs = require('fs');`);
+      lines.push(`  expect(_fs.existsSync(p)).toBe(true);`);
+      lines.push(`  expect(_fs.statSync(p).size).toBeGreaterThan(0);`);
+      lines.push('});');
+      lines.push(`Then('the downloaded file {string} should exist', async function (filename) {`);
+      lines.push(`  const _path = require('path');`);
+      lines.push(`  const _fs = require('fs');`);
+      lines.push(`  const dir = process.env.DOWNLOAD_DIR || _path.join(process.cwd(), 'downloads');`);
+      lines.push(`  const p = _path.join(dir, filename);`);
+      lines.push(`  expect(_fs.existsSync(p)).toBe(true);`);
+      lines.push(`  expect(_fs.statSync(p).size).toBeGreaterThan(0);`);
+      lines.push('});');
+      lines.push('');
+
+      lines.push(`// --- Broken Images ---`);
+      lines.push(`Then('all images should load', async function () {`);
+      lines.push(`  const page = this.activePage || this.page;`);
+      lines.push(`  // frameLocator doesn't have .evaluate — fall back to this.page when inside a frame`);
+      lines.push(`  const target = typeof page.evaluate === 'function' ? page : this.page;`);
+      lines.push(`  const broken = await target.evaluate(() => {`);
+      lines.push(`    return Array.from(document.images)`);
+      lines.push(`      .filter(i => !i.complete || i.naturalWidth === 0)`);
+      lines.push(`      .map(i => i.src || i.getAttribute('src') || '(no src)');`);
+      lines.push(`  });`);
+      lines.push(`  if (broken.length) throw new Error('Broken images (' + broken.length + '): ' + broken.join(', '));`);
+      lines.push('});');
+      lines.push(`Then('the image {string} should load', async function (alt) {`);
+      lines.push(`  const page = this.activePage || this.page;`);
+      lines.push(`  const safe = String(alt).replace(/["\\\\]/g, '');`);
+      lines.push(`  const img = page.locator('img[alt="' + safe + '" i], img[title="' + safe + '" i], img[src*="' + safe + '" i]').first();`);
+      lines.push(`  const ok = await img.evaluate(el => el.complete && el.naturalWidth > 0).catch(() => false);`);
+      lines.push(`  if (!ok) throw new Error('Image "' + alt + '" did not load');`);
+      lines.push('});');
+      lines.push('');
+
+      lines.push(`// --- Page JS Errors ---`);
+      lines.push(`Then('the page should have no JS errors', async function () {`);
+      lines.push(`  const errs = this.__pageErrors || [];`);
+      lines.push(`  if (errs.length) throw new Error('Page JS errors (' + errs.length + '): ' + errs.join(' | '));`);
+      lines.push('});');
+      lines.push(`Then('the page should have a JS error containing {string}', async function (needle) {`);
+      lines.push(`  const errs = this.__pageErrors || [];`);
+      lines.push(`  if (!errs.some(e => e.includes(needle))) {`);
+      lines.push(`    throw new Error('No page JS error contained "' + needle + '". Got: ' + errs.join(' | '));`);
+      lines.push(`  }`);
+      lines.push('});');
+      lines.push('');
+
+      lines.push(`// --- Slider (input[type=range] / ARIA slider) ---`);
+      lines.push(`When('I set the {string} slider to {string}', async function (field, value) {`);
+      lines.push(`  const page = this.activePage || this.page;`);
+      lines.push(`  let el;`);
+      lines.push(`  try { el = await findInput(page, field); } catch { el = page.locator('input[type="range"]').first(); }`);
+      lines.push(`  const tag = await el.evaluate(n => n.tagName.toLowerCase() + ':' + (n.getAttribute('type') || '')).catch(() => '');`);
+      lines.push(`  if (tag.startsWith('input:') && tag.includes('range')) {`);
+      lines.push(`    await el.evaluate((node, v) => {`);
+      lines.push(`      node.value = String(v);`);
+      lines.push(`      node.dispatchEvent(new Event('input', { bubbles: true }));`);
+      lines.push(`      node.dispatchEvent(new Event('change', { bubbles: true }));`);
+      lines.push(`    }, value);`);
+      lines.push(`  } else {`);
+      lines.push(`    // ARIA slider — use keyboard`);
+      lines.push(`    await el.focus();`);
+      lines.push(`    await el.press('Home');`);
+      lines.push(`    const steps = Math.max(0, Math.round(Number(value)));`);
+      lines.push(`    for (let i = 0; i < steps; i++) await el.press('ArrowRight');`);
+      lines.push(`  }`);
+      lines.push('});');
+      lines.push(`Then('the {string} slider should have value {string}', async function (field, expected) {`);
+      lines.push(`  const page = this.activePage || this.page;`);
+      lines.push(`  let el;`);
+      lines.push(`  try { el = await findInput(page, field); } catch { el = page.locator('input[type="range"]').first(); }`);
+      lines.push(`  const v = await el.evaluate(n => n.value != null ? n.value : n.getAttribute('aria-valuenow'));`);
+      lines.push(`  expect(String(v)).toBe(String(expected));`);
+      lines.push('});');
+      lines.push('');
+
+      lines.push(`// --- HTTP Response Status ---`);
+      lines.push(`Then('the response status should be {int}', async function (status) {`);
+      lines.push(`  expect(this.__lastResponseStatus).toBe(status);`);
+      lines.push('});');
+      lines.push(`Then('the last response status should be {int}', async function (status) {`);
+      lines.push(`  expect(this.__lastResponseStatus).toBe(status);`);
+      lines.push('});');
+      lines.push('');
+
+      lines.push(`// --- Mouse movement (Exit Intent etc.) ---`);
+      lines.push(`When('I move the mouse to the top of the page', async function () {`);
+      lines.push(`  const vp = this.page.viewportSize() || { width: 1280, height: 720 };`);
+      lines.push(`  await this.page.mouse.move(Math.floor(vp.width / 2), 400);`);
+      lines.push(`  await this.page.mouse.move(Math.floor(vp.width / 2), 0);`);
+      lines.push('});');
+      lines.push(`When('I move the mouse to coordinates {int} {int}', async function (x, y) {`);
+      lines.push(`  await this.page.mouse.move(x, y);`);
       lines.push('});');
       lines.push('');
 
@@ -3581,22 +3975,39 @@ class BDDService {
       // 14. TEXT / VISIBILITY ASSERTIONS
       // ========================================
       lines.push(`// --- Text / Visibility Assertions ---`);
-      lines.push(`Then('I should see {string}', async function (text) {`);
-      lines.push(`  const loc = this.page.getByText(text, { exact: false }).first();`);
-      lines.push(`  // If the element is present but hidden (e.g., hover submenu that collapsed),`);
-      lines.push(`  // try to re-trigger the last hover before asserting.`);
+      // Text-presence check that understands <select>/<option>:
+      // a selected option in a closed dropdown is "hidden" per Playwright, but
+      // for the user's intent it IS visible — so we check selection state instead.
+      // Falls back to hover-retrigger for collapsed hover menus, then a plain visibility check.
+      lines.push(`async function assertTextPresent(page, text, lastHoverTarget) {`);
+      lines.push(`  const loc = page.getByText(text, { exact: false }).first();`);
+      lines.push(`  const optionInfo = await loc.evaluate(el => {`);
+      lines.push(`    if (el && el.tagName === 'OPTION') {`);
+      lines.push(`      const sel = el.closest('select');`);
+      lines.push(`      return { isOption: true, selected: !!el.selected, parentValue: sel ? sel.value : null, parentText: sel ? (sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].text) : null };`);
+      lines.push(`    }`);
+      lines.push(`    return { isOption: false };`);
+      lines.push(`  }).catch(() => ({ isOption: false }));`);
+      lines.push(`  if (optionInfo && optionInfo.isOption) {`);
+      lines.push(`    if (optionInfo.selected) return;`);
+      lines.push(`    if (optionInfo.parentText && optionInfo.parentText.trim() === String(text).trim()) return;`);
+      lines.push(`    throw new Error('Expected option "' + text + '" to be selected, but selected option is "' + (optionInfo.parentText || '') + '" (value="' + (optionInfo.parentValue || '') + '")');`);
+      lines.push(`  }`);
       lines.push(`  try {`);
       lines.push(`    await expect(loc).toBeVisible({ timeout: 3000 });`);
-      lines.push(`  } catch {`);
-      lines.push(`    // Element exists in DOM? Try re-hovering the last hovered element`);
-      lines.push(`    const count = await loc.count();`);
-      lines.push(`    if (count > 0 && this.lastHoverTarget) {`);
-      lines.push(`      try { await this.lastHoverTarget.hover(); } catch {}`);
-      lines.push(`      await expect(loc).toBeVisible({ timeout: 5000 });`);
-      lines.push(`    } else {`);
-      lines.push(`      await expect(loc).toBeVisible({ timeout: 7000 });`);
-      lines.push(`    }`);
+      lines.push(`    return;`);
+      lines.push(`  } catch {}`);
+      lines.push(`  const count = await loc.count();`);
+      lines.push(`  if (count > 0 && lastHoverTarget) {`);
+      lines.push(`    try { await lastHoverTarget.hover(); } catch {}`);
+      lines.push(`    await expect(loc).toBeVisible({ timeout: 5000 });`);
+      lines.push(`    return;`);
       lines.push(`  }`);
+      lines.push(`  await expect(loc).toBeVisible({ timeout: 7000 });`);
+      lines.push(`}`);
+      lines.push('');
+      lines.push(`Then('I should see {string}', async function (text) {`);
+      lines.push(`  await assertTextPresent(this.activePage || this.page, text, this.lastHoverTarget);`);
       lines.push('});');
       lines.push(`Then('I should not see {string}', async function (text) {`);
       lines.push(`  await expect(this.page.getByText(text, { exact: false })).toBeHidden({ timeout: 5000 });`);
@@ -3608,7 +4019,7 @@ class BDDService {
       lines.push(`  await expect(this.page.locator(\`[aria-label="\${section}"], [data-testid="\${section}"], .\${section}\`).first()).toContainText(text);`);
       lines.push('});');
       lines.push(`Then('{string} should be visible', async function (text) {`);
-      lines.push(`  await expect(this.page.getByText(text).first()).toBeVisible({ timeout: 10000 });`);
+      lines.push(`  await assertTextPresent(this.activePage || this.page, text, this.lastHoverTarget);`);
       lines.push('});');
       lines.push(`Then('{string} should not be visible', async function (text) {`);
       lines.push(`  await expect(this.page.getByText(text)).toBeHidden({ timeout: 5000 });`);
@@ -3892,6 +4303,23 @@ class BDDService {
         /^I switch to the new tab$/, /^I switch back to the original tab$/, /^I close the current tab$/,
         // API
         /^I intercept ".*" requests to ".*"$/, /^I should have intercepted \d+ ".*" requests$/,
+        // HTTP Auth
+        /^I authenticate with user ".*" password ".*"$/, /^I authenticate as ".*" with password ".*"$/,
+        // Geolocation
+        /^my location is lat ".*" lng ".*"$/, /^my location is latitude [\d.+-]+ longitude [\d.+-]+$/,
+        // Download
+        /^I click ".*" and save the download as ".*"$/, /^the downloaded file should exist$/,
+        /^the downloaded file ".*" should exist$/,
+        // Images
+        /^all images should load$/, /^the image ".*" should load$/,
+        // Page errors
+        /^the page should have no JS errors$/, /^the page should have a JS error containing ".*"$/,
+        // Slider
+        /^I set the ".*" slider to ".*"$/, /^the ".*" slider should have value ".*"$/,
+        // Response status
+        /^the response status should be \d+$/, /^the last response status should be \d+$/,
+        // Mouse
+        /^I move the mouse to the top of the page$/, /^I move the mouse to coordinates \d+ \d+$/,
       ];
 
       const seenSteps = new Set<string>();

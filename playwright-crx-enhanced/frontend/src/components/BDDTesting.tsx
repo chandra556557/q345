@@ -167,6 +167,131 @@ const SAMPLE_FEATURE = `Feature: Login functionality
       | user1    | pass1       | Welcome   |
 `;
 
+// Map a static-scan response → the POMResult shape used by the "Enterprise POM
+// Tabs" (Page Objects, BasePage, Fixtures, Data, Barrel, Env, Validation).
+// Lets Apply POM / Save as Script / Apply All consume static-scan output.
+function mapStaticScanToPOMResult(data: {
+  scan: { url: string; components: any[]; interactives: { buttons: any[]; links: any[]; inputs: any[] } };
+  files: {
+    pageClass: { code: string; filename: string };
+    fixtures: { code: string };
+    basePage: { code: string };
+    navMenu: { code: string };
+    tabPanel: { code: string };
+    dataList: { code: string };
+  };
+}) {
+  const { scan, files } = data;
+  const className = files.pageClass.filename.replace(/^pages\//, '').replace(/\.ts$/, '') || 'ScannedPage';
+
+  const toCamel = (s: string) => {
+    const cleaned = (s || '').replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+    if (cleaned.length === 0) return 'el';
+    return cleaned[0].toLowerCase() + cleaned.slice(1).map(w => w[0].toUpperCase() + w.slice(1)).join('');
+  };
+
+  const locators: any[] = [];
+  const variableCounts = new Map<string, number>();
+  const uniqueName = (base: string) => {
+    const n = (variableCounts.get(base) || 0) + 1;
+    variableCounts.set(base, n);
+    return n === 1 ? base : `${base}${n}`;
+  };
+
+  for (const btn of scan.interactives?.buttons || []) {
+    const locator = btn.selector.startsWith('[data-testid')
+      ? `page.getByRole('button', { name: ${JSON.stringify(btn.name)} })`
+      : `page.locator(${JSON.stringify(btn.selector)})`;
+    locators.push({
+      fieldName: btn.name,
+      variableName: uniqueName(toCamel(btn.name) + 'Button'),
+      locator,
+      elementType: 'button',
+      locatorStrategy: btn.selector.startsWith('[data-testid') ? 'role+name' : 'css',
+      confidence: 85,
+    });
+  }
+  for (const link of scan.interactives?.links || []) {
+    locators.push({
+      fieldName: link.name,
+      variableName: uniqueName(toCamel(link.name) + 'Link'),
+      locator: `page.getByRole('link', { name: ${JSON.stringify(link.name)} })`,
+      elementType: 'link',
+      locatorStrategy: 'role+name',
+      confidence: 80,
+    });
+  }
+  for (const inp of scan.interactives?.inputs || []) {
+    const locator = inp.name
+      ? `page.getByLabel(${JSON.stringify(inp.name)})`
+      : inp.placeholder
+        ? `page.getByPlaceholder(${JSON.stringify(inp.placeholder)})`
+        : `page.locator(${JSON.stringify(inp.selector)})`;
+    const strategy = inp.name ? 'label' : inp.placeholder ? 'placeholder' : 'css';
+    const base = toCamel(inp.name || inp.placeholder || 'input');
+    const suffix = inp.inputType === 'checkbox' ? 'Checkbox' : inp.inputType === 'radio' ? 'Radio' : 'Input';
+    locators.push({
+      fieldName: inp.name || inp.placeholder || 'input',
+      variableName: uniqueName(base + suffix),
+      locator,
+      elementType: inp.inputType === 'checkbox' ? 'checkbox' : inp.inputType === 'radio' ? 'radio' : 'input',
+      locatorStrategy: strategy,
+      confidence: strategy === 'label' ? 90 : strategy === 'placeholder' ? 75 : 50,
+    });
+  }
+
+  const methods: string[] = [];
+  const components: any[] = [];
+  const scanTypeToPOMType: Record<string, 'header' | 'footer' | 'nav' | 'sidebar' | 'modal' | 'table'> = {
+    menu: 'nav', tablist: 'nav', list: 'table', form: 'modal',
+  };
+  for (const c of scan.components || []) {
+    if (c.type === 'menu') methods.push('navMenu.click', 'navMenu.select');
+    else if (c.type === 'tablist') methods.push('tabs.open', 'tabs.clickItemInTab');
+    else if (c.type === 'list') methods.push('dataList.clickItemByText', 'dataList.hoverRowAndClick');
+    else if (c.type === 'form') methods.push('submitForm');
+    components.push({
+      name: c.id || c.type,
+      type: scanTypeToPOMType[c.type] || 'nav',
+      locators: [],
+      methods: [],
+    });
+  }
+
+  const validationReport = locators.map(l => ({
+    variableName: l.variableName,
+    locator: l.locator,
+    matchCount: 1,
+    status: l.confidence >= 70 ? 'ok' : 'ambiguous',
+  }));
+
+  // Concatenate the emitted class files so "Page Objects" tab shows everything
+  // a user needs to drop into their project from one copy-paste.
+  const generatedCode = [
+    files.pageClass.code,
+    '',
+    '// ─── Components referenced above ─────────────────────────────────────────────',
+    files.navMenu.code,
+    files.tabPanel.code,
+    files.dataList.code,
+  ].join('\n');
+
+  return {
+    className,
+    url: scan.url,
+    locators,
+    methods: Array.from(new Set(methods)),
+    generatedCode,
+    basePageCode: files.basePage.code,
+    fixtureCode: files.fixtures.code,
+    barrelExport: `export * from './${className}';\nexport * from './StaticBasePage';\nexport * from './components/NavMenu';\nexport * from './components/TabPanel';\nexport * from './components/DataList';\n`,
+    dataInterface: '',
+    validationReport,
+    components,
+    envConfig: '',
+  };
+}
+
 const BDDTesting: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'editor' | 'features' | 'runs' | 'steplib' | 'schedules' | 'screenplay' | 'convert'>('editor');
   const [features, setFeatures] = useState<BDDFeature[]>([]);
@@ -480,6 +605,103 @@ const BDDTesting: React.FC = () => {
   const [pomClassName, setPOMClassName] = useState('');
   const [showPOMDialog, setShowPOMDialog] = useState(false);
   const [pomFeatureContent, setPOMFeatureContent] = useState('');
+
+  // Auth for POM scan/generate — Playwright storageState JSON so the
+  // generator can cross login and scan post-auth pages without replaying
+  // the login flow every time.
+  const [pomStorageState, setPOMStorageState] = useState('');
+  // Per-project saved-auth status. Polled when the user opens the dialog and
+  // after Save/Clear actions so the UI shows freshness ("✓ 5 min old" / "⚠ stale").
+  const [projectAuthStatus, setProjectAuthStatus] = useState<null | {
+    configured: boolean; updatedAt?: string; ttlMinutes?: number; stale: boolean; ageMinutes?: number; refreshNote?: string;
+  }>(null);
+  const [savingProjectAuth, setSavingProjectAuth] = useState(false);
+
+  const refreshProjectAuthStatus = async () => {
+    if (!pm.selectedProjectId) { setProjectAuthStatus(null); return; }
+    try {
+      const res = await axios.get(`${API_URL}/bdd/projects/${pm.selectedProjectId}/auth/status`, { headers });
+      setProjectAuthStatus(res.data.data);
+    } catch { setProjectAuthStatus(null); }
+  };
+
+  const saveProjectAuth = async () => {
+    if (!pm.selectedProjectId) { setError('Select a project first'); return; }
+    if (!pomStorageState.trim()) { setError('Paste storageState JSON before saving to project'); return; }
+    setSavingProjectAuth(true); setError('');
+    try {
+      let parsed: any;
+      try { parsed = JSON.parse(pomStorageState); }
+      catch { setError('storageState is not valid JSON'); setSavingProjectAuth(false); return; }
+      await axios.put(`${API_URL}/bdd/projects/${pm.selectedProjectId}/auth`,
+        { storageState: parsed, ttlMinutes: 60 }, { headers });
+      await refreshProjectAuthStatus();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to save project auth');
+    } finally { setSavingProjectAuth(false); }
+  };
+
+  const clearProjectAuth = async () => {
+    if (!pm.selectedProjectId) return;
+    if (!confirm('Clear saved auth for this project?')) return;
+    try {
+      await axios.delete(`${API_URL}/bdd/projects/${pm.selectedProjectId}/auth`, { headers });
+      await refreshProjectAuthStatus();
+    } catch { /* ignore */ }
+  };
+  // Toggle: also run the static-scan classifier and merge its tabs/lists/
+  // menus/forms into the POM locators (helps findLocatorForField match
+  // structural widgets, not just individual buttons/inputs).
+  const [pomEnrichWithScan, setPOMEnrichWithScan] = useState(false);
+
+  // Static scan state (feature-free, URL-only)
+  const [staticScanning, setStaticScanning] = useState(false);
+  const [staticScanResult, setStaticScanResult] = useState<null | {
+    scan: { url: string; title: string; scannedAt: string; stats: { domNodes: number; componentsFound: number }; components: any[] };
+    files: {
+      pageClass: { filename: string; code: string };
+      fixtures: { filename: string; code: string };
+      feature: { filename: string; code: string };
+      scanReport: { filename: string; code: string };
+      basePage: { filename: string; code: string };
+      navMenu: { filename: string; code: string };
+      tabPanel: { filename: string; code: string };
+      dataList: { filename: string; code: string };
+    };
+  }>(null);
+  const [staticScanActiveFile, setStaticScanActiveFile] = useState<
+    'pageClass' | 'fixtures' | 'feature' | 'scanReport' | 'basePage' | 'navMenu' | 'tabPanel' | 'dataList'
+  >('pageClass');
+
+  const handleStaticScan = async () => {
+    if (!pomTargetUrl) {
+      setError('Target URL is required for static scan');
+      return;
+    }
+    setStaticScanning(true);
+    setStaticScanResult(null);
+    setError('');
+    try {
+      const res = await axios.post(`${API_URL}/bdd/scan-pom`, {
+        targetUrl: pomTargetUrl,
+        projectId: pm.selectedProjectId || undefined,
+        pageName: pomClassName || undefined,
+        storageState: pomStorageState || undefined,
+      }, { headers });
+      const data = res.data.data;
+      setStaticScanResult(data);
+      setStaticScanActiveFile('pageClass');
+      // Also surface the scan in the main POM tabs so Apply POM / Save as Script
+      // and the Enterprise POM panel work on static-scan output.
+      setPOMResults([mapStaticScanToPOMResult(data)]);
+      setPOMActiveTab('pom');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Static scan failed');
+    } finally {
+      setStaticScanning(false);
+    }
+  };
+
   const handleGeneratePOM = async () => {
     if (!pomFeatureContent || !pomTargetUrl) {
       setError('Feature content and target URL are required');
@@ -494,6 +716,8 @@ const BDDTesting: React.FC = () => {
         targetUrl: pomTargetUrl || undefined,
         projectId: pm.selectedProjectId || undefined,
         className: pomClassName || undefined,
+        storageState: pomStorageState || undefined,
+        enrichWithScan: pomEnrichWithScan || undefined,
       }, { headers });
       setPOMResults(res.data.data || []);
     } catch (err: any) {
@@ -512,6 +736,8 @@ const BDDTesting: React.FC = () => {
     setPOMResults([]);
     setAppliedPOMCode('');
     setShowPOMDialog(true);
+    // Show saved-auth freshness so the user knows whether to paste a new one.
+    refreshProjectAuthStatus();
   };
 
   // Apply POM to feature — regenerate test code using POM methods
@@ -2274,6 +2500,75 @@ const BDDTesting: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 500 }}>
+                  storageState (optional) — paste Playwright auth JSON to scan post-login pages
+                </label>
+                {projectAuthStatus?.configured && (
+                  <span style={{
+                    fontSize: '11px', padding: '2px 8px', borderRadius: '10px',
+                    background: projectAuthStatus.stale ? '#fff4e5' : '#e8f5e9',
+                    color: projectAuthStatus.stale ? '#b34700' : '#2e7d32',
+                  }}>
+                    Project auth saved
+                    {typeof projectAuthStatus.ageMinutes === 'number' && ` · ${projectAuthStatus.ageMinutes}m old`}
+                    {projectAuthStatus.stale && ' · ⚠ stale'}
+                  </span>
+                )}
+              </div>
+              <textarea
+                value={pomStorageState}
+                onChange={e => setPOMStorageState(e.target.value)}
+                placeholder='{"cookies":[...],"origins":[...]}'
+                style={{ width: '100%', minHeight: '60px', padding: '8px 10px', border: '1px solid #d0d0d0', borderRadius: '6px', fontSize: '11px', fontFamily: 'monospace' }}
+              />
+              <div style={{ fontSize: '11px', color: '#777', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span>
+                  Generate with <code style={{ background: '#f0f0f0', padding: '1px 4px', borderRadius: '3px' }}>
+                    npx playwright codegen --save-storage=auth.json &lt;url&gt;
+                  </code>, then paste here.
+                  {pm.selectedProjectId && !projectAuthStatus?.configured && (
+                    <span style={{ color: '#1565c0', marginLeft: '6px' }}>
+                      Leave blank to auto-use the project's saved auth when configured.
+                    </span>
+                  )}
+                </span>
+                {pm.selectedProjectId && (
+                  <span style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      className="bdd-btn bdd-btn-sm bdd-btn-secondary"
+                      onClick={saveProjectAuth}
+                      disabled={savingProjectAuth || !pomStorageState.trim()}
+                      title="Encrypt and persist this storageState on the project so other runs can reuse it without pasting"
+                    >
+                      {savingProjectAuth ? 'Saving...' : 'Save to project'}
+                    </button>
+                    {projectAuthStatus?.configured && (
+                      <button
+                        className="bdd-btn bdd-btn-sm"
+                        style={{ background: '#ffebee', color: '#c62828', border: '1px solid #ffcdd2' }}
+                        onClick={clearProjectAuth}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <input
+                  type="checkbox"
+                  checked={pomEnrichWithScan}
+                  onChange={e => setPOMEnrichWithScan(e.target.checked)}
+                />
+                Enrich with static scan — also classify tabs/lists/menus/forms and merge them into POM locators
+              </label>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
               <label style={{ fontSize: '13px', fontWeight: 500, display: 'block', marginBottom: '4px' }}>Feature Content</label>
               <textarea
                 value={pomFeatureContent}
@@ -2282,9 +2577,17 @@ const BDDTesting: React.FC = () => {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <button className="bdd-btn bdd-btn-primary" onClick={handleGeneratePOM} disabled={generatingPOM || !pomTargetUrl}>
                 {generatingPOM ? 'Visiting page & extracting locators...' : 'Generate POM'}
+              </button>
+              <button
+                className="bdd-btn bdd-btn-secondary"
+                onClick={handleStaticScan}
+                disabled={staticScanning || !pomTargetUrl}
+                title="Scan the URL's live DOM for tabs / lists / menus / forms — no feature file needed"
+              >
+                {staticScanning ? 'Scanning live DOM...' : 'Static Scan'}
               </button>
               {pomResults.length > 1 && (
                 <button className="bdd-btn bdd-btn-success" onClick={handleApplyAllPOMs} disabled={applyingPOM}>
@@ -2292,6 +2595,61 @@ const BDDTesting: React.FC = () => {
                 </button>
               )}
             </div>
+
+            {/* Static scan results (URL-only flow) */}
+            {staticScanResult && (
+              <div style={{ marginBottom: '16px', border: '1px solid #d0d0d0', borderRadius: '6px', padding: '12px', background: '#fafafa' }}>
+                <div style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>
+                  <strong>{staticScanResult.scan.stats.componentsFound}</strong> components across{' '}
+                  <strong>{staticScanResult.scan.stats.domNodes}</strong> DOM nodes —{' '}
+                  <em>{staticScanResult.scan.title || staticScanResult.scan.url}</em>
+                </div>
+                {staticScanResult.scan.components.length > 0 && (
+                  <div style={{ fontSize: '11px', color: '#444', marginBottom: '10px', fontFamily: 'monospace' }}>
+                    {staticScanResult.scan.components.map((c: any, idx: number) => {
+                      let detail = '';
+                      if (c.type === 'tablist') detail = `${c.tabs?.length || 0} tabs`;
+                      else if (c.type === 'list') detail = `${c.itemCount} items`;
+                      else if (c.type === 'menu') detail = `${c.items?.length || 0} items${c.isHoverDriven ? ' (hover)' : ''}`;
+                      else if (c.type === 'form') detail = `${c.fields?.length || 0} fields`;
+                      const flag = c.confidence < 0.5 ? ' ⚠' : '';
+                      return <div key={idx}>• {c.type.padEnd(8)} #{c.id} — {detail}{flag}</div>;
+                    })}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  {([
+                    { key: 'pageClass', label: 'Page Class' },
+                    { key: 'basePage', label: 'StaticBasePage' },
+                    { key: 'navMenu', label: 'NavMenu' },
+                    { key: 'tabPanel', label: 'TabPanel' },
+                    { key: 'dataList', label: 'DataList' },
+                    { key: 'fixtures', label: 'Fixtures' },
+                    { key: 'feature', label: 'Suggested Feature' },
+                    { key: 'scanReport', label: 'Scan Report' },
+                  ] as Array<{ key: typeof staticScanActiveFile; label: string }>).map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setStaticScanActiveFile(tab.key)}
+                      style={{
+                        padding: '4px 10px', fontSize: '11px', border: '1px solid #d0d0d0',
+                        borderRadius: '4px', cursor: 'pointer',
+                        background: staticScanActiveFile === tab.key ? '#1565c0' : '#fff',
+                        color: staticScanActiveFile === tab.key ? '#fff' : '#333',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+                  {staticScanResult.files[staticScanActiveFile].filename}
+                </div>
+                <pre style={{ maxHeight: '300px', overflow: 'auto', padding: '8px', background: '#fff', border: '1px solid #e0e0e0', borderRadius: '4px', fontSize: '11px', margin: 0 }}>
+                  {staticScanResult.files[staticScanActiveFile].code}
+                </pre>
+              </div>
+            )}
 
             {/* Enterprise POM Tabs */}
             {pomResults.length > 0 && (
@@ -2472,22 +2830,58 @@ const BDDTesting: React.FC = () => {
                 {/* Tab: Validation Report */}
                 {pomActiveTab === 'validation' && (
                   <div>
-                    <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>Each locator was validated against the live page. Green = exactly 1 match, Yellow = ambiguous (multiple), Red = broken (0 matches).</p>
+                    <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
+                      Each locator was validated against the live page. Green = exactly 1 match,
+                      Yellow = ambiguous (multiple) / low confidence, Red = broken (0 matches).
+                    </p>
                     {pomResults.map((pom, idx) => pom.validationReport && pom.validationReport.length > 0 && (
                       <div key={idx} style={{ marginBottom: '16px' }}>
                         <h4 style={{ fontSize: '13px', marginBottom: '8px' }}>{pom.className}</h4>
                         <div style={{ background: '#f5f7fa', borderRadius: '6px', padding: '10px', fontSize: '12px' }}>
-                          {pom.validationReport.map((v: any, i: number) => (
-                            <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '4px 0', borderBottom: i < pom.validationReport!.length - 1 ? '1px solid #e0e0e0' : 'none' }}>
-                              <span style={{
-                                width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
-                                background: v.status === 'ok' ? '#4caf50' : v.status === 'ambiguous' ? '#ff9800' : '#f44336',
-                              }} />
-                              <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 500, minWidth: '150px' }}>{v.variableName}</span>
-                              <span style={{ fontSize: '11px', color: '#666' }}>matches: {v.matchCount}</span>
-                              {v.suggestion && <span style={{ fontSize: '10px', color: '#c62828', flex: 1 }}>{v.suggestion}</span>}
-                            </div>
-                          ))}
+                          {pom.validationReport.map((v: any, i: number) => {
+                            // Locate the source POMLocator to surface confidence alongside
+                            // the validation status — low confidence means "matcher picked
+                            // this but isn't sure", distinct from runtime match failures.
+                            const srcLoc = (pom.locators || []).find((l: any) => l.variableName === v.variableName);
+                            const confidence = srcLoc?.confidence;
+                            const isLowConfidence = typeof confidence === 'number' && confidence < 60;
+                            const rowBg = v.status === 'broken' ? '#fdecea'
+                              : v.status === 'ambiguous' ? '#fff4e5'
+                              : isLowConfidence ? '#fff9e6'
+                              : 'transparent';
+                            return (
+                              <div key={i} style={{
+                                display: 'flex', gap: '12px', alignItems: 'center', padding: '6px 8px',
+                                borderBottom: i < pom.validationReport!.length - 1 ? '1px solid #e0e0e0' : 'none',
+                                background: rowBg, borderRadius: '3px',
+                              }}>
+                                <span style={{
+                                  width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
+                                  background: v.status === 'ok'
+                                    ? (isLowConfidence ? '#ffb300' : '#4caf50')
+                                    : v.status === 'ambiguous' ? '#ff9800' : '#f44336',
+                                }} />
+                                <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 500, minWidth: '150px' }}>{v.variableName}</span>
+                                <span style={{ fontSize: '11px', color: '#666' }}>matches: {v.matchCount}</span>
+                                {typeof confidence === 'number' && (
+                                  <span style={{
+                                    fontSize: '10px', fontWeight: 500, padding: '2px 6px', borderRadius: '10px',
+                                    color: isLowConfidence ? '#b34700' : '#2e7d32',
+                                    background: isLowConfidence ? '#ffe0b2' : '#e8f5e9',
+                                  }}>
+                                    confidence {confidence}
+                                    {isLowConfidence && ' ⚠'}
+                                  </span>
+                                )}
+                                {srcLoc?.locatorStrategy && (
+                                  <span style={{ fontSize: '10px', color: '#555', fontStyle: 'italic' }}>
+                                    {srcLoc.locatorStrategy}
+                                  </span>
+                                )}
+                                {v.suggestion && <span style={{ fontSize: '10px', color: '#c62828', flex: 1 }}>{v.suggestion}</span>}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}
@@ -2496,21 +2890,72 @@ const BDDTesting: React.FC = () => {
               </div>
             )}
 
-            {/* Applied POM → Test Code */}
-            {appliedPOMCode && (
+            {/* Applied POM → Test Code (dry-run preview: editable before save) */}
+            {appliedPOMCode && (() => {
+              // Parse @unstable comment count emitted by the backend so users
+              // see, up front, how many steps need attention before saving.
+              const unstableCount = (appliedPOMCode.match(/^\s*\/\/\s*@unstable/gm) || []).length;
+              const lineCount = appliedPOMCode.split('\n').length;
+              return (
               <div style={{ borderTop: '2px solid #1565c0', paddingTop: '16px', marginTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', color: '#1565c0' }}>Test Code Using POM</h3>
-                  <button className="bdd-btn bdd-btn-sm bdd-btn-secondary" onClick={() => navigator.clipboard.writeText(appliedPOMCode)}>Copy Test Code</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#1565c0' }}>
+                    Dry-run Preview
+                    <span style={{ fontSize: '11px', color: '#666', fontWeight: 400, marginLeft: '8px' }}>
+                      ({lineCount} lines
+                      {unstableCount > 0 && (
+                        <span style={{ color: '#b34700', marginLeft: '4px' }}>
+                          · {unstableCount} ⚠ unstable step{unstableCount > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      )
+                    </span>
+                  </h3>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button className="bdd-btn bdd-btn-sm bdd-btn-secondary"
+                      onClick={() => navigator.clipboard.writeText(appliedPOMCode)}>
+                      Copy
+                    </button>
+                    <button className="bdd-btn bdd-btn-sm bdd-btn-secondary"
+                      onClick={() => {
+                        const blob = new Blob([appliedPOMCode], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${pomClassName || 'test'}.spec.ts`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}>
+                      Download .spec.ts
+                    </button>
+                  </div>
                 </div>
-                <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
-                  Production-ready test using your POM with fluent API (method chaining). Save as <code>tests/*.spec.ts</code>, POM as <code>pages/*.ts</code>, and <code>BasePage.ts</code> in pages/.
+                <p style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                  Review and edit before saving. Lines marked <code style={{ background: '#fff9e6', padding: '1px 4px', borderRadius: '3px' }}>// @unstable</code> use
+                  low-confidence locators — consider adding a <code>data-testid</code> to those elements.
                 </p>
-                <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', overflow: 'auto', maxHeight: '400px', fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                  {appliedPOMCode}
-                </pre>
+                {unstableCount > 0 && (
+                  <div style={{ background: '#fff4e5', border: '1px solid #ffb300', borderRadius: '4px', padding: '8px 10px', marginBottom: '10px', fontSize: '11px', color: '#b34700' }}>
+                    ⚠ {unstableCount} step{unstableCount > 1 ? 's' : ''} resolved to low-confidence locators. Search for <code>@unstable</code> in the code below to review.
+                  </div>
+                )}
+                <textarea
+                  value={appliedPOMCode}
+                  onChange={e => setAppliedPOMCode(e.target.value)}
+                  spellCheck={false}
+                  style={{
+                    width: '100%', minHeight: '260px', maxHeight: '500px',
+                    background: '#1e1e2e', color: '#cdd6f4',
+                    padding: '12px', borderRadius: '8px', border: '1px solid #444',
+                    fontSize: '12px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    resize: 'vertical', whiteSpace: 'pre', tabSize: 2,
+                  }}
+                />
+                <p style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>
+                  Edits here stay local until you save as a Script or download the file — the emitted POM, BasePage, and fixtures are separate and unchanged by edits in this box.
+                </p>
               </div>
-            )}
+            );})()}
           </div>
         </div>
       )}
